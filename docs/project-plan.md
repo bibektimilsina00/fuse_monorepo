@@ -34,13 +34,13 @@
 **Goal:** `make dev` starts without errors. API responds. DB is migrated.
 
 ### Checklist
-- [ ] Copy `.env.example` → `.env`, fill in `SECRET_KEY` and `ENCRYPTION_KEY` (`openssl rand -hex 32`)
-- [ ] `make setup` — installs all Python + Node deps without errors
-- [ ] `make db-up` — PostgreSQL + Redis containers running (`docker ps`)
-- [ ] `make migrate` — Alembic runs without errors
-- [ ] `uv run uvicorn apps.api.app.main:app --reload` — API starts on `:8000`
-- [ ] `curl http://localhost:8000/` returns `{"message": "Welcome to Fuse API"}`
-- [ ] `curl http://localhost:8000/api/v1/openapi.json` returns OpenAPI spec
+- [x] Copy `.env.example` → `.env`, fill in `SECRET_KEY` and `ENCRYPTION_KEY` (`openssl rand -hex 32`)
+- [x] `make setup` — installs all Python + Node deps without errors
+- [x] `make db-up` — PostgreSQL + Redis containers running (`docker ps`)
+- [x] `make migrate` — Alembic runs without errors
+- [x] `uv run uvicorn apps.api.app.main:app --reload` — API starts on `:8000`
+- [x] `curl http://localhost:8000/` returns `{"message": "Welcome to Fuse API"}`
+- [x] `curl http://localhost:8000/api/v1/openapi.json` returns OpenAPI spec
 
 **Acceptance:** API is live, DB is migrated, no import errors.
 
@@ -62,16 +62,16 @@
 | `alembic/versions/` | New migration for `user` table |
 
 ### Checklist
-- [ ] `User` model created with `id`, `email`, `hashed_password`, `is_active`, `created_at`
-- [ ] `UserRegister` schema validates email format + password min length 8
-- [ ] `POST /auth/register` creates user, returns `UserOut` (no password field)
-- [ ] `POST /auth/login` accepts `email` + `password` JSON, returns JWT token
-- [ ] `GET /auth/me` returns current user (requires valid JWT)
-- [ ] `get_current_user` dependency extracts + validates JWT, returns `User`
-- [ ] All future protected routers use `Depends(get_current_user)`
-- [ ] Alembic migration created + applied
-- [ ] Hardcoded `admin/admin` login removed from auth router
-- [ ] `make lint` passes
+- [x] `User` model created with `id`, `email`, `hashed_password`, `is_active`, `created_at`
+- [x] `UserRegister` schema validates email format + password min length 8
+- [x] `POST /auth/register` creates user, returns `UserOut` (no password field)
+- [x] `POST /auth/login` accepts `email` + `password` JSON, returns JWT token
+- [x] `GET /auth/me` returns current user (requires valid JWT)
+- [x] `get_current_user` dependency extracts + validates JWT, returns `User`
+- [x] All future protected routers use `Depends(get_current_user)`
+- [x] Alembic migration created + applied
+- [x] Hardcoded `admin/admin` login removed from auth router
+- [x] `make lint` passes (Python)
 
 **Acceptance:**
 ```bash

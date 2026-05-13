@@ -16,6 +16,8 @@ dependencies = [
     "celery",
     "cryptography",
     "httpx",
+    "email-validator>=2.3.0",
+    "argon2-cffi>=25.1.0",
 ]
 
 [tool.uv]
@@ -28,10 +30,12 @@ src = ["../.."]
 
 [tool.pyright]
 extraPaths = ["../.."]
+venvPath = "../../"
+venv = ".venv"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps"]

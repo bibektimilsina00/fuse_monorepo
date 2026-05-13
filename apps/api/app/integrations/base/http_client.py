@@ -1,14 +1,16 @@
-import httpx
-from typing import Any, Dict, Optional
 import logging
+from typing import Any
+
+import httpx
 
 logger = logging.getLogger("fuse.integration.http")
 
+
 class IntegrationHTTPClient:
-    def __init__(self, base_url: Optional[str] = None, headers: Optional[Dict[str, str]] = None):
+    def __init__(self, base_url: str | None = None, headers: dict[str, str] | None = None):
         self.client = httpx.AsyncClient(base_url=base_url or "", headers=headers or {})
 
-    async def request(self, method: str, url: str, **kwargs) -> Dict[str, Any]:
+    async def request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         try:
             response = await self.client.request(method, url, **kwargs)
             response.raise_for_status()

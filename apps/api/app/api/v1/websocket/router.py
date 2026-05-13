@@ -1,12 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List, Dict
-import asyncio
 
 router = APIRouter()
 
+
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Dict[str, List[WebSocket]] = {}
+        self.active_connections: dict[str, list[WebSocket]] = {}
 
     async def connect(self, execution_id: str, websocket: WebSocket):
         await websocket.accept()
@@ -23,7 +22,9 @@ class ConnectionManager:
             for connection in self.active_connections[execution_id]:
                 await connection.send_json(message)
 
+
 manager = ConnectionManager()
+
 
 @router.websocket("/{execution_id}")
 async def websocket_endpoint(websocket: WebSocket, execution_id: str):

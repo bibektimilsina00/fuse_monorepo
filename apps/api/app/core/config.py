@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,6 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "development_secret_key_change_me"
     ENCRYPTION_KEY: str = "32_byte_base64_encryption_key_here"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ALGORITHM: str = "HS256"
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     @computed_field  # type: ignore[prop-decorator]
     @property

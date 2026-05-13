@@ -1,11 +1,12 @@
 from fastapi import APIRouter
+
+from apps.api.app.api.v1.ai.router import router as ai_router
 from apps.api.app.api.v1.auth.router import router as auth_router
-from apps.api.app.api.v1.workflows.router import router as workflows_router
-from apps.api.app.api.v1.executions.router import router as executions_router
 from apps.api.app.api.v1.credentials.router import router as credentials_router
+from apps.api.app.api.v1.executions.router import router as executions_router
 from apps.api.app.api.v1.integrations.router import router as integrations_router
 from apps.api.app.api.v1.websocket.router import router as websocket_router
-from apps.api.app.api.v1.ai.router import router as ai_router
+from apps.api.app.api.v1.workflows.router import router as workflows_router
 
 router = APIRouter()
 
