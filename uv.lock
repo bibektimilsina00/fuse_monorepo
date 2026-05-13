@@ -521,6 +521,7 @@ dependencies = [
     { name = "httpx" },
     { name = "playwright" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "python-json-logger" },
     { name = "redis" },
 ]
@@ -533,6 +534,7 @@ requires-dist = [
     { name = "httpx" },
     { name = "playwright" },
     { name = "pydantic" },
+    { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "python-json-logger" },
     { name = "redis" },
 ]

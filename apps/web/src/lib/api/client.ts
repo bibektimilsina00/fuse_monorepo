@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig } from 'axios'
 import { z } from 'zod'
 
 /**
@@ -13,6 +13,22 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+// Inject Auth Token into every request
+apiClient.interceptors.request.use((config) => {
+  const storage = localStorage.getItem('auth-storage')
+  if (storage) {
+    try {
+      const { state } = JSON.parse(storage)
+      if (state.token) {
+        config.headers.Authorization = `Bearer ${state.token}`
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }
+  return config
 })
 
 /**
