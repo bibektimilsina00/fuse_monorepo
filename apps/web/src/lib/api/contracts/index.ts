@@ -20,10 +20,11 @@ export function defineRouteContract<
 export const WorkflowSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
-  description: z.string().optional(),
-  status: z.enum(['draft', 'active', 'failed']),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  description: z.string().optional().nullable(),
+  status: z.string(), // Changed to string for flexibility
+  graph: z.record(z.string(), z.any()),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
 })
 
 export type Workflow = z.infer<typeof WorkflowSchema>

@@ -1,10 +1,12 @@
-import Editor from '../features/workflow-editor/Editor'
+import { RouterProvider } from 'react-router-dom'
+import { router } from './router'
+import { Providers } from './providers'
 
 function App() {
   return (
-    <div className="h-screen w-screen overflow-hidden">
-      <Editor />
-    </div>
+    <Providers>
+      <RouterProvider router={router} />
+    </Providers>
   )
 }
 
