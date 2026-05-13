@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict
-from apps.api.app.credential_manager.encryption.service import encryption_service
+from typing import Any, Dict, Optional, cast
+from apps.api.app.credential_manager.encryption.aes import aes_service as encryption_service
 from apps.api.app.models.credential import Credential
 from apps.api.app.core.database import AsyncSessionLocal
 from sqlalchemy import select
@@ -14,17 +14,17 @@ class CredentialVault:
             if not credential:
                 raise ValueError("Credential not found")
                 
-            decrypted_json = encryption_service.decrypt(credential.encrypted_data)
+            decrypted_json = encryption_service.decrypt(cast(str, credential.encrypted_data))
             return json.loads(decrypted_json)
 
-    async def store_credential(self, name: str, type: str, data: Dict[str, Any], metadata: Dict[str, Any] = None):
+    async def store_credential(self, name: str, type: str, data: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None):
         async with AsyncSessionLocal() as db:
             encrypted_data = encryption_service.encrypt(json.dumps(data))
             new_cred = Credential(
                 name=name,
                 type=type,
                 encrypted_data=encrypted_data,
-                metadata=metadata
+                meta=metadata
             )
             db.add(new_cred)
             await db.commit()

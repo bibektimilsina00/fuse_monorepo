@@ -1,0 +1,19 @@
+{
+  "include": [
+    "apps"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "apps/api",
+      "extraPaths": [
+        "../.."
+      ]
+    },
+    {
+      "root": "apps/worker",
+      "extraPaths": [
+        "../.."
+      ]
+    }
+  ]
+}

@@ -11,6 +11,6 @@ class Credential(Base):
     # Encrypted JSON data
     encrypted_data = Column(String, nullable=False)
     # Metadata for the credential (e.g. expiration info)
-    metadata = Column(JSON, nullable=True)
+    meta = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

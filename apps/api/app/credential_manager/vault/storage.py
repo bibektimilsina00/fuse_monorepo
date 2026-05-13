@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional, cast
 from apps.api.app.credential_manager.encryption.aes import aes_service
 from apps.api.app.models.credential import Credential
 from apps.api.app.core.database import AsyncSessionLocal
@@ -13,17 +13,17 @@ class VaultStorage:
             if not credential:
                 raise ValueError("Credential not found")
             
-            decrypted_str = aes_service.decrypt(credential.encrypted_data)
+            decrypted_str = aes_service.decrypt(cast(str, credential.encrypted_data))
             return json.loads(decrypted_str)
 
-    async def save_encrypted(self, name: str, type: str, data: Dict[str, Any], metadata: Dict[str, Any] = None):
+    async def save_encrypted(self, name: str, type: str, data: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None):
         async with AsyncSessionLocal() as db:
             encrypted_data = aes_service.encrypt(json.dumps(data))
             credential = Credential(
                 name=name,
                 type=type,
                 encrypted_data=encrypted_data,
-                metadata=metadata
+                meta=metadata
             )
             db.add(credential)
             await db.commit()

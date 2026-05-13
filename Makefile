@@ -12,7 +12,20 @@ db-up:
 	docker-compose up -d db redis
 
 migrate:
-	cd apps/api && uv run alembic upgrade head
+	cd apps/api && PYTHONPATH=../.. uv run alembic upgrade head
+
+api:
+	cd apps/api && PYTHONPATH=../.. uv run uvicorn app.main:app --reload --port 8000
+
+worker:
+	cd apps/worker && PYTHONPATH=../.. uv run celery -A app.jobs.tasks worker --loglevel=info
+
+dev-all:
+	make db-up
+	make migrate
+	@echo "🚀 Infrastructure ready. Starting frontend..."
+	@echo "💡 Note: You still need to run 'make api' and 'make worker' in separate tabs."
+	pnpm dev
 
 lint: lint-py lint-js
 
