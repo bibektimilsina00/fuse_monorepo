@@ -1,41 +1,49 @@
 import asyncio
-import os
+import uuid
 
-from celery import Celery
+from apps.api.app.core.celery import celery_app
+from apps.api.app.core.logger import get_logger
 
-from apps.worker.app.browser.service import browser_service
-
-app = Celery("fuse_worker", broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"))
-
-
-async def _execute_node_async(
-    execution_id: str, node_id: str, node_type: str, properties: dict, input_data: dict
-):
-    print(f"Executing node {node_id} ({node_type}) for execution {execution_id}")
-
-    result = {"status": "success", "data": {}}
-
-    if node_type == "action.http_request":
-        import httpx
-
-        url = properties.get("url")
-        method = properties.get("method", "GET")
-        async with httpx.AsyncClient() as client:
-            response = await client.request(method, url)
-            result["data"] = response.json()
-
-    elif node_type == "browser.open_page":
-        url = properties.get("url")
-        content = await browser_service.run_task(url, action_type="content")
-        result["data"] = {"content": content}
-
-    return result
+logger = get_logger(__name__)
 
 
-@app.task(name="execute_node")
-def execute_node(
-    execution_id: str, node_id: str, node_type: str, properties: dict, input_data: dict
-):
-    return asyncio.run(
-        _execute_node_async(execution_id, node_id, node_type, properties, input_data)
-    )
+@celery_app.task(name="execute_workflow", bind=True, max_retries=3)
+def execute_workflow(self, execution_id: str, workflow_id: str, graph: dict, trigger_data: dict):
+    """Main workflow execution task. Runs async WorkflowRunner in sync Celery context."""
+    try:
+        asyncio.run(_run_workflow(execution_id, workflow_id, graph, trigger_data))
+    except Exception as e:
+        logger.error(f"execute_workflow task failed: {e}", exc_info=True)
+        raise self.retry(exc=e, countdown=2**self.request.retries) from e
+
+
+async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigger_data: dict):
+    from apps.api.app.core.database import AsyncSessionLocal
+    from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
+    from apps.api.app.repositories.execution_repository import ExecutionRepository
+
+    async with AsyncSessionLocal() as db:
+        repo = ExecutionRepository(db)
+
+        # Mark running
+        await repo.update_status(uuid.UUID(execution_id), "running")
+        await repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
+
+        try:
+            runner = WorkflowRunner(
+                workflow_id=workflow_id,
+                execution_id=execution_id,
+                graph=graph,
+            )
+            output = await runner.run(trigger_data)
+
+            await repo.update_status(uuid.UUID(execution_id), "completed", output_data=output)
+            await repo.add_log(
+                uuid.UUID(execution_id), "Workflow execution completed", level="info"
+            )
+
+        except Exception as e:
+            logger.error(f"Workflow {workflow_id} failed: {e}", exc_info=True)
+            await repo.update_status(uuid.UUID(execution_id), "failed")
+            await repo.add_log(uuid.UUID(execution_id), f"Workflow failed: {str(e)}", level="error")
+            raise

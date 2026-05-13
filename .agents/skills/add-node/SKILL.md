@@ -139,9 +139,10 @@ export const NODE_REGISTRY: NodeDefinition[] = [
 ### BaseNode Structure
 
 ```python
-from typing import Any, Dict, List
-from apps.api.app.node_system.base.node import BaseNode, NodeMetadata
-from apps.api.app.node_system.base.execution_contract import NodeContext, NodeResult
+from apps.api.app.node_system.base.base_node import BaseNode
+from apps.api.app.node_system.base.node_metadata import NodeMetadata
+from apps.api.app.node_system.base.node_context import NodeContext
+from apps.api.app.node_system.base.node_result import NodeResult
 from apps.api.app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -269,8 +270,10 @@ export const SlackSendMessageNode: NodeDefinition = {
 
 ```python
 from typing import Any, Dict
-from apps.api.app.node_system.base.node import BaseNode, NodeMetadata
-from apps.api.app.node_system.base.execution_contract import NodeContext, NodeResult
+from apps.api.app.node_system.base.base_node import BaseNode
+from apps.api.app.node_system.base.node_metadata import NodeMetadata
+from apps.api.app.node_system.base.node_context import NodeContext
+from apps.api.app.node_system.base.node_result import NodeResult
 from apps.api.app.core.logger import get_logger
 
 logger = get_logger(__name__)

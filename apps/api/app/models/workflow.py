@@ -1,6 +1,9 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from apps.api.app.models.user import User
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -28,8 +31,10 @@ class Workflow(Base):
         onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
-    
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user.id"), nullable=False
+    )
+
     user: Mapped["User"] = relationship("User", back_populates="workflows")
     executions: Mapped[list["Execution"]] = relationship(
         "Execution", back_populates="workflow", cascade="all, delete-orphan"

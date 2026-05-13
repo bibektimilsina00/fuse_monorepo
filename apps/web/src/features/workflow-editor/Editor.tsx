@@ -1,6 +1,6 @@
 import ReactFlow, { Background, Controls, Panel } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { useWorkflowStore } from '@/stores/workflowStore'
+import { useWorkflowStore } from '@/stores/workflow-store'
 import { NODE_REGISTRY } from '@/nodes/registry'
 
 export default function Editor() {

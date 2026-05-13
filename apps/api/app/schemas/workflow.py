@@ -1,33 +1,31 @@
-from pydantic import BaseModel, Field
-from uuid import UUID
+import uuid
 from datetime import datetime
-from typing import Any, Optional, List
 
-class WorkflowBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-    graph: dict[str, Any] = Field(default_factory=lambda: {"nodes": [], "edges": []})
+from pydantic import BaseModel, Field
 
-class WorkflowCreate(WorkflowBase):
-    pass
+
+class WorkflowCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    graph: dict = Field(default_factory=lambda: {"nodes": [], "edges": []})
+
 
 class WorkflowUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-    graph: Optional[dict[str, Any]] = None
-    is_active: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    graph: dict | None = None
+    is_active: bool | None = None
 
-class WorkflowOut(WorkflowBase):
-    id: UUID
-    user_id: UUID
-    is_active: bool
+
+class WorkflowOut(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    description: str | None
     schema_version: str
+    graph: dict
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
-class WorkflowList(BaseModel):
-    items: List[WorkflowOut]
-    total: int
+    model_config = {"from_attributes": True}

@@ -26,6 +26,9 @@ export interface NodeDefinition {
   credentialType?: string; // e.g. 'slack_oauth'
 }
 
+import { HttpRequestNode } from './http';
+import { ConditionNode, DelayNode } from './logic';
+
 export const NODE_REGISTRY: NodeDefinition[] = [
   {
     type: 'trigger.webhook',
@@ -38,46 +41,7 @@ export const NODE_REGISTRY: NodeDefinition[] = [
     inputs: 0,
     outputs: 1
   },
-  {
-    type: 'action.http_request',
-    name: 'HTTP Request',
-    category: 'integration',
-    description: 'Send an HTTP request to any API',
-    properties: [
-      { name: 'url', label: 'URL', type: 'string', required: true },
-      { name: 'method', label: 'Method', type: 'options', default: 'GET', options: [
-        { label: 'GET', value: 'GET' },
-        { label: 'POST', value: 'POST' },
-        { label: 'PUT', value: 'PUT' },
-        { label: 'DELETE', value: 'DELETE' }
-      ]},
-      { name: 'body', label: 'Body', type: 'json' }
-    ],
-    inputs: 1,
-    outputs: 1
-  },
-  {
-    type: 'action.slack_send_message',
-    name: 'Send Slack Message',
-    category: 'integration',
-    description: 'Send a message to a Slack channel',
-    credentialType: 'slack_oauth',
-    properties: [
-      { name: 'channel', label: 'Channel ID', type: 'string', required: true },
-      { name: 'text', label: 'Message Text', type: 'string', required: true }
-    ],
-    inputs: 1,
-    outputs: 1
-  },
-  {
-    type: 'browser.open_page',
-    name: 'Open Browser Page',
-    category: 'browser',
-    description: 'Open a URL in a headless browser',
-    properties: [
-      { name: 'url', label: 'URL', type: 'string', required: true }
-    ],
-    inputs: 1,
-    outputs: 1
-  }
+  HttpRequestNode,
+  DelayNode,
+  ConditionNode,
 ];

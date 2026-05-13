@@ -1,5 +1,5 @@
-import { Node, Edge, Connection, addEdge } from 'reactflow';
-import { useWorkflowStore } from './stores/workflowStore';
+import { addEdge } from 'reactflow';
+import type { Node, Edge, Connection } from 'reactflow';
 
 export class CanvasEngine {
   static onConnect(params: Connection, edges: Edge[]): Edge[] {
@@ -18,7 +18,7 @@ export class CanvasEngine {
     };
   }
 
-  static validateConnection(connection: Connection, nodes: Node[]): boolean {
+  static validateConnection(connection: Connection): boolean {
     // Basic cycle detection or port validation
     return connection.source !== connection.target;
   }

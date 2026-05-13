@@ -1,7 +1,8 @@
 from typing import Any
 
 from apps.api.app.core.logger import get_logger
-from apps.api.app.node_system.base.execution_contract import NodeContext, NodeResult
+from apps.api.app.node_system.base.node_context import NodeContext
+from apps.api.app.node_system.base.node_result import NodeResult
 from apps.api.app.node_system.registry.registry import node_registry
 
 logger = get_logger(__name__)

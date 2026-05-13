@@ -1,6 +1,8 @@
 from typing import Any
 
-from apps.api.app.node_system.base.node import BaseNode
+from apps.api.app.node_system.base.base_node import BaseNode
+from apps.api.app.node_system.builtins.http_request import HttpRequestNode
+from apps.api.app.node_system.builtins.webhook import WebhookTriggerNode
 
 
 class NodeRegistry:
@@ -21,3 +23,7 @@ class NodeRegistry:
 
 
 node_registry = NodeRegistry()
+
+# Register builtin nodes
+node_registry.register(HttpRequestNode)
+node_registry.register(WebhookTriggerNode)

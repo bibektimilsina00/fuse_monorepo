@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { useWorkflowStore } from './stores/workflowStore';
+import { useWorkflowStore } from '@/stores/workflow-store';
 import { CanvasEngine } from './canvas-engine';
-import { Connection, NodeChange, EdgeChange } from 'reactflow';
+import type { Connection } from 'reactflow';
 
 export const useWorkflow = () => {
   const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange } = useWorkflowStore();
@@ -12,10 +12,10 @@ export const useWorkflow = () => {
   }, [nodes, setNodes]);
 
   const onConnect = useCallback((params: Connection) => {
-    if (CanvasEngine.validateConnection(params, nodes)) {
+    if (CanvasEngine.validateConnection(params)) {
       setEdges(CanvasEngine.onConnect(params, edges));
     }
-  }, [nodes, edges, setEdges]);
+  }, [edges, setEdges]);
 
   return {
     nodes,

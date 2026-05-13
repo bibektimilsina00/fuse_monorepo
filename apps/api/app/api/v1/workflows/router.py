@@ -1,94 +1,81 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import UUID
-from typing import List
+import uuid
 
-from apps.api.app.api.deps import get_db
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from apps.api.app.api.v1.auth.dependencies import get_current_user
+from apps.api.app.core.database import get_db
 from apps.api.app.models.user import User
-from apps.api.app.schemas.workflow import WorkflowCreate, WorkflowUpdate, WorkflowOut, WorkflowList
+from apps.api.app.schemas.workflow import WorkflowCreate, WorkflowOut, WorkflowUpdate
 from apps.api.app.services.workflow_service import WorkflowService
 
 router = APIRouter()
 
-@router.post("/", response_model=WorkflowOut, status_code=status.HTTP_201_CREATED)
-async def create_workflow(
-    workflow_in: WorkflowCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    service = WorkflowService(db)
-    return await service.create_workflow(user_id=current_user.id, workflow_in=workflow_in)
 
-@router.get("/", response_model=WorkflowList)
+@router.get("/", response_model=list[WorkflowOut])
 async def list_workflows(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = WorkflowService(db)
-    workflows = await service.list_workflows(user_id=current_user.id)
-    return {"items": workflows, "total": len(workflows)}
+    return await service.list_workflows(current_user)
+
+
+@router.post("/", response_model=WorkflowOut, status_code=status.HTTP_201_CREATED)
+async def create_workflow(
+    data: WorkflowCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkflowService(db)
+    return await service.create_workflow(data, current_user)
+
 
 @router.get("/{workflow_id}", response_model=WorkflowOut)
 async def get_workflow(
-    workflow_id: UUID,
+    workflow_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = WorkflowService(db)
-    workflow = await service.get_workflow(workflow_id=workflow_id, user_id=current_user.id)
-    if not workflow:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found or access denied"
-        )
-    return workflow
+    return await service.get_workflow(workflow_id, current_user)
+
 
 @router.put("/{workflow_id}", response_model=WorkflowOut)
 async def update_workflow(
-    workflow_id: UUID,
-    workflow_in: WorkflowUpdate,
+    workflow_id: uuid.UUID,
+    data: WorkflowUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = WorkflowService(db)
-    workflow = await service.update_workflow(
-        workflow_id=workflow_id, user_id=current_user.id, workflow_in=workflow_in
-    )
-    if not workflow:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found or access denied"
-        )
-    return workflow
+    return await service.update_workflow(workflow_id, data, current_user)
+
 
 @router.delete("/{workflow_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workflow(
-    workflow_id: UUID,
+    workflow_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = WorkflowService(db)
-    success = await service.delete_workflow(workflow_id=workflow_id, user_id=current_user.id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found or access denied"
-        )
-    return None
+    await service.delete_workflow(workflow_id, current_user)
 
-@router.post("/{workflow_id}/run", status_code=status.HTTP_202_ACCEPTED)
+
+@router.post("/{workflow_id}/run")
 async def run_workflow(
-    workflow_id: UUID,
+    workflow_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    # This will be implemented in Phase 3/4
     service = WorkflowService(db)
-    workflow = await service.get_workflow(workflow_id=workflow_id, user_id=current_user.id)
-    if not workflow:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found or access denied"
-        )
-    return {"execution_id": "manual-run-pending"}
+    workflow = await service.get_workflow(workflow_id, current_user)
+
+    from apps.api.app.execution_engine.engine import execution_engine
+
+    execution_id = await execution_engine.trigger_workflow(
+        workflow_id=workflow.id,
+        graph=workflow.graph,
+        trigger_type="manual",
+    )
+    return {"execution_id": str(execution_id)}

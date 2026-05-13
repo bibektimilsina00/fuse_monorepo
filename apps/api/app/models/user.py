@@ -1,5 +1,9 @@
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from apps.api.app.models.workflow import Workflow
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -16,5 +20,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
-    
-    workflows: Mapped[list["Workflow"]] = relationship("Workflow", back_populates="user", cascade="all, delete-orphan")
+
+    workflows: Mapped[list["Workflow"]] = relationship(
+        "Workflow", back_populates="user", cascade="all, delete-orphan"
+    )
