@@ -1,0 +1,17 @@
+[project]
+name = "fuse-worker"
+version = "0.1.0"
+description = "Fuse Platform Worker"
+dependencies = [
+    "celery",
+    "redis",
+    "playwright",
+    "httpx",
+    "beautifulsoup4",
+    "python-json-logger",
+    "cryptography",
+    "pydantic",
+]
+
+[tool.uv]
+managed = true

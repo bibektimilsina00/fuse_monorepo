@@ -1,0 +1,42 @@
+from typing import Optional
+from pydantic import computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Fuse"
+    API_V1_STR: str = "/api/v1"
+    SECRET_KEY: str = "development_secret_key_change_me"
+    ENCRYPTION_KEY: str = "32_byte_base64_encryption_key_here"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "fuse"
+
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def async_sqlalchemy_database_uri(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def celery_broker_url(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def celery_result_backend(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+
+
+settings = Settings()

@@ -1,0 +1,63 @@
+# ── Version control ───────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[oc]
+*.egg-info/
+.venv/
+venv/
+.uv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+.turbo/
+apps/web/dist/
+apps/web/.vite/
+*.tsbuildinfo
+
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Docs & Planning ───────────────────────────────────────────────────────────
+docs/
+*.md
+LICENSE
+
+# ── Dev tooling ───────────────────────────────────────────────────────────────
+.editorconfig
+.nvmrc
+.pre-commit-config.yaml
+.python-version
+Makefile
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+tests/
+playwright-report/
+test-results/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+tempfile/
+.claude/
+docker-compose*.yml

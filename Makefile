@@ -1,0 +1,37 @@
+.PHONY: setup dev build lint lint-py lint-js test clean db-up migrate docker-build docker-up
+
+setup:
+	pnpm install
+	cd apps/api && uv sync
+	cd apps/worker && uv sync
+
+dev:
+	pnpm dev
+
+db-up:
+	docker-compose up -d db redis
+
+migrate:
+	cd apps/api && uv run alembic upgrade head
+
+lint: lint-py lint-js
+
+lint-py:
+	uv run --project apps/api ruff check . --fix
+	uv run --project apps/api ruff format .
+
+lint-js:
+	pnpm --filter web lint
+
+type-check:
+	pnpm --filter web exec tsc --noEmit
+
+docker-build:
+	docker-compose build
+
+docker-up:
+	docker-compose up -d
+
+clean:
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
