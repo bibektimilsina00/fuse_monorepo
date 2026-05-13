@@ -28,6 +28,9 @@ class Workflow(Base):
         onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
 
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    
+    user: Mapped["User"] = relationship("User", back_populates="workflows")
     executions: Mapped[list["Execution"]] = relationship(
         "Execution", back_populates="workflow", cascade="all, delete-orphan"
     )

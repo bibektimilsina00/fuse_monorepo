@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.app.models.base import Base
 
@@ -16,3 +16,5 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
+    
+    workflows: Mapped[list["Workflow"]] = relationship("Workflow", back_populates="user", cascade="all, delete-orphan")
