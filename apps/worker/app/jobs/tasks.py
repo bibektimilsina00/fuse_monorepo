@@ -22,28 +22,33 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
     from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
     from apps.api.app.repositories.execution_repository import ExecutionRepository
 
+    # 1. Setup Phase: Mark running
     async with AsyncSessionLocal() as db:
         repo = ExecutionRepository(db)
-
-        # Mark running
         await repo.update_status(uuid.UUID(execution_id), "running")
         await repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
 
-        try:
-            runner = WorkflowRunner(
-                workflow_id=workflow_id,
-                execution_id=execution_id,
-                graph=graph,
-            )
-            output = await runner.run(trigger_data)
+    # 2. Execution Phase: Run the runner (No DB session held here)
+    try:
+        runner = WorkflowRunner(
+            workflow_id=workflow_id,
+            execution_id=execution_id,
+            graph=graph,
+        )
+        output = await runner.run(trigger_data)
 
+        # 3. Finish Phase: Mark completed
+        async with AsyncSessionLocal() as db:
+            repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "completed", output_data=output)
             await repo.add_log(
                 uuid.UUID(execution_id), "Workflow execution completed", level="info"
             )
 
-        except Exception as e:
-            logger.error(f"Workflow {workflow_id} failed: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Workflow {workflow_id} failed: {e}", exc_info=True)
+        async with AsyncSessionLocal() as db:
+            repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "failed")
             await repo.add_log(uuid.UUID(execution_id), f"Workflow failed: {str(e)}", level="error")
-            raise
+        raise

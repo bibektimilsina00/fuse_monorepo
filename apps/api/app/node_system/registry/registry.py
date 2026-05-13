@@ -1,6 +1,8 @@
 from typing import Any
 
 from apps.api.app.node_system.base.base_node import BaseNode
+from apps.api.app.node_system.builtins.condition import ConditionNode
+from apps.api.app.node_system.builtins.delay import DelayNode
 from apps.api.app.node_system.builtins.http_request import HttpRequestNode
 from apps.api.app.node_system.builtins.webhook import WebhookTriggerNode
 
@@ -27,3 +29,5 @@ node_registry = NodeRegistry()
 # Register builtin nodes
 node_registry.register(HttpRequestNode)
 node_registry.register(WebhookTriggerNode)
+node_registry.register(DelayNode)
+node_registry.register(ConditionNode)

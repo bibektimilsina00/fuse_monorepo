@@ -15,8 +15,11 @@ class WorkflowRunner:
         self.nodes = {node["id"]: node for node in graph.get("nodes", [])}
         self.edges = graph.get("edges", [])
         self.executed_nodes: dict[str, Any] = {}
+        self.node_outputs: dict[str, dict[str, Any]] = {}
+        self.trigger_data: dict[str, Any] = {}
 
     async def run(self, trigger_data: dict[str, Any]) -> dict:
+        self.trigger_data = trigger_data
         logger.info(f"Starting workflow execution {self.execution_id}")
 
         # 1. Find start nodes (nodes with no incoming edges)
@@ -30,9 +33,9 @@ class WorkflowRunner:
             await self._execute_node_recursive(node_id, trigger_data)
 
         # Return output of last executed nodes
-        if self.executed_nodes:
-            last_node = list(self.executed_nodes.values())[-1]
-            return last_node.output_data if last_node.success else {}
+        if self.node_outputs:
+            last_node_id = list(self.node_outputs.keys())[-1]
+            return self.node_outputs[last_node_id]
         return {}
 
     def _get_start_nodes(self) -> list[str]:
@@ -44,6 +47,17 @@ class WorkflowRunner:
             return
 
         node_data = self.nodes[node_id]
+
+        # Resolve templates in properties BEFORE executing
+        from apps.api.app.execution_engine.engine.template_resolver import TemplateResolver
+
+        resolver = TemplateResolver(
+            node_outputs=self.node_outputs,
+            trigger_data=self.trigger_data,
+        )
+        raw_properties = node_data.get("data", {}).get("properties", {})
+        resolved_properties = resolver.resolve_properties(raw_properties)
+
         context = NodeContext(
             execution_id=self.execution_id,
             workflow_id=self.workflow_id,
@@ -54,7 +68,7 @@ class WorkflowRunner:
         result = await node_executor.execute_node(
             node_type=node_data["type"],
             node_id=node_id,
-            properties=node_data.get("data", {}).get("properties", {}),
+            properties=resolved_properties,  # Pass resolved properties
             input_data=input_data,
             context=context,
         )
@@ -62,6 +76,9 @@ class WorkflowRunner:
         self.executed_nodes[node_id] = result
 
         if result.success:
+            # Store output for future interpolation
+            self.node_outputs[node_id] = result.output_data
+
             # Find next nodes
             branch = result.output_data.get("branch")
             next_edges = [edge for edge in self.edges if edge["source"] == node_id]

@@ -1,4 +1,4 @@
-import type { NodeDefinition } from './registry'
+import type { NodeDefinition } from './types'
 
 export const HttpRequestNode: NodeDefinition = {
   type: 'action.http_request',
