@@ -1,6 +1,9 @@
-from apps.api.app.integrations.base.base import OAuthIntegration
+from typing import Any
+
 import httpx
-from typing import Any, Dict
+
+from apps.api.app.integrations.base.base import OAuthIntegration
+
 
 class SlackIntegration(OAuthIntegration):
     provider_id = "slack"
@@ -11,11 +14,11 @@ class SlackIntegration(OAuthIntegration):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://slack.com/api/auth.test",
-                headers={"Authorization": f"Bearer {self.access_token}"}
+                headers={"Authorization": f"Bearer {self.access_token}"},
             )
             return response.json().get("ok", False)
 
-    async def refresh_token(self) -> Dict[str, Any]:
+    async def refresh_token(self) -> dict[str, Any]:
         # Implementation for OAuth token refresh via Slack API
         return {"access_token": "new_mock_token"}
 
@@ -24,7 +27,7 @@ class SlackIntegration(OAuthIntegration):
             response = await client.post(
                 "https://slack.com/api/chat.postMessage",
                 headers={"Authorization": f"Bearer {self.access_token}"},
-                json={"channel": channel, "text": text}
+                json={"channel": channel, "text": text},
             )
             response.raise_for_status()
             return response.json()

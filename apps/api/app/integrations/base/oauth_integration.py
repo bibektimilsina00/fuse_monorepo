@@ -1,16 +1,18 @@
 from abc import abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
+
 from apps.api.app.integrations.base.base_integration import BaseIntegration
 
+
 class OAuthIntegration(BaseIntegration):
-    def __init__(self, credentials: Dict[str, Any]):
+    def __init__(self, credentials: dict[str, Any]):
         super().__init__(credentials)
         self.access_token = credentials.get("access_token")
         self.refresh_token = credentials.get("refresh_token")
         self.expires_at = credentials.get("expires_at")
 
     @abstractmethod
-    async def refresh_access_token(self) -> Dict[str, Any]:
+    async def refresh_access_token(self) -> dict[str, Any]:
         """Logic to refresh OAuth token"""
         pass
 

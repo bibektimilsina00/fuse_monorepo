@@ -1,14 +1,18 @@
-from pydantic import BaseModel, UUID4
-from typing import List, Optional, Dict, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import UUID4, BaseModel
+
 
 class WorkflowBase(BaseModel):
     name: str
-    description: Optional[str] = None
-    graph: Dict[str, Any]
+    description: str | None = None
+    graph: dict[str, Any]
+
 
 class WorkflowCreate(WorkflowBase):
     pass
+
 
 class WorkflowOut(WorkflowBase):
     id: UUID4

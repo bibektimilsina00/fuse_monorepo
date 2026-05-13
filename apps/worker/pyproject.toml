@@ -23,6 +23,8 @@ src = ["../.."]
 
 [tool.pyright]
 extraPaths = ["../.."]
+venvPath = "../../"
+venv = ".venv"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

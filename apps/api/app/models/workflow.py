@@ -1,43 +1,69 @@
-from sqlalchemy import Column, String, JSON, DateTime, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from apps.api.app.models.base import Base
 
+
 class Workflow(Base):
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    schema_version = Column(String, default="1.0.0")
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    schema_version: Mapped[str] = mapped_column(String, default="1.0.0")
     # Store the React Flow graph (nodes and edges)
-    graph = Column(JSON, nullable=False, default={"nodes": [], "edges": []})
-    is_active = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    executions = relationship("Execution", back_populates="workflow", cascade="all, delete-orphan")
+    graph: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default={"nodes": [], "edges": []}
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    executions: Mapped[list["Execution"]] = relationship(
+        "Execution", back_populates="workflow", cascade="all, delete-orphan"
+    )
+
 
 class Execution(Base):
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflow.id"), nullable=False)
-    status = Column(String, default="pending") # pending, running, completed, failed
-    trigger_type = Column(String, nullable=False) # manual, webhook, cron
-    input_data = Column(JSON, nullable=True)
-    output_data = Column(JSON, nullable=True)
-    started_at = Column(DateTime, nullable=True)
-    finished_at = Column(DateTime, nullable=True)
-    
-    workflow = relationship("Workflow", back_populates="executions")
-    logs = relationship("ExecutionLog", back_populates="execution", cascade="all, delete-orphan")
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workflow.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String, default="pending"
+    )  # pending, running, completed, failed
+    trigger_type: Mapped[str] = mapped_column(String, nullable=False)  # manual, webhook, cron
+    input_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    output_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="executions")
+    logs: Mapped[list["ExecutionLog"]] = relationship(
+        "ExecutionLog", back_populates="execution", cascade="all, delete-orphan"
+    )
+
 
 class ExecutionLog(Base):
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    execution_id = Column(UUID(as_uuid=True), ForeignKey("execution.id"), nullable=False)
-    node_id = Column(String, nullable=True)
-    level = Column(String, default="info") # info, warn, error
-    message = Column(String, nullable=False)
-    payload = Column(JSON, nullable=True)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    execution = relationship("Execution", back_populates="logs")
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    execution_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("execution.id"), nullable=False
+    )
+    node_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    level: Mapped[str] = mapped_column(String, default="info")  # info, warn, error
+    message: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+
+    execution: Mapped["Execution"] = relationship("Execution", back_populates="logs")

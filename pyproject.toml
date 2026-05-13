@@ -9,7 +9,12 @@ src = ["."]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+]

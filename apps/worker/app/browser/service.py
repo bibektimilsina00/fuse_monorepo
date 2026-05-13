@@ -1,7 +1,9 @@
-from playwright.async_api import async_playwright
 import logging
 
+from playwright.async_api import async_playwright
+
 logger = logging.getLogger("fuse.worker.browser")
+
 
 class BrowserService:
     def __init__(self):
@@ -24,10 +26,10 @@ class BrowserService:
     async def run_task(self, url: str, action_type: str = "screenshot"):
         if not self.browser:
             await self.start()
-        
+
         context = await self.browser.new_context()
         page = await context.new_page()
-        
+
         try:
             await page.goto(url)
             if action_type == "screenshot":
@@ -37,5 +39,6 @@ class BrowserService:
             # Add more actions as needed
         finally:
             await context.close()
+
 
 browser_service = BrowserService()
