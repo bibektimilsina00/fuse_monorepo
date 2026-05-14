@@ -13,8 +13,7 @@ import { cn } from '@/lib/utils'
 import { 
   ToolbarButton, 
   OptionItem, 
-  DataNode, 
-  PRISM_THEME 
+  DataNode
 } from '../../components/common/EditorUI'
 
 type TabType = 'Output' | 'Input'
@@ -23,7 +22,11 @@ interface LogInspectorProps {
   isCollapsed: boolean
   outputWidth: number
   toggleCollapse: () => void
-  widthResizerProps: any
+  widthResizerProps: {
+    onPointerDown: (e: React.PointerEvent) => void
+    onPointerMove: (e: React.PointerEvent) => void
+    onPointerUp: (e: React.PointerEvent) => void
+  }
 }
 
 export const LogInspector = React.memo(({ 
