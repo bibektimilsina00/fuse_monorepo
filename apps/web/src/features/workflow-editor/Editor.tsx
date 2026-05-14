@@ -1,15 +1,18 @@
 import React, { useRef, useState } from 'react'
 import ReactFlow, {
   ReactFlowProvider,
-  SelectionMode
+  SelectionMode,
+  ConnectionLineType,
+  Background
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 
-import { EditorInspector } from './panels/inspector/EditorInspector'
-import { EditorLogs } from './panels/logs-panel/EditorLogs'
-import { WorkflowControls } from './controls/WorkflowControls'
-import { useWorkflow } from './hooks/use-workflow'
-import { useResizable } from './hooks/use-resizable'
+import { EditorInspector } from '@/features/workflow-editor/panels/inspector/EditorInspector'
+import { EditorLogs } from '@/features/workflow-editor/panels/logs-panel/EditorLogs'
+import { WorkflowControls } from '@/features/workflow-editor/controls/WorkflowControls'
+import { useWorkflow } from '@/features/workflow-editor/hooks/use-workflow'
+import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
+import { NODE_REGISTRY } from '@/nodes/registry'
 
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 600
@@ -42,6 +45,9 @@ export default function Editor() {
   )
 }
 
+import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
+import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
+
 function EditorContent() {
   const {
     nodes,
@@ -49,6 +55,7 @@ function EditorContent() {
     onNodesChange,
     onEdgesChange,
     onConnect,
+    onNodeClick,
     onDragOver,
     onDrop,
     reactFlowWrapper,
@@ -56,26 +63,71 @@ function EditorContent() {
     setMode,
   } = useWorkflow()
 
+  // Generate nodeTypes from NODE_REGISTRY dynamically so any node type uses CustomNode
+  const dynamicNodeTypes = React.useMemo(() => {
+    const types: Record<string, any> = {}
+    NODE_REGISTRY.forEach(node => {
+      if (node.type === 'logic.condition') {
+        types[node.type] = ConditionNode
+      } else {
+        types[node.type] = CustomNode
+      }
+    })
+    return types
+  }, [])
+
+  const [connectionColor, setConnectionColor] = React.useState('var(--workflow-edge, #555)')
+
+  const onConnectStart = React.useCallback((_: any, { handleId }: any) => {
+    if (handleId === 'error') {
+      setConnectionColor('#ff4d4f')
+    } else {
+      setConnectionColor('var(--workflow-edge, #555)')
+    }
+  }, [])
+
+  const onConnectEnd = React.useCallback(() => {
+    setConnectionColor('var(--workflow-edge)')
+  }, [])
+
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg)] relative overflow-hidden">
       <div className="flex-1 relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={dynamicNodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
           onDragOver={onDragOver}
           onDrop={onDrop}
+          onConnectStart={onConnectStart}
+          onConnectEnd={onConnectEnd}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            style: { strokeWidth: 2 }
+          }}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          connectionLineStyle={{
+            stroke: connectionColor,
+            strokeWidth: 2,
+            transition: 'stroke 0.2s ease'
+          }}
           panOnDrag={mode === 'pan'}
           selectionOnDrag={mode === 'select'}
           panOnScroll={mode === 'select'}
           selectionMode={mode === 'select' ? SelectionMode.Full : SelectionMode.Partial}
           fitView
-          snapToGrid
-          snapGrid={[15, 15]}
+          fitViewOptions={{ maxZoom: 0.8, padding: 0.2 }}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+          snapToGrid={false}
+          snapGrid={[10, 10]}
           style={{ background: 'var(--bg)' }}
-        />
+        >
+          <Background color="#222" gap={20} />
+        </ReactFlow>
         <WorkflowControls mode={mode} onModeChange={setMode} />
       </div>
       <EditorLogs />

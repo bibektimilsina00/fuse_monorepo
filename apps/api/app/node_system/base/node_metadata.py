@@ -11,4 +11,5 @@ class NodeMetadata(BaseModel):
     properties: list[dict[str, Any]]
     inputs: int
     outputs: int
+    allow_error: bool = False
     credential_type: str | None = None

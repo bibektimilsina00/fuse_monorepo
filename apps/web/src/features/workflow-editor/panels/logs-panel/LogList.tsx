@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { LogEntry, StartIcon, ApiIcon } from '../../components/common/EditorUI'
+import { LogEntry, StartIcon, ApiIcon } from '@/features/workflow-editor/components/common/EditorUI'
 
 interface LogListProps {
   isCollapsed: boolean

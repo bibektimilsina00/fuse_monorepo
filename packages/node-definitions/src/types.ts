@@ -1,4 +1,4 @@
-export type NodePropertyType = 'string' | 'number' | 'boolean' | 'json' | 'options' | 'credential';
+export type NodePropertyType = 'string' | 'number' | 'boolean' | 'json' | 'options' | 'credential' | 'key-value' | 'list';
 
 export interface NodeProperty {
   name: string;
@@ -12,6 +12,7 @@ export interface NodeProperty {
   condition?: { field: string; value: any | any[]; not?: boolean; and?: any };
   dependsOn?: string[];
   mode?: 'basic' | 'advanced' | 'both';
+  visibility?: 'user-or-llm' | 'user-only' | 'hidden';
 }
 
 export interface NodeDefinition {
@@ -19,9 +20,11 @@ export interface NodeDefinition {
   name: string;
   category: 'trigger' | 'action' | 'logic' | 'ai' | 'browser' | 'integration';
   description: string;
-  icon?: string;
+  icon: string;
+  color?: string;
   properties: NodeProperty[];
   inputs: number;
   outputs: number;
+  allowError?: boolean;
   credentialType?: string; // e.g. 'slack_oauth'
 }

@@ -1,9 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import { useResizable } from '../../hooks/use-resizable'
-import { PRISM_THEME } from '../../components/common/EditorUI'
-import { LogList } from './LogList'
-import { LogInspector } from './LogInspector'
+import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
+import { LogList } from '@/features/workflow-editor/panels/logs-panel/LogList'
+import { LogInspector } from '@/features/workflow-editor/panels/logs-panel/LogInspector'
 
 const MIN_OUTPUT_WIDTH = 200
 const MIN_HEIGHT = 30
@@ -14,7 +13,7 @@ export const EditorLogs: React.FC = () => {
   const [height, setHeight] = useState(260)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [outputWidth, setOutputWidth] = useState(500)
-  
+
   const containerRef = useRef<HTMLElement>(null)
   const lastHeightRef = useRef(260)
 
@@ -56,8 +55,7 @@ export const EditorLogs: React.FC = () => {
       style={{ height }}
       aria-label="Terminal"
     >
-      <style>{PRISM_THEME}</style>
-      
+
       {!isCollapsed && (
         <div
           {...heightResizer}
@@ -68,7 +66,7 @@ export const EditorLogs: React.FC = () => {
 
       <div className="flex h-full w-full min-w-0 overflow-hidden">
         <LogList isCollapsed={isCollapsed} />
-        <LogInspector 
+        <LogInspector
           isCollapsed={isCollapsed}
           outputWidth={outputWidth}
           toggleCollapse={toggleCollapse}

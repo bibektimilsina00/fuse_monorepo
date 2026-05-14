@@ -5,6 +5,8 @@ export const WebhookTriggerNode: NodeDefinition = {
   name: 'Webhook Trigger',
   category: 'trigger',
   description: 'Trigger workflow via HTTP POST request',
+  icon: 'Zap',
+  color: '#10b981',
   properties: [
     {
       name: 'path',

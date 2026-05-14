@@ -3,6 +3,8 @@ import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Editor from 'react-simple-code-editor'
 import Prism from 'prismjs'
+import 'prismjs/components/prism-json'
+import '@/styles/prism.css'
 
 // --- Shared Types ---
 export interface NodeItem {
@@ -12,30 +14,20 @@ export interface NodeItem {
   color: string
 }
 
-// --- Prism Theme Constants ---
-export const PRISM_THEME = `
-  .prism-editor-wrapper {
-    font-family: var(--font-mono);
-    font-size: 13px !important;
-  }
-  .token.property, .token.attr-name { color: #7aa2f7; }
-  .token.string { color: #9ece6a; }
-  .token.number, .token.boolean { color: #f7768e; }
-  .token.operator, .token.punctuation { color: var(--text-muted); }
-  .token.keyword { color: #bb9af7; }
-  .token.null { color: #ff9e64; font-weight: bold; }
-`
+import { Tooltip } from '@/components/ui/tooltip'
 
 // --- Components ---
 
-export const ToolbarButton = memo(({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick?: () => void }) => (
-  <button
-    onClick={onClick}
-    className="p-1.5 rounded-md text-[var(--text-muted)] transition-all hover:text-white hover:bg-[var(--surface-hover)]"
-    title={label}
-  >
-    {icon}
-  </button>
+export const ToolbarButton = memo(({ icon, label, onClick, disabled = false }: { icon: React.ReactNode, label: string, onClick?: () => void, disabled?: boolean }) => (
+  <Tooltip content={label} disabled={disabled}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="p-1.5 rounded-md text-[var(--text-muted)] transition-all hover:text-white hover:bg-[var(--surface-hover)] disabled:opacity-20 disabled:cursor-not-allowed"
+    >
+      {icon}
+    </button>
+  </Tooltip>
 ))
 
 export const OptionItem = memo(({ label, checked, onClick }: { label: string, checked: boolean, onClick: () => void }) => (
@@ -102,17 +94,41 @@ export const ApiIcon = () => (
   <svg width="10" height="10" viewBox="0 0 30 30" fill="none" className="text-white"><path d="M5.61 24.39C8.5 27.28 12.47 25.47 13.56 24.39L15.72 22.22L7.78 14.28L5.61 16.44C4.53 17.53 2.72 21.5 5.61 24.39ZM5.61 24.39L2 28M24.39 5.61C21.5 2.72 17.53 4.53 16.44 5.61L14.28 7.78L22.22 15.72L24.39 13.56C25.47 12.47 27.28 8.5 24.39 5.61ZM24.39 5.61L28 2M15.72 9.22L12.83 12.11M20.78 14.28L17.89 17.17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
 )
 
-export const ToolbarItem = memo(({ label, icon, color }: NodeItem) => (
-  <div className="flex items-center gap-3 px-4 py-1.5 hover:bg-[var(--surface-hover)] transition-all cursor-grab active:cursor-grabbing group">
-    <div
-      className="flex size-6 items-center justify-center rounded-lg border border-transparent group-hover:border-white/10 shadow-sm"
-      style={{ backgroundColor: color }}
+export const ToolbarItem = memo(({ label, icon, color, type, onClick }: NodeItem & { type: string, onClick?: () => void }) => {
+  const onDragStart = (event: React.DragEvent) => {
+    event.dataTransfer.setData('application/reactflow', type)
+    event.dataTransfer.effectAllowed = 'move'
+    
+    // Set custom drag image to ensure transparency and border radius
+    const dragImg = event.currentTarget.cloneNode(true) as HTMLElement
+    dragImg.style.position = 'absolute'
+    dragImg.style.top = '-1000px'
+    dragImg.style.width = '220px'
+    dragImg.style.opacity = '0.9'
+    dragImg.style.borderRadius = '8px'
+    dragImg.style.backgroundColor = 'var(--surface-active)'
+    document.body.appendChild(dragImg)
+    event.dataTransfer.setDragImage(dragImg, 110, 15) // Centered horizontally (220/2) and vertically
+    setTimeout(() => document.body.removeChild(dragImg), 0)
+  }
+
+  return (
+    <div 
+      className="flex items-center gap-3 px-4 py-1.5 hover:bg-[var(--surface-hover)] transition-all cursor-grab active:cursor-grabbing group rounded-lg"
+      draggable
+      onDragStart={onDragStart}
+      onClick={onClick}
     >
-      <div className="text-white flex items-center justify-center">
-        {React.cloneElement(icon as React.ReactElement, { className: 'size-3' })}
+      <div
+        className="flex size-6 items-center justify-center rounded-lg border border-transparent group-hover:border-white/10 shadow-sm"
+        style={{ backgroundColor: color }}
+      >
+        <div className="text-white flex items-center justify-center">
+          {React.cloneElement(icon as React.ReactElement, { className: 'size-3' })}
+        </div>
       </div>
+      <span className="text-[13px] font-medium text-white">{label}</span>
     </div>
-    <span className="text-[13px] font-medium text-white">{label}</span>
-  </div>
-))
+  )
+})
 

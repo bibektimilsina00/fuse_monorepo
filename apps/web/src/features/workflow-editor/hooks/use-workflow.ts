@@ -1,18 +1,30 @@
 import { useCallback, useRef, useState } from 'react';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { CanvasEngine } from '../utils/canvas-engine';
+import { CanvasEngine } from '@/features/workflow-editor/utils/canvas-engine';
 import { type Connection, useReactFlow } from 'reactflow';
+import { useUIStore } from '@/stores/ui-store';
 
 export const useWorkflow = () => {
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange } = useWorkflowStore();
+  const { 
+    nodes, 
+    edges, 
+    setNodes, 
+    setEdges, 
+    onNodesChange, 
+    onEdgesChange,
+    setSelectedNodeId 
+  } = useWorkflowStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+  const { setInspectorTab } = useUIStore();
   const [mode, setMode] = useState<'select' | 'pan'>('select');
 
   const addNode = useCallback((type: string, position: { x: number, y: number }) => {
     const newNode = CanvasEngine.createNode(type, position);
     setNodes([...nodes, newNode]);
-  }, [nodes, setNodes]);
+    setSelectedNodeId(newNode.id);
+    setInspectorTab('Editor');
+  }, [nodes, setNodes, setInspectorTab, setSelectedNodeId]);
 
   const onConnect = useCallback((params: Connection) => {
     if (CanvasEngine.validateConnection(params)) {
@@ -46,6 +58,11 @@ export const useWorkflow = () => {
     [addNode, screenToFlowPosition]
   );
 
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: any) => {
+    setSelectedNodeId(node.id);
+    setInspectorTab('Editor');
+  }, [setInspectorTab, setSelectedNodeId]);
+
   return {
     nodes,
     edges,
@@ -53,6 +70,7 @@ export const useWorkflow = () => {
     onConnect,
     onNodesChange,
     onEdgesChange,
+    onNodeClick,
     onDragOver,
     onDrop,
     reactFlowWrapper,

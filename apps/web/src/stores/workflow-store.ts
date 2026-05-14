@@ -24,6 +24,10 @@ interface WorkflowState {
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
   addNode: (node: Node) => void
+  updateNodeData: (id: string, data: any) => void
+  removeNode: (id: string) => void
+  selectedNodeId: string | null
+  setSelectedNodeId: (id: string | null) => void
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -41,4 +45,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setNodes: (nodes: Node[]) => set({ nodes }),
   setEdges: (edges: Edge[]) => set({ edges }),
   addNode: (node: Node) => set({ nodes: [...get().nodes, node] }),
+  updateNodeData: (id: string, data: any) => {
+    set({
+      nodes: get().nodes.map((node) => {
+        if (node.id === id) {
+          return { ...node, data: { ...node.data, ...data } };
+        }
+        return node;
+      }),
+    });
+  },
+  removeNode: (id: string) => {
+    set({
+      nodes: get().nodes.filter((node) => node.id !== id),
+      edges: get().edges.filter((edge) => edge.source !== id && edge.target !== id),
+      selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId
+    })
+  },
+  selectedNodeId: null,
+  setSelectedNodeId: (id: string | null) => set({ selectedNodeId: id }),
 }))

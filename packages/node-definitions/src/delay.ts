@@ -5,6 +5,8 @@ export const DelayNode: NodeDefinition = {
   name: 'Delay',
   category: 'action',
   description: 'Wait for a specified number of milliseconds',
+  icon: 'Clock',
+  color: '#3b82f6',
   properties: [
     {
       name: 'milliseconds',

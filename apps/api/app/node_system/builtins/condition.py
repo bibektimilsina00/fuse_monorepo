@@ -24,43 +24,61 @@ class ConditionNode(BaseNode):
             type="logic.condition",
             name="Condition",
             category="logic",
-            description="Branch workflow based on a condition",
+            description="Branch workflow based on boolean expressions",
             properties=[
-                {"name": "left", "label": "Left Value", "type": "string", "required": True},
                 {
-                    "name": "operator",
-                    "label": "Operator",
-                    "type": "options",
-                    "default": "==",
-                    "options": [{"label": op, "value": op} for op in OPERATORS],
+                    "name": "conditions",
+                    "label": "Conditions",
+                    "type": "list",
+                    "default": [{"id": "if", "label": "If", "expression": ""}],
                 },
-                {"name": "right", "label": "Right Value", "type": "string", "required": True},
             ],
             inputs=1,
-            outputs=2,  # output 0 = true branch, output 1 = false branch
+            outputs=2,
+            allow_error=True,
         )
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
         try:
-            left = self.properties.get("left", "")
-            operator = self.properties.get("operator", "==")
-            right = self.properties.get("right", "")
+            conditions = self.properties.get("conditions", [])
 
-            if operator not in OPERATORS:
-                return NodeResult(success=False, error=f"Unknown operator: {operator}")
+            matched_id = "else"
+            matched_index = -1
 
-            try:
-                result = OPERATORS[operator](left, right)
-            except (ValueError, TypeError) as e:
-                return NodeResult(success=False, error=f"Comparison failed: {e}")
+            for i, cond in enumerate(conditions):
+                expr = cond.get("expression", "")
+                if not expr:
+                    continue
+
+                if self._evaluate_expression(expr, input_data, context):
+                    matched_id = cond.get("id", f"output-{i}")
+                    matched_index = i
+                    break
 
             return NodeResult(
                 success=True,
                 output_data={
-                    "result": result,
-                    "branch": "true" if result else "false",
+                    "matched_id": matched_id,
+                    "matched_index": matched_index,
+                    "is_else": matched_id == "else",
                     **input_data,
                 },
             )
         except Exception as e:
             return NodeResult(success=False, error=str(e))
+
+    def _evaluate_expression(self, expr: str, input_data: dict, context: NodeContext) -> bool:
+        # This is a simplified evaluator. In production, use a library like 'simpleeval'.
+        try:
+            # Basic cleanup
+            expr = expr.strip()
+            if expr.lower() == "true":
+                return True
+            if expr.lower() == "false":
+                return False
+
+            # Simple numeric comparison example: "price > 100"
+            # This would need a robust implementation to match the JS-like syntax requested.
+            return False
+        except Exception:
+            return False

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { 
   Search, 
   Plus, 
@@ -7,15 +7,19 @@ import {
   Play, 
   BookOpen,
   Send,
-  History
+  History,
+  Pencil
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUIStore, type InspectorTabType } from '@/stores/ui-store'
+import { useWorkflowStore } from '@/stores/workflow-store'
+import { NODE_REGISTRY } from '@/nodes/registry'
+import { getIcon } from '@/features/workflow-editor/utils/icon-map'
+import { Tooltip } from '@/components/ui/tooltip'
 
-import { CopilotTab } from './CopilotTab'
-import { ToolbarTab } from './ToolbarTab'
-import { EditorTab } from './EditorTab'
-
-type TabType = 'Copilot' | 'Toolbar' | 'Editor'
+import { CopilotTab } from '@/features/workflow-editor/panels/inspector/CopilotTab'
+import { ToolbarTab } from '@/features/workflow-editor/panels/inspector/ToolbarTab'
+import { EditorTab } from '@/features/workflow-editor/panels/inspector/EditorTab'
 
 interface EditorInspectorProps {
   style?: React.CSSProperties
@@ -23,7 +27,34 @@ interface EditorInspectorProps {
 }
 
 export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, className }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('Editor')
+  const { inspectorTab: activeTab, setInspectorTab: setActiveTab } = useUIStore()
+  const { nodes, selectedNodeId, updateNodeData } = useWorkflowStore()
+  const [isEditingName, setIsEditingName] = React.useState(false)
+  const [editNameValue, setEditNameValue] = React.useState('')
+  
+  const selectedNode = React.useMemo(() => 
+    nodes.find(n => n.id === selectedNodeId),
+    [nodes, selectedNodeId]
+  )
+
+  const definition = React.useMemo(() => 
+    selectedNode ? NODE_REGISTRY.find(d => d.type === selectedNode.type) : null,
+    [selectedNode]
+  )
+
+  const handleEditClick = () => {
+    if (selectedNode && definition) {
+      setEditNameValue(selectedNode.data.label || definition.name)
+      setIsEditingName(true)
+    }
+  }
+
+  const handleNameSave = () => {
+    if (selectedNode && editNameValue.trim()) {
+      updateNodeData(selectedNode.id, { label: editNameValue.trim() })
+    }
+    setIsEditingName(false)
+  }
 
   return (
     <aside
@@ -33,29 +64,37 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
       {/* Top Action Bar */}
       <div className="flex items-center justify-between p-3 gap-2">
         <div className="flex items-center gap-1.5">
-          <button className="flex items-center justify-center size-7 rounded-md bg-transparent hover:bg-[#2a2a2a] text-[#999] hover:text-white transition-all">
-            <Ellipsis className="size-3.5" />
-          </button>
-          <button className="flex items-center justify-center size-7 rounded-md bg-transparent hover:bg-[#2a2a2a] text-[#999] hover:text-white transition-all">
-            <MessageCircle className="size-3.5" />
-          </button>
+          <Tooltip content="More options">
+            <button className="flex items-center justify-center size-7 rounded-md bg-transparent hover:bg-[#2a2a2a] text-[#999] hover:text-white transition-all">
+              <Ellipsis className="size-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip content="View chat">
+            <button className="flex items-center justify-center size-7 rounded-md bg-transparent hover:bg-[#2a2a2a] text-[#999] hover:text-white transition-all">
+              <MessageCircle className="size-3.5" />
+            </button>
+          </Tooltip>
         </div>
         
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 h-[32px] rounded-lg bg-[var(--surface-3)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-medium hover:bg-[var(--surface-hover)] transition-all">
-            <Send className="w-3.5 h-3.5 text-[var(--brand-accent)]" />
-            Deploy
-          </button>
-          <button className="flex items-center gap-2 px-3 h-[32px] rounded-lg bg-[var(--brand-accent)] text-white text-[13px] font-semibold hover:bg-[var(--brand-accent-hover)] transition-all shadow-lg">
-            <Play className="w-3.5 h-3.5 fill-current" />
-            Run
-          </button>
+          <Tooltip content="Deploy workflow">
+            <button className="flex items-center gap-2 px-3 h-[32px] rounded-lg bg-[var(--surface-3)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-medium hover:bg-[var(--surface-hover)] transition-all">
+              <Send className="w-3.5 h-3.5 text-[var(--brand-accent)]" />
+              Deploy
+            </button>
+          </Tooltip>
+          <Tooltip content="Run workflow">
+            <button className="flex items-center gap-2 px-3 h-[32px] rounded-lg bg-[var(--brand-accent)] text-white text-[13px] font-semibold hover:bg-[var(--brand-accent-hover)] transition-all shadow-lg">
+              <Play className="w-3.5 h-3.5 fill-current" />
+              Run
+            </button>
+          </Tooltip>
         </div>
       </div>
 
       {/* Tabs Selector */}
       <div className="flex items-center gap-1 px-3 py-1">
-        {(['Copilot', 'Toolbar', 'Editor'] as TabType[]).map((tab) => (
+        {(['Copilot', 'Toolbar', 'Editor'] as InspectorTabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -72,22 +111,65 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
       </div>
 
       {/* Content Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 mt-2 border-y border-[var(--border-default)]">
-        <span className="text-[13px] font-bold text-white tracking-tight">
-          {activeTab === 'Copilot' ? 'New Chat' : activeTab === 'Toolbar' ? 'Toolbar' : activeTab.toUpperCase()}
-        </span>
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between px-4 py-2.5 mt-2 border-y border-[var(--border-default)] min-h-[45px]">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+          {activeTab === 'Editor' && selectedNode && definition ? (
+            <>
+              <div 
+                className="flex size-5 items-center justify-center rounded-md flex-shrink-0"
+                style={{ backgroundColor: definition.color || '#3b82f6' }}
+              >
+                {React.cloneElement(getIcon(definition.icon) as React.ReactElement, { className: 'size-3 text-white' })}
+              </div>
+              {isEditingName ? (
+                <input 
+                  autoFocus
+                  value={editNameValue}
+                  onChange={(e) => setEditNameValue(e.target.value)}
+                  onBlur={handleNameSave}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                  className="bg-[#222] rounded px-1.5 py-0.5 text-[13px] font-bold text-white w-full focus:outline-none border-none"
+                />
+              ) : (
+                <span className="text-[13px] font-bold text-white tracking-tight truncate cursor-pointer hover:text-gray-300 transition-colors" onDoubleClick={handleEditClick}>
+                  {selectedNode.data.label || definition.name}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] font-bold text-white tracking-tight">
+              {activeTab === 'Copilot' ? 'New Chat' : activeTab === 'Toolbar' ? 'Toolbar' : activeTab.toUpperCase()}
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {activeTab === 'Copilot' && (
             <>
-              <Plus className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
-              <History className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+              <Tooltip content="New chat">
+                <Plus className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+              </Tooltip>
+              <Tooltip content="Chat history">
+                <History className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+              </Tooltip>
             </>
           )}
           {activeTab === 'Toolbar' && (
-            <Search className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+            <Tooltip content="Search nodes">
+              <Search className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+            </Tooltip>
           )}
           {activeTab === 'Editor' && (
-            <BookOpen className="size-4 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+            <>
+              {!isEditingName && selectedNode && (
+                <Tooltip content="Rename node">
+                  <Pencil onClick={handleEditClick} className="size-3.5 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+                </Tooltip>
+              )}
+              <Tooltip content="Open documentation">
+                <BookOpen className="size-4 text-[var(--text-muted)] hover:text-white cursor-pointer transition-colors" />
+              </Tooltip>
+            </>
           )}
         </div>
       </div>

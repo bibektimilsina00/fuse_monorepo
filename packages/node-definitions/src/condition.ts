@@ -4,27 +4,20 @@ export const ConditionNode: NodeDefinition = {
   type: 'logic.condition',
   name: 'Condition',
   category: 'logic',
-  description: 'Branch workflow based on a condition',
+  description: 'Branch workflow based on a boolean expression',
+  icon: 'Workflow',
+  color: '#FF752F',
   properties: [
-    { name: 'left', label: 'Left Value', type: 'string', required: true },
     {
-      name: 'operator',
-      label: 'Operator',
-      type: 'options',
-      default: '==',
-      options: [
-        { label: '==', value: '==' },
-        { label: '!=', value: '!=' },
-        { label: '>', value: '>' },
-        { label: '<', value: '<' },
-        { label: '>=', value: '>=' },
-        { label: '<=', value: '<=' },
-        { label: 'contains', value: 'contains' },
-        { label: 'not_contains', value: 'not_contains' },
+      name: 'conditions',
+      label: 'Conditions',
+      type: 'list',
+      default: [
+        { id: 'if', label: 'If', expression: '' }
       ],
     },
-    { name: 'right', label: 'Right Value', type: 'string', required: true },
   ],
   inputs: 1,
-  outputs: 2,
+  outputs: 2, // 1 for If, 1 for Else
+  allowError: true,
 }
