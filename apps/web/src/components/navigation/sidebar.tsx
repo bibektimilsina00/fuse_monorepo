@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   HelpCircle, 
@@ -16,12 +16,17 @@ import { SidebarFlyout } from '@/components/navigation/sidebar/SidebarFlyout'
 import { MainNavigation } from '@/components/navigation/sidebar/MainNavigation'
 import { SettingsNavigation } from '@/components/navigation/sidebar/SettingsNavigation'
 
+const MIN_SIDEBAR_WIDTH = 180
+const MAX_SIDEBAR_WIDTH = 420
+
 export const Sidebar: React.FC = () => {
   const location = useLocation()
   const { isSidebarCollapsed, toggleSidebar } = useUIStore()
   const [isHeaderHovered, setIsHeaderHovered] = useState(false)
   const [activeFlyout, setActiveFlyout] = useState<{ type: 'tasks' | 'workflows', top: number } | null>(null)
-  
+  const [customWidth, setCustomWidth] = useState<number | null>(null)
+  const asideRef = useRef<HTMLElement>(null)
+
   const isSettingsMode = location.pathname.startsWith('/settings')
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname])
 
@@ -33,12 +38,36 @@ export const Sidebar: React.FC = () => {
 
   const closeFlyout = useCallback(() => setActiveFlyout(null), [])
 
+  const handleToggleSidebar = useCallback(() => {
+    if (!isSidebarCollapsed) setCustomWidth(null)
+    toggleSidebar()
+  }, [isSidebarCollapsed, toggleSidebar])
+
+  function onDividerPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function onDividerPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+    const left = asideRef.current!.getBoundingClientRect().left
+    const next = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX - left))
+    setCustomWidth(next)
+  }
+
+  function onDividerPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+
   return (
-    <aside 
+    <aside
+      ref={asideRef}
       className={cn(
-        "flex-shrink-0 relative h-full flex flex-col bg-[var(--surface-1)] pt-3 transition-[width] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] z-40",
-        isSidebarCollapsed ? "w-[var(--sidebar-collapsed)] overflow-visible" : "w-[var(--sidebar-width)] overflow-hidden"
+        "flex-shrink-0 relative h-full flex flex-col bg-[var(--surface-1)] pt-3 z-40",
+        isSidebarCollapsed
+          ? "w-[var(--sidebar-collapsed)] overflow-visible transition-[width] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+          : cn("overflow-hidden", !customWidth && "w-[var(--sidebar-width)]")
       )}
+      style={!isSidebarCollapsed && customWidth ? { width: customWidth, minWidth: customWidth } : undefined}
       onMouseLeave={closeFlyout}
     >
       {/* Top Section / Logo */}
@@ -49,7 +78,7 @@ export const Sidebar: React.FC = () => {
       >
         <div className="flex h-[30px] items-center w-full relative">
           {isSidebarCollapsed ? (
-            <button onClick={toggleSidebar} className="flex items-center justify-center w-full h-[30px] rounded-lg hover:bg-[var(--surface-hover)] group">
+            <button onClick={handleToggleSidebar} className="flex items-center justify-center w-full h-[30px] rounded-lg hover:bg-[var(--surface-hover)] group">
               {isHeaderHovered ? <PanelLeftOpen className="w-4 h-4 text-white" /> : (
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="h-[16px] w-auto text-[var(--brand-accent)]">
                   <path d="M10.68 9.25C10.68 11.91 9.61 14.28 7.74 15.98C5.87 17.68 3.33 18.63 0.68 18.63H0.23V0H0.68C3.33 0 5.87 0.95 7.74 2.65C9.61 4.35 10.68 6.72 10.68 9.38" fill="currentColor" />
@@ -68,7 +97,7 @@ export const Sidebar: React.FC = () => {
                   </g>
                 </svg>
               </Link>
-              <button onClick={toggleSidebar} className="ml-auto p-1.5 rounded-lg hover:bg-[var(--surface-hover)]">
+              <button onClick={handleToggleSidebar} className="ml-auto p-1.5 rounded-lg hover:bg-[var(--surface-hover)]">
                 <PanelLeft className="w-4 h-4 text-[var(--text-icon)]" />
               </button>
             </>
@@ -103,6 +132,16 @@ export const Sidebar: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Resize handle — right edge, only when expanded */}
+      {!isSidebarCollapsed && (
+        <div
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize select-none z-50"
+          onPointerDown={onDividerPointerDown}
+          onPointerMove={onDividerPointerMove}
+          onPointerUp={onDividerPointerUp}
+        />
+      )}
 
       {/* Floating Flyout */}
       {isSidebarCollapsed && activeFlyout && !isSettingsMode && (

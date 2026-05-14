@@ -71,6 +71,8 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
           variant="action"
           icon={<div className="w-2 h-2 rounded-sm bg-[var(--brand-secondary)] flex-shrink-0" />}
           label="default-agent"
+          href="/workflows/9394eafe-d181-4a1f-a669-91c0db6211c"
+          active={location.pathname === '/workflows/9394eafe-d181-4a1f-a669-91c0db6211c'}
           isCollapsed={isCollapsed}
           onMouseEnter={(e) => onItemMouseEnter('workflows', e)}
         />

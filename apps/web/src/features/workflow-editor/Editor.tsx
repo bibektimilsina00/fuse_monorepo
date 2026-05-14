@@ -1,50 +1,64 @@
-import ReactFlow, { Background, Controls, Panel } from 'reactflow'
+import React, { useRef, useState } from 'react'
+import ReactFlow, {
+  ReactFlowProvider,
+  SelectionMode
+} from 'reactflow'
 import 'reactflow/dist/style.css'
-import { useWorkflowStore } from '@/stores/workflow-store'
-import { NODE_REGISTRY } from '@/nodes/registry'
+
+import { EditorInspector } from './panels/inspector/EditorInspector'
+import { EditorLogs } from './panels/logs-panel/EditorLogs'
+import { WorkflowControls } from './controls/WorkflowControls'
+import { useWorkflow } from './hooks/use-workflow'
+import { useResizable } from './hooks/use-resizable'
+
+const MIN_PANEL_WIDTH = 240
+const MAX_PANEL_WIDTH = 600
+const DEFAULT_PANEL_WIDTH = 280
 
 export default function Editor() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useWorkflowStore()
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const onDragOver = (event: React.DragEvent) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  const onDrop = (event: React.DragEvent) => {
-    event.preventDefault()
-    const type = event.dataTransfer.getData('application/reactflow')
-    if (!type) return
-
-    const newNode = {
-      id: `${type}-${crypto.randomUUID()}`,
-      type: 'default',
-      position: { x: event.clientX - 200, y: event.clientY - 40 },
-      data: { label: type },
-    }
-
-    addNode(newNode)
-  }
+  const inspectorResizer = useResizable({
+    direction: 'horizontal',
+    minSize: MIN_PANEL_WIDTH,
+    maxSize: MAX_PANEL_WIDTH,
+    onSizeChange: setPanelWidth,
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    invert: true
+  })
 
   return (
-    <div className="w-full h-screen flex">
-      <aside className="w-64 border-r bg-slate-50 p-4">
-        <h2 className="text-lg font-semibold mb-4">Nodes</h2>
-        <div className="space-y-2">
-          {NODE_REGISTRY.map((node) => (
-            <div
-              key={node.type}
-              className="p-2 border rounded cursor-move hover:bg-slate-100 transition-colors"
-              draggable
-              onDragStart={(e) => e.dataTransfer.setData('application/reactflow', node.type)}
-            >
-              {node.name}
-            </div>
-          ))}
-        </div>
-      </aside>
+    <ReactFlowProvider>
+      <div ref={containerRef} className="flex h-full w-full overflow-hidden bg-[var(--bg)]">
+        <EditorContent />
+        <div
+          {...inspectorResizer}
+          className="w-1 shrink-0 cursor-col-resize select-none z-50 hover:bg-[var(--brand-accent)] transition-colors"
+        />
+        <EditorInspector style={{ width: panelWidth, minWidth: panelWidth }} className="shrink-0 overflow-hidden" />
+      </div>
+    </ReactFlowProvider>
+  )
+}
 
-      <main className="flex-1 relative">
+function EditorContent() {
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onDragOver,
+    onDrop,
+    reactFlowWrapper,
+    mode,
+    setMode,
+  } = useWorkflow()
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg)] relative overflow-hidden">
+      <div className="flex-1 relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -53,17 +67,18 @@ export default function Editor() {
           onConnect={onConnect}
           onDragOver={onDragOver}
           onDrop={onDrop}
+          panOnDrag={mode === 'pan'}
+          selectionOnDrag={mode === 'select'}
+          panOnScroll={mode === 'select'}
+          selectionMode={mode === 'select' ? SelectionMode.Full : SelectionMode.Partial}
           fitView
-        >
-          <Background />
-          <Controls />
-          <Panel position="top-right">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition-colors">
-              Save Workflow
-            </button>
-          </Panel>
-        </ReactFlow>
-      </main>
+          snapToGrid
+          snapGrid={[15, 15]}
+          style={{ background: 'var(--bg)' }}
+        />
+        <WorkflowControls mode={mode} onModeChange={setMode} />
+      </div>
+      <EditorLogs />
     </div>
   )
 }

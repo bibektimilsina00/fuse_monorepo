@@ -33,6 +33,10 @@ export const router = createBrowserRouter([
         element: <div className="text-zinc-500">Execution history coming soon...</div>,
       },
       {
+        path: 'workflows/:id',
+        element: <Editor />,
+      },
+      {
         path: 'settings',
         element: <SettingsLayout />,
         children: [
@@ -83,13 +87,5 @@ export const router = createBrowserRouter([
         ],
       },
     ],
-  },
-  {
-    path: '/workflows/:id',
-    element: (
-      <div className="h-screen w-screen overflow-hidden">
-        <Editor />
-      </div>
-    ),
   },
 ])

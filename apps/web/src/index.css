@@ -40,19 +40,29 @@
   --motion-sidebar: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
   background-color: var(--bg);
   color: var(--text-body);
   font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, sans-serif;
   font-weight: 420;
   letter-spacing: 0.28px;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
-  height: 100vh;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Typography Overrides */
@@ -80,6 +90,10 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--surface-5);
+  background: transparent;
   border-radius: 4px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--surface-5);
 }
