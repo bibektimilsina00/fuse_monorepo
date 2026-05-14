@@ -24,7 +24,7 @@ apiClient.interceptors.request.use((config) => {
       if (state.token) {
         config.headers.Authorization = `Bearer ${state.token}`
       }
-    } catch (e) {
+    } catch {
       // Silent fail
     }
   }

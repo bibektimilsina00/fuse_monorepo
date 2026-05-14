@@ -3,15 +3,51 @@
 @import "tailwindcss/utilities";
 
 :root {
-  color-scheme: dark;
+  /* Dark Mode Tokens */
+  --bg: #1b1b1b;
+  --surface-1: #1e1e1e;
+  --surface-2: #232323;
+  --surface-3: #242424;
+  --surface-4: #292929;
+  --surface-5: #363636;
+  --surface-6: #454545;
+  --surface-7: #505050;
+  --surface-hover: #262626;
+  --surface-active: #2c2c2c;
+  
+  --text-primary: #e6e6e6;
+  --text-body: #cdcdcd;
+  --text-secondary: #cccccc;
+  --text-tertiary: #b3b3b3;
+  --text-muted: #787878;
+  --text-subtle: #7d7d7d;
+  --text-icon: #939393;
+  
+  --border-default: #333333;
+  --border-strong: #3d3d3d;
+  --border-muted: #424242;
+  --border-divider: #393939;
+
+  --brand-secondary: #33b4ff;
+  --brand-accent: #33c482;
+  --brand-accent-hover: #2dac72;
+  
+  --selection-dark: #4b83f7;
+  --selection-bg-dark: #264f78;
+
+  --sidebar-width: 248px;
+  --sidebar-collapsed: 51px;
+  --motion-sidebar: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 body {
   margin: 0;
-  background-color: #0D0D0D;
-  color: #E0E0E0;
+  background-color: var(--bg);
+  color: var(--text-body);
+  font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, sans-serif;
+  font-weight: 420;
+  letter-spacing: 0.28px;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -19,21 +55,31 @@ body {
   height: 100vh;
 }
 
-/* Custom Minimalist Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Typography Overrides */
+.font-season {
+  font-family: "Season Sans", system-ui, -apple-system, sans-serif;
 }
 
-::-webkit-scrollbar-track {
+.text-micro { font-size: 10px; }
+.text-xs { font-size: 11px; }
+.text-caption { font-size: 12px; }
+.text-small { font-size: 13px; }
+.text-base { font-size: 15px; }
+
+/* Precise Weights */
+.font-base { font-weight: 420; }
+.font-medium { font-weight: 440; }
+.font-semibold { font-weight: 500; }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--surface-5);
+  border-radius: 4px;
 }
