@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+import { useAuthStore } from '@/stores/auth-store'
 
 // Refactored sub-components
 import { SidebarLink } from '@/components/navigation/sidebar/SidebarLink'
@@ -22,6 +23,7 @@ const MAX_SIDEBAR_WIDTH = 420
 export const Sidebar: React.FC = () => {
   const location = useLocation()
   const { isSidebarCollapsed, toggleSidebar } = useUIStore()
+  const { user } = useAuthStore()
   const [isHeaderHovered, setIsHeaderHovered] = useState(false)
   const [activeFlyout, setActiveFlyout] = useState<{ type: 'tasks' | 'workflows', top: number } | null>(null)
   const [customWidth, setCustomWidth] = useState<number | null>(null)
@@ -111,10 +113,14 @@ export const Sidebar: React.FC = () => {
           "flex h-[32px] w-full items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] pl-[5px] pr-2 hover:bg-[var(--surface-hover)]",
           isSidebarCollapsed ? "justify-center px-0" : ""
         )}>
-          <div className="w-5 h-5 bg-[var(--brand-accent)] rounded flex items-center justify-center font-semibold text-[10px] text-white flex-shrink-0">B</div>
+          <div className="w-5 h-5 bg-[var(--brand-accent)] rounded flex items-center justify-center font-semibold text-[10px] text-white flex-shrink-0">
+            {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
+          </div>
           {!isSidebarCollapsed && (
             <>
-              <span className="flex-1 truncate text-left font-medium text-[12px] text-white">bibek's Workspace</span>
+              <span className="flex-1 truncate text-left font-medium text-[12px] text-white">
+                {user?.full_name ? `${user.full_name}'s Workspace` : 'Personal Workspace'}
+              </span>
               <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             </>
           )}

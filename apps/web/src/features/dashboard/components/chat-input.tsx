@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils'
 interface ChatInputProps {
   placeholder?: string
   onSend?: (message: string) => void
+  onChange?: (value: string) => void
   className?: string
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
   placeholder = "Ask Fuse anything...", 
   onSend,
+  onChange,
   className
 }) => {
   const [value, setValue] = useState('')
@@ -50,7 +52,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <textarea 
             ref={textareaRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value)
+              onChange?.(e.target.value)
+            }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}

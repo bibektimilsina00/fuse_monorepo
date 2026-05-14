@@ -4,12 +4,14 @@ import type { LucideIcon } from 'lucide-react'
 interface TemplateCardProps {
   title: string
   icon: LucideIcon
+  description?: string
   isSmall?: boolean
 }
 
 export const TemplateCard: React.FC<TemplateCardProps> = ({ 
   title, 
   icon: Icon, 
+  description,
   isSmall = false
 }) => {
   if (isSmall) {
@@ -26,11 +28,18 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
       <div className="relative h-[120px] w-full bg-[var(--surface-1)] flex items-center justify-center border-b border-[var(--border-default)]">
          <Icon className="w-8 h-8 text-[var(--text-muted)] opacity-30 group-hover:scale-110 transition-transform group-hover:text-[var(--brand-secondary)] group-hover:opacity-60" />
       </div>
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-[var(--surface-3)]">
-         <div className="p-1 rounded-md bg-[var(--surface-4)] border border-[var(--border-default)]">
-            <Icon className="w-3.5 h-3.5 text-[var(--text-icon)] group-hover:text-[var(--brand-secondary)]" />
+      <div className="flex flex-col gap-0.5 px-4 py-3 bg-[var(--surface-3)]">
+         <div className="flex items-center gap-3">
+            <div className="p-1 rounded-md bg-[var(--surface-4)] border border-[var(--border-default)]">
+               <Icon className="w-3.5 h-3.5 text-[var(--text-icon)] group-hover:text-[var(--brand-secondary)]" />
+            </div>
+            <span className="text-[var(--text-primary)] text-[13px] font-medium tracking-tight">{title}</span>
          </div>
-         <span className="text-[var(--text-primary)] text-[13px] font-medium tracking-tight">{title}</span>
+         {description && (
+           <p className="mt-1 line-clamp-1 text-[12px] text-[var(--text-muted)] font-[380]">
+             {description}
+           </p>
+         )}
       </div>
     </button>
   )

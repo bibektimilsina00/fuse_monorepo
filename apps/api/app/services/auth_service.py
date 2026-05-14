@@ -2,10 +2,11 @@ from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher, exceptions
 from fastapi import HTTPException, status
-from jose import jwt
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.core.config import settings
+from apps.api.app.core.logger import logger
 from apps.api.app.models.user import User
 from apps.api.app.repositories.user_repository import UserRepository
 from apps.api.app.schemas.auth import UserLogin, UserRegister
@@ -55,3 +56,50 @@ class AuthService(BaseService):
         if not self.verify_password(user_login.password, user.hashed_password):
             return None
         return user
+
+    async def forgot_password(self, email: str) -> bool:
+        user = await self.user_repo.get_by_email(email)
+        if not user:
+            # For security, we return True even if user doesn't exist
+            # to prevent email enumeration
+            return True
+        
+        # Generate a password reset token (15 mins expiry)
+        reset_token = self.create_access_token(
+            data={"sub": user.email, "type": "password_reset"}, 
+            expires_delta=timedelta(minutes=15)
+        )
+        
+        # MOCK EMAIL SENDING
+        # In a real app, you would use an email service (SendGrid, Mailgun, etc.)
+        logger.info(f"PASSWORD RESET LINK for {email}: http://localhost:5173/reset-password?token={reset_token}")
+        
+        return True
+
+    async def reset_password(self, token: str, new_password: str) -> bool:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            email: str | None = payload.get("sub")
+            token_type: str | None = payload.get("type")
+            
+            if email is None or token_type != "password_reset":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired reset token"
+                )
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired reset token"
+            )
+            
+        user = await self.user_repo.get_by_email(email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+            
+        user.hashed_password = self.get_password_hash(new_password)
+        await self.user_repo.update(user)
+        return True

@@ -1,59 +1,28 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import {
   Search,
-
   FileText,
   Folder,
-
   Zap,
-
   Database,
   Table,
-  Files
+  Files,
+  Workflow as WorkflowIcon,
+  Plus,
+  Home,
+  Settings
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
-
-const CATEGORIES = [
-  {
-    title: 'Workflows',
-    items: [
-      { id: '1', label: 'default-agent', icon: <div className="w-2.5 h-2.5 rounded-sm bg-blue-500" /> }
-    ]
-  },
-  {
-    title: 'Tasks',
-    items: [
-      { id: '2', label: 'New task', icon: <Zap className="w-3.5 h-3.5" /> },
-      { id: '3', label: 'New task', icon: <Zap className="w-3.5 h-3.5" /> }
-    ]
-  },
-  {
-    title: 'Files',
-    items: [
-      { id: '4', label: 'untitled.md', icon: <FileText className="w-3.5 h-3.5" /> }
-    ]
-  },
-  {
-    title: 'Workspaces',
-    items: [
-      { id: '5', label: "bibek's Workspace (current)", icon: <Folder className="w-3.5 h-3.5" />, active: true }
-    ]
-  },
-  {
-    title: 'Pages',
-    items: [
-      { id: '6', label: 'Tables', icon: <Table className="w-3.5 h-3.5" /> },
-      { id: '7', label: 'Files', icon: <Files className="w-3.5 h-3.5" /> },
-      { id: '8', label: 'Knowledge Base', icon: <Database className="w-3.5 h-3.5" /> }
-    ]
-  }
-]
+import { useWorkflows } from '@/features/dashboard/hooks/use-workflows'
 
 export const CommandPalette: React.FC = () => {
   const { isSearchOpen, setSearchOpen } = useUIStore()
+  const { data: workflows = [] } = useWorkflows()
   const [searchValue, setSearchValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -79,7 +48,51 @@ export const CommandPalette: React.FC = () => {
     }
   }, [isSearchOpen])
 
+  const filteredResults = useMemo(() => {
+    const query = searchValue.toLowerCase().trim()
+    
+    const results = [
+      {
+        title: 'Workflows',
+        items: workflows
+          .filter(w => !query || w.name.toLowerCase().includes(query) || w.description?.toLowerCase().includes(query))
+          .map(w => ({
+            id: w.id,
+            label: w.name,
+            icon: <WorkflowIcon className="w-3.5 h-3.5 text-blue-400" />,
+            onClick: () => navigate(`/workflows/${w.id}`)
+          }))
+      },
+      {
+        title: 'Actions',
+        items: [
+          { 
+            id: 'new-workflow', 
+            label: 'Create new workflow', 
+            icon: <Plus className="w-3.5 h-3.5" />,
+            onClick: () => navigate('/dashboard') // Or actual create logic
+          }
+        ].filter(i => !query || i.label.toLowerCase().includes(query))
+      },
+      {
+        title: 'Pages',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: <Home className="w-3.5 h-3.5" />, onClick: () => navigate('/dashboard') },
+          { id: 'settings', label: 'Settings', icon: <Settings className="w-3.5 h-3.5" />, onClick: () => navigate('/settings') },
+        ].filter(i => !query || i.label.toLowerCase().includes(query))
+      }
+    ]
+
+    return results.filter(r => r.items.length > 0)
+  }, [workflows, searchValue, navigate])
+
   if (!isSearchOpen) return null
+
+  const handleItemClick = (onClick: () => void) => {
+    onClick()
+    setSearchOpen(false)
+    setSearchValue('')
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
@@ -106,29 +119,35 @@ export const CommandPalette: React.FC = () => {
 
         {/* Results */}
         <div className="max-h-[420px] overflow-y-auto py-2 custom-scrollbar">
-          {CATEGORIES.map((category) => (
-            <div key={category.title} className="mb-2">
-              <div className="px-4 py-1 text-[11px] font-semibold text-[#666] uppercase tracking-wider">
-                {category.title}
+          {filteredResults.length > 0 ? (
+            filteredResults.map((category) => (
+              <div key={category.title} className="mb-2">
+                <div className="px-4 py-1 text-[11px] font-semibold text-[#666] uppercase tracking-wider">
+                  {category.title}
+                </div>
+                <div className="px-2 space-y-0.5">
+                  {category.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleItemClick(item.onClick)}
+                      className={cn(
+                        "flex items-center gap-3 w-full px-2.5 py-1.5 rounded-lg text-[13px] text-[#d1d1d1] hover:bg-[#2a2a2a] hover:text-white transition-colors group text-left"
+                      )}
+                    >
+                      <span className="text-[#888] group-hover:text-white transition-colors">
+                        {item.icon}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="px-2 space-y-0.5">
-                {category.items.map((item) => (
-                  <button
-                    key={item.id}
-                    className={cn(
-                      "flex items-center gap-3 w-full px-2.5 py-1.5 rounded-lg text-[13px] text-[#d1d1d1] hover:bg-[#2a2a2a] hover:text-white transition-colors group text-left",
-                      item.active ? "bg-[#2a2a2a] text-white" : ""
-                    )}
-                  >
-                    <span className="text-[#888] group-hover:text-white transition-colors">
-                      {item.icon}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                ))}
-              </div>
+            ))
+          ) : (
+            <div className="px-4 py-8 text-center text-[13px] text-[#666]">
+              No results found for "{searchValue}"
             </div>
-          ))}
+          )}
         </div>
 
         {/* Footer */}

@@ -28,6 +28,7 @@ interface WorkflowState {
   removeNode: (id: string) => void
   selectedNodeId: string | null
   setSelectedNodeId: (id: string | null) => void
+  loadWorkflow: (workflow: any) => void
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -64,4 +65,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
   selectedNodeId: null,
   setSelectedNodeId: (id: string | null) => set({ selectedNodeId: id }),
+  loadWorkflow: (workflow: any) => {
+    // Assuming the graph contains nodes and edges in the format React Flow expects
+    // If it's a raw backend graph, we might need a converter
+    const nodes = workflow.graph?.nodes || []
+    const edges = workflow.graph?.edges || []
+    set({ nodes, edges, selectedNodeId: null })
+  }
 }))

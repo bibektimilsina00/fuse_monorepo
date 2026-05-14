@@ -1,11 +1,9 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import { z } from 'zod'
+import { useAuthStore } from '@/stores/auth-store'
 
 /**
  * Fuse API Client
- * 
- * A wrapper around axios that provides type-safe requests and response 
- * validation using Zod.
  */
 
 const apiClient = axios.create({
@@ -17,7 +15,16 @@ const apiClient = axios.create({
 
 // Inject Auth Token into every request
 apiClient.interceptors.request.use((config) => {
-  const storage = localStorage.getItem('auth-storage')
+  // Try to get token from state first (most up-to-date)
+  const token = useAuthStore.getState().token
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+    return config
+  }
+
+  // Fallback to localStorage (for cold starts)
+  const storage = localStorage.getItem('fuse-auth-storage')
   if (storage) {
     try {
       const { state } = JSON.parse(storage)

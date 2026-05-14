@@ -11,6 +11,7 @@ import { EditorInspector } from '@/features/workflow-editor/panels/inspector/Edi
 import { EditorLogs } from '@/features/workflow-editor/panels/logs-panel/EditorLogs'
 import { WorkflowControls } from '@/features/workflow-editor/controls/WorkflowControls'
 import { useWorkflow } from '@/features/workflow-editor/hooks/use-workflow'
+import { useWorkflowData } from '@/features/workflow-editor/hooks/use-workflow-data'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
 import { NODE_REGISTRY } from '@/nodes/registry'
 
@@ -19,6 +20,7 @@ const MAX_PANEL_WIDTH = 600
 const DEFAULT_PANEL_WIDTH = 280
 
 export default function Editor() {
+  const { isLoading, error } = useWorkflowData()
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -30,6 +32,28 @@ export default function Editor() {
     containerRef: containerRef as React.RefObject<HTMLElement>,
     invert: true
   })
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[var(--bg)]">
+        <div className="size-8 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-[var(--text-primary)]" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-[var(--bg)] text-center">
+        <p className="mb-4 text-red-500">Failed to load workflow</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="rounded-lg bg-[var(--surface-3)] px-4 py-2 text-[13px] text-white hover:bg-[var(--surface-hover)]"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   return (
     <ReactFlowProvider>
