@@ -58,3 +58,28 @@ export const FolderSchema = z.object({
 })
 
 export type Folder = z.infer<typeof FolderSchema>
+
+export const ExecutionLogSchema = z.object({
+  id: z.string().uuid(),
+  node_id: z.string().optional().nullable(),
+  level: z.string(),
+  message: z.string(),
+  payload: z.record(z.string(), z.any()).optional().nullable(),
+  timestamp: z.string(),
+})
+
+export type ExecutionLog = z.infer<typeof ExecutionLogSchema>
+
+export const ExecutionSchema = z.object({
+  id: z.string().uuid(),
+  workflow_id: z.string().uuid(),
+  status: z.string(),
+  trigger_type: z.string(),
+  input_data: z.record(z.string(), z.any()).optional().nullable(),
+  output_data: z.record(z.string(), z.any()).optional().nullable(),
+  started_at: z.string().optional().nullable(),
+  finished_at: z.string().optional().nullable(),
+  logs: z.array(ExecutionLogSchema),
+})
+
+export type Execution = z.infer<typeof ExecutionSchema>

@@ -19,9 +19,9 @@ import { NODE_REGISTRY } from '@/nodes/registry'
 import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
 import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
 
-const MIN_PANEL_WIDTH = 240
+const MIN_PANEL_WIDTH = 280
 const MAX_PANEL_WIDTH = 600
-const DEFAULT_PANEL_WIDTH = 280
+const DEFAULT_PANEL_WIDTH = 320
 
 export default function Editor() {
   const { isLoading, error } = useWorkflowData()
@@ -61,13 +61,17 @@ export default function Editor() {
 
   return (
     <ReactFlowProvider>
-      <div ref={containerRef} className="flex h-full w-full overflow-hidden bg-[var(--bg)]">
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-hidden bg-[var(--bg)]"
+        style={{ display: 'grid', gridTemplateColumns: `minmax(0, 1fr) 5px ${panelWidth}px` }}
+      >
         <EditorContent />
         <div
           {...inspectorResizer}
-          className="w-1 shrink-0 cursor-col-resize select-none z-50 hover:bg-[var(--brand-accent)] transition-colors"
+          className="cursor-col-resize select-none z-50 h-full"
         />
-        <EditorInspector style={{ width: panelWidth, minWidth: panelWidth }} className="shrink-0 overflow-hidden" />
+        <EditorInspector className="overflow-hidden" />
       </div>
     </ReactFlowProvider>
   )
@@ -118,7 +122,7 @@ function EditorContent() {
   }, [])
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg)] relative overflow-hidden">
+    <div className="h-full flex flex-col min-w-0 bg-[var(--bg)] relative overflow-hidden">
       <div className="flex-1 relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}

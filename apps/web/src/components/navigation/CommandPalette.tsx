@@ -9,18 +9,31 @@ import { useCommandPalette } from '@/components/navigation/hooks/useCommandPalet
 const PaletteItem: React.FC<{
   label: string
   icon: React.ReactNode | React.ComponentType<{ className?: string }>
-  color?: string
+  bgColor?: string
   isActive: boolean
   onClick: () => void
   onMouseEnter: () => void
-}> = ({ label, icon, color, isActive, onClick, onMouseEnter }) => {
+}> = ({ label, icon, bgColor, isActive, onClick, onMouseEnter }) => {
   const renderIcon = () => {
     if (!icon) return null
-    if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null && 'render' in icon)) {
-      const IconComponent = icon as React.ComponentType<{ className?: string }>
-      return <IconComponent className={cn("w-4 h-4", !isActive && color)} />
-    }
-    return icon
+    
+    return (
+      <div 
+        className={cn(
+          "relative flex size-[16px] flex-shrink-0 items-center justify-center overflow-hidden rounded-sm transition-all",
+          !bgColor && (isActive ? "bg-white/20" : "bg-white/5")
+        )}
+        style={bgColor ? { backgroundColor: bgColor } : undefined}
+      >
+        <div className="w-[10px] h-[10px] flex items-center justify-center text-white">
+          {React.isValidElement(icon) ? (
+            icon
+          ) : (
+            React.createElement(icon as any, { size: 10, strokeWidth: 2.5 })
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -28,20 +41,15 @@ const PaletteItem: React.FC<{
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       className={cn(
-        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all text-left outline-none",
+        "group flex h-[30px] w-full cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 text-left text-[12px] transition-all outline-none",
         isActive 
-          ? "bg-[var(--brand-accent)] text-white shadow-lg shadow-brand-accent/20" 
-          : "text-[var(--text-body)] hover:bg-white/5 hover:text-white"
+          ? "border-white/10 bg-[#2a2a2a] text-white" 
+          : "text-white/90 hover:bg-white/5 hover:text-white"
       )}
     >
-      <div className={cn(
-        "flex-shrink-0 transition-colors",
-        isActive ? "text-white" : "text-[var(--text-icon)]"
-      )}>
-        {renderIcon()}
-      </div>
-      <span className="truncate font-[450] flex-1">{label}</span>
-      {isActive && <Command className="w-3 h-3 opacity-60" />}
+      {renderIcon()}
+      <span className="truncate font-semibold flex-1 mt-[-1px]">{label}</span>
+      {isActive && <Command className="w-3 h-3 opacity-30" />}
     </button>
   )
 }
@@ -73,11 +81,11 @@ export const CommandPalette: React.FC = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[10000] flex items-start justify-center pt-[15vh] px-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200"
+      className="fixed inset-0 z-[10000] flex items-start justify-center pt-[10vh] px-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200"
       onClick={() => setSearchOpen(false)}
     >
       <div 
-        className="w-full max-w-[580px] bg-[#1c1c1c] border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200"
+        className="w-full max-w-[480px] bg-[#1c1c1c] border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Search Header */}
@@ -98,7 +106,7 @@ export const CommandPalette: React.FC = () => {
         </div>
 
         {/* Results Body */}
-        <div className="max-h-[420px] overflow-y-auto p-2 custom-scrollbar">
+        <div className="max-h-[750px] overflow-y-auto pt-0.5 px-2 pb-2 custom-scrollbar">
           {filteredResults.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-center">
               <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
@@ -108,11 +116,11 @@ export const CommandPalette: React.FC = () => {
               <p className="text-[12px] text-[var(--text-muted)]/60 mt-1">Try a different search term or check your spelling.</p>
             </div>
           ) : (
-            <div className="space-y-4 py-2">
+            <div className="space-y-2 pt-0 pb-1">
               {filteredResults.map((group) => (
-                <div key={group.title} className="space-y-1">
+                <div key={group.title} className="space-y-0">
                   <div className="px-3 pb-1">
-                    <span className="text-[11px] font-bold text-[var(--text-muted)]/60 uppercase tracking-[0.1em]">
+                    <span className="text-[11px] font-bold text-white/40 tracking-[0.05em]">
                       {group.title}
                     </span>
                   </div>
@@ -124,7 +132,7 @@ export const CommandPalette: React.FC = () => {
                           key={item.id}
                           label={item.label}
                           icon={item.icon}
-                          color={(item as any).color}
+                          bgColor={(item as any).bgColor}
                           isActive={selectedIndex === absoluteIndex}
                           onClick={() => {
                             item.onClick()

@@ -1,61 +1,47 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
+import { useCollapsiblePanel } from '@/features/workflow-editor/hooks/use-collapsible-panel'
+import { useExecutionStore } from '@/stores/execution-store'
+import { useUIStore } from '@/stores/ui-store'
 import { LogList } from '@/features/workflow-editor/panels/logs-panel/LogList'
 import { LogInspector } from '@/features/workflow-editor/panels/logs-panel/LogInspector'
 
-const MIN_OUTPUT_WIDTH = 200
-const MIN_HEIGHT = 30
-const MAX_HEIGHT_RATIO = 0.8
 const HEADER_HEIGHT = 30
 
 export const EditorLogs: React.FC = () => {
-  const [height, setHeight] = useState(260)
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [outputWidth, setOutputWidth] = useState(500)
+  const { isExecutionPanelOpen } = useExecutionStore()
+  const { logOpenOnRun } = useUIStore()
 
-  const containerRef = useRef<HTMLElement>(null)
-  const lastHeightRef = useRef(260)
+  const { height, handleHeightChange, expand, toggleCollapse, isCollapsed } =
+    useCollapsiblePanel(260, HEADER_HEIGHT)
 
-  // Resizing logic
+  const containerRef = React.useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (isExecutionPanelOpen && isCollapsed && logOpenOnRun) {
+      expand()
+    }
+  }, [isExecutionPanelOpen, isCollapsed, logOpenOnRun, expand])
+
   const heightResizer = useResizable({
     direction: 'vertical',
-    minSize: MIN_HEIGHT,
-    maxSize: typeof window !== 'undefined' ? window.innerHeight * MAX_HEIGHT_RATIO : 600,
-    onSizeChange: setHeight,
-    containerRef: containerRef as React.RefObject<HTMLElement>
-  })
-
-  const widthResizer = useResizable({
-    direction: 'horizontal',
-    minSize: MIN_OUTPUT_WIDTH,
-    onSizeChange: setOutputWidth,
+    minSize: HEADER_HEIGHT,
+    maxSize: typeof window !== 'undefined' ? window.innerHeight * 0.8 : 600,
+    onSizeChange: handleHeightChange,
     containerRef: containerRef as React.RefObject<HTMLElement>,
-    invert: true
   })
-
-  const toggleCollapse = useCallback(() => {
-    if (isCollapsed) {
-      setHeight(lastHeightRef.current)
-      setIsCollapsed(false)
-    } else {
-      lastHeightRef.current = height
-      setHeight(HEADER_HEIGHT)
-      setIsCollapsed(true)
-    }
-  }, [isCollapsed, height])
 
   return (
     <aside
       ref={containerRef}
       className={cn(
-        "relative w-full overflow-hidden border-t border-[var(--border-default)] bg-[var(--bg)] flex-shrink-0 transition-[height] duration-200 ease-in-out",
-        isCollapsed && "select-none"
+        'relative w-full overflow-hidden border-t border-[var(--border-default)] bg-[var(--bg)] flex-shrink-0 transition-[height] duration-200 ease-in-out',
+        isCollapsed && 'select-none'
       )}
       style={{ height }}
-      aria-label="Terminal"
+      aria-label="Execution logs"
     >
-
       {!isCollapsed && (
         <div
           {...heightResizer}
@@ -68,9 +54,7 @@ export const EditorLogs: React.FC = () => {
         <LogList isCollapsed={isCollapsed} />
         <LogInspector
           isCollapsed={isCollapsed}
-          outputWidth={outputWidth}
           toggleCollapse={toggleCollapse}
-          widthResizerProps={widthResizer}
         />
       </div>
     </aside>

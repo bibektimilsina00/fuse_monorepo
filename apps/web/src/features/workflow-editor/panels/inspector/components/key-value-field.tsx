@@ -2,7 +2,19 @@ import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Trash2 } from 'lucide-react'
 
-export const KeyValueField = ({ value, onChange }: { value: any, onChange: (val: any) => void }) => {
+export const KeyValueField = ({ 
+  value, 
+  onChange,
+  onShowPicker,
+  isFirstClickAllowed,
+  onFirstClickUsed
+}: { 
+  value: any, 
+  onChange: (val: any) => void,
+  onShowPicker?: (rect: DOMRect, onSelect: (val: string) => void) => void,
+  isFirstClickAllowed?: (subId?: string) => boolean,
+  onFirstClickUsed?: (subId?: string) => void
+}) => {
   const [pairs, setPairs] = useState<{key: string, value: string}[]>(() => {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const entries = Object.entries(value).map(([k, v]) => ({ key: k, value: String(v) }))
@@ -52,10 +64,65 @@ export const KeyValueField = ({ value, onChange }: { value: any, onChange: (val:
       </div>
       {pairs.map((pair, idx) => {
         const isLast = idx === pairs.length - 1
+        const keyId = `key-${idx}`
+        const valueId = `value-${idx}`
+        
         return (
           <div key={idx} className={cn("flex group", !isLast && "border-b border-[#333]")}>
             <input
               value={pair.key}
+              onFocus={e => {
+                const target = e.target as HTMLInputElement
+                if (isFirstClickAllowed && onShowPicker && onFirstClickUsed && isFirstClickAllowed(keyId)) {
+                  const rect = target.getBoundingClientRect()
+                  const start = target.selectionStart || 0
+                  const end = target.selectionEnd || 0
+                  const valueAtTrigger = target.value
+
+                  onShowPicker(rect, (val) => {
+                    const textBefore = valueAtTrigger.substring(0, start)
+                    const hasTrigger = textBefore.endsWith('{{')
+                    const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                    handleChange(idx, 'key', newVal)
+                  })
+                  onFirstClickUsed(keyId)
+                }
+              }}
+              onClick={e => {
+                const target = e.target as HTMLInputElement
+                if (isFirstClickAllowed && onShowPicker && onFirstClickUsed && isFirstClickAllowed(keyId)) {
+                  const rect = target.getBoundingClientRect()
+                  const start = target.selectionStart || 0
+                  const end = target.selectionEnd || 0
+                  const valueAtTrigger = target.value
+
+                  onShowPicker(rect, (val) => {
+                    const textBefore = valueAtTrigger.substring(0, start)
+                    const hasTrigger = textBefore.endsWith('{{')
+                    const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                    handleChange(idx, 'key', newVal)
+                  })
+                  onFirstClickUsed(keyId)
+                }
+              }}
+              onKeyDown={e => {
+                const target = e.target as HTMLInputElement
+                if (e.key === '{' && target.value[target.selectionStart! - 1] === '{' && onShowPicker) {
+                  const rect = target.getBoundingClientRect()
+                  setTimeout(() => {
+                    const start = target.selectionStart || 0
+                    const end = target.selectionEnd || 0
+                    const valueAtTrigger = target.value
+
+                    onShowPicker(rect, (val) => {
+                      const textBefore = valueAtTrigger.substring(0, start)
+                      const hasTrigger = textBefore.endsWith('{{')
+                      const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                      handleChange(idx, 'key', newVal)
+                    })
+                  }, 0)
+                }
+              }}
               onChange={e => handleChange(idx, 'key', e.target.value)}
               placeholder="Key"
               className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-[#555] min-w-0"
@@ -63,6 +130,58 @@ export const KeyValueField = ({ value, onChange }: { value: any, onChange: (val:
             <div className="w-[1px] bg-[#333] flex-shrink-0" />
             <input
               value={pair.value}
+              onFocus={e => {
+                const target = e.target as HTMLInputElement
+                if (isFirstClickAllowed && onShowPicker && onFirstClickUsed && isFirstClickAllowed(valueId)) {
+                  const rect = target.getBoundingClientRect()
+                  const start = target.selectionStart || 0
+                  const end = target.selectionEnd || 0
+                  const valueAtTrigger = target.value
+
+                  onShowPicker(rect, (val) => {
+                    const textBefore = valueAtTrigger.substring(0, start)
+                    const hasTrigger = textBefore.endsWith('{{')
+                    const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                    handleChange(idx, 'value', newVal)
+                  })
+                  onFirstClickUsed(valueId)
+                }
+              }}
+              onClick={e => {
+                const target = e.target as HTMLInputElement
+                if (isFirstClickAllowed && onShowPicker && onFirstClickUsed && isFirstClickAllowed(valueId)) {
+                  const rect = target.getBoundingClientRect()
+                  const start = target.selectionStart || 0
+                  const end = target.selectionEnd || 0
+                  const valueAtTrigger = target.value
+
+                  onShowPicker(rect, (val) => {
+                    const textBefore = valueAtTrigger.substring(0, start)
+                    const hasTrigger = textBefore.endsWith('{{')
+                    const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                    handleChange(idx, 'value', newVal)
+                  })
+                  onFirstClickUsed(valueId)
+                }
+              }}
+              onKeyDown={e => {
+                const target = e.target as HTMLInputElement
+                if (e.key === '{' && target.value[target.selectionStart! - 1] === '{' && onShowPicker) {
+                  const rect = target.getBoundingClientRect()
+                  setTimeout(() => {
+                    const start = target.selectionStart || 0
+                    const end = target.selectionEnd || 0
+                    const valueAtTrigger = target.value
+
+                    onShowPicker(rect, (val) => {
+                      const textBefore = valueAtTrigger.substring(0, start)
+                      const hasTrigger = textBefore.endsWith('{{')
+                      const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
+                      handleChange(idx, 'value', newVal)
+                    })
+                  }, 0)
+                }
+              }}
               onChange={e => handleChange(idx, 'value', e.target.value)}
               placeholder="Value"
               className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-[#555] min-w-0"

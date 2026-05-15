@@ -26,8 +26,12 @@ interface WorkflowState {
   addNode: (node: Node) => void
   updateNodeData: (id: string, data: any) => void
   removeNode: (id: string) => void
+  toggleNodeLock: (id: string) => void
+  duplicateNode: (id: string) => void
+  toggleNodeHandleDirection: (id: string) => void
   selectedNodeId: string | null
   setSelectedNodeId: (id: string | null) => void
+  nodeSelectionTimestamp: number
   loadWorkflow: (workflow: any) => void
 }
 
@@ -63,13 +67,60 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId
     })
   },
+  toggleNodeLock: (id: string) => {
+    set({
+      nodes: get().nodes.map((node) => {
+        if (node.id === id) {
+          const isLocked = !node.data?.locked
+          return {
+            ...node,
+            draggable: !isLocked,
+            selectable: !isLocked,
+            deletable: !isLocked,
+            data: { ...node.data, locked: isLocked }
+          }
+        }
+        return node
+      })
+    })
+  },
+  duplicateNode: (id: string) => {
+    const node = get().nodes.find(n => n.id === id)
+    if (!node) return
+ 
+    const newNode: Node = {
+      ...node,
+      id: crypto.randomUUID(),
+      position: { x: node.position.x + 20, y: node.position.y + 20 },
+      selected: false,
+    }
+    set({ nodes: [...get().nodes, newNode] })
+  },
+  toggleNodeHandleDirection: (id: string) => {
+    set({
+      nodes: get().nodes.map((node) => {
+        if (node.id === id) {
+          const newDirection = node.data?.handleDirection === 'horizontal' ? 'vertical' : 'horizontal'
+          return {
+            ...node,
+            data: { ...node.data, handleDirection: newDirection }
+          }
+        }
+        return node
+      })
+    })
+  },
   selectedNodeId: null,
-  setSelectedNodeId: (id: string | null) => set({ selectedNodeId: id }),
+  nodeSelectionTimestamp: Date.now(),
+  setSelectedNodeId: (id: string | null) => set({ 
+    selectedNodeId: id,
+    nodeSelectionTimestamp: Date.now()
+  }),
   loadWorkflow: (workflow: any) => {
     // Assuming the graph contains nodes and edges in the format React Flow expects
     // If it's a raw backend graph, we might need a converter
     const nodes = workflow.graph?.nodes || []
     const edges = workflow.graph?.edges || []
-    set({ nodes, edges, selectedNodeId: null })
+    set({ nodes, edges, selectedNodeId: null, nodeSelectionTimestamp: Date.now() })
   }
 }))

@@ -61,7 +61,6 @@ class ConditionNode(BaseNode):
                     "matched_id": matched_id,
                     "matched_index": matched_index,
                     "is_else": matched_id == "else",
-                    **input_data,
                 },
             )
         except Exception as e:

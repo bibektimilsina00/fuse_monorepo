@@ -222,57 +222,52 @@ Execution completes, logs show HTTP 200 response body.
 
 ---
 
-## Phase 5 — Frontend: Pages & Routing
+## Phase 5 — Variable Interpolation
 
-**Goal:** Full frontend UI — login page, dashboard, workflow editor with sidebar.
-
-### What to build
-| File | Action |
-|---|---|
-| `apps/web/src/app/router.tsx` | React Router: `/login`, `/dashboard`, `/workflows/:id` |
-| `apps/web/src/app/providers.tsx` | `QueryClientProvider`, `AuthProvider` |
-| `apps/web/src/stores/auth.store.ts` | Auth state (token, user, logout) |
-| `apps/web/src/services/api.ts` | Axios instance with auth interceptor |
-| `apps/web/src/features/auth/LoginPage.tsx` | Email + password form |
-| `apps/web/src/features/dashboard/DashboardPage.tsx` | List workflows, create button |
-| `apps/web/src/features/dashboard/WorkflowCard.tsx` | Card: name, status, run button |
-| `apps/web/src/features/workflow-editor/NodePanel.tsx` | Left sidebar: draggable node list |
-| `apps/web/src/features/workflow-editor/PropertyPanel.tsx` | Right sidebar: selected node properties form |
-| `apps/web/src/features/workflow-editor/ExecutionPanel.tsx` | Bottom panel: execution logs |
-| `apps/web/src/hooks/workflows/` | React Query hooks: `useWorkflows`, `useWorkflow`, `useCreateWorkflow` |
-| `apps/web/src/hooks/executions/` | React Query hooks: `useExecution`, `useTriggerWorkflow` |
+**Goal:** Node properties support `{{node_id.output.field}}` template syntax. Templates resolved at execution time.
 
 ### Checklist
-- [ ] Login page: email + password form, calls `POST /auth/login`, stores token in localStorage
-- [ ] Unauthenticated users redirected to `/login`
-- [ ] Dashboard page: lists all user's workflows using React Query
-- [ ] Dashboard: "New Workflow" button creates workflow + navigates to editor
-- [ ] Workflow editor: left panel shows draggable node list from `NODE_REGISTRY`
-- [ ] Workflow editor: nodes can be dragged onto canvas
-- [ ] Workflow editor: clicking a node opens property form in right panel
-- [ ] Property form: shows correct inputs for each node type
-- [ ] Property form: changes saved to Zustand store
-- [ ] "Save Workflow" button sends updated graph to `PUT /workflows/{id}`
-- [ ] "Run" button triggers execution, shows execution ID
-- [ ] Execution log panel shows status (polling or WebSocket)
-- [ ] API calls use auth token from store
-- [ ] 401 response logs user out + redirects to `/login`
-- [ ] All React Query hooks use key factories + `staleTime`
-- [ ] `npx tsc --noEmit` passes
-- [ ] `make lint` passes
+- [x] `TemplateResolver` implemented in backend
+- [x] `WorkflowRunner` integrates template resolution before node execution
+- [x] Frontend `InterpolationPicker` implemented for easy variable selection
+- [x] Support for interpolation in all field types (String, JSON, Key-Value, Conditions)
+- [x] Syntax highlighting for `{{...}}` tags in editors
+- [x] Smart insertion logic replaces `{{` trigger to prevent syntax errors
 
 **Acceptance:**
-Full flow works in browser:
-1. Open `/login` → log in
-2. See dashboard with workflow list
-3. Click "New Workflow" → editor opens
-4. Drag HTTP Request onto canvas, fill URL
-5. Click Save → no errors
-6. Click Run → execution completes → logs visible
+Workflow with `[HTTP Request] → [Slack Message: "Title: {{http.output.body.title}}"]` sends resolved data.
 
 ---
 
-## Phase 6 — Credential Management
+## Phase 6 — Frontend: Pages & Routing
+
+**Goal:** Full frontend UI — login page, dashboard, workflow editor with sidebar.
+
+### Checklist
+- [x] Login page: email + password form, calls `POST /auth/login`, stores token in localStorage
+- [x] Unauthenticated users redirected to `/login`
+- [x] Dashboard page: lists all user's workflows using React Query
+- [x] Dashboard: "New Workflow" button creates workflow + navigates to editor
+- [x] Workflow editor: left panel shows draggable node list from `NODE_REGISTRY`
+- [x] Workflow editor: nodes can be dragged onto canvas
+- [x] Workflow editor: clicking a node opens property form in right panel
+- [x] Property form: shows correct inputs for each node type
+- [x] Property form: changes saved to Zustand store
+- [x] "Save Workflow" button sends updated graph to `PUT /workflows/{id}`
+- [x] "Run" button triggers execution, shows execution ID
+- [x] Execution log panel shows status (polling or WebSocket)
+- [x] API calls use auth token from store
+- [x] 401 response logs user out + redirects to `/login`
+- [x] All React Query hooks use key factories + `staleTime`
+- [x] `npx tsc --noEmit` passes
+- [x] `make lint` passes
+
+**Acceptance:**
+Full flow works in browser: Login → Dashboard → Create → Edit → Save → Run → Logs visible.
+
+---
+
+## Phase 7 — Credential Management
 
 **Goal:** Users can store OAuth tokens and API keys. Credentials are injected into node execution.
 
@@ -291,18 +286,18 @@ Full flow works in browser:
 | `alembic/versions/` | Migration: `user_id` on `credential` |
 
 ### Checklist
-- [ ] `Credential.user_id` FK added + migration applied
-- [ ] `GET /credentials/` returns only current user's credentials
-- [ ] `POST /credentials/` stores API key credential (encrypted)
-- [ ] `DELETE /credentials/{id}` removes credential
-- [ ] `GET /credentials/oauth/{service}/url` returns OAuth authorization URL
-- [ ] OAuth callback stores access + refresh tokens (encrypted)
-- [ ] `WorkflowRunner` fetches credentials for current user + injects into `NodeContext.credentials`
-- [ ] `encryption_service` name fixed (was referencing wrong module)
-- [ ] Credentials page: lists stored credentials (type, name, created_at — no raw token)
-- [ ] "Connect" button for OAuth services opens provider auth page
-- [ ] After OAuth, credential appears in list
-- [ ] `make lint` passes
+- [x] `Credential.user_id` FK added + migration applied
+- [x] `GET /credentials/` returns only current user's credentials
+- [x] `POST /credentials/` stores API key credential (encrypted)
+- [x] `DELETE /credentials/{id}` removes credential
+- [x] `GET /credentials/oauth/{service}/url` returns OAuth authorization URL
+- [x] OAuth callback stores access + refresh tokens (encrypted)
+- [x] `WorkflowRunner` fetches credentials for current user + injects into `NodeContext.credentials`
+- [x] `encryption_service` name fixed (also exported as `aes_service` alias)
+- [x] Credentials page: lists stored credentials (type, name, created_at — no raw token)
+- [x] "Connect" button for OAuth services opens provider auth page
+- [x] After OAuth, credential appears in list
+- [x] `make lint` passes
 
 **Acceptance:**
 1. Click "Connect Slack" → redirected to Slack auth → token stored
@@ -310,7 +305,7 @@ Full flow works in browser:
 
 ---
 
-## Phase 7 — First Integration: Slack
+## Phase 8 — First Integration: Slack
 
 **Goal:** Slack "Send Message" node works end-to-end with real credentials.
 
@@ -346,7 +341,7 @@ Build and run workflow → real Slack message received in your workspace.
 
 ---
 
-## Phase 8 — WebSocket Execution Streaming
+## Phase 9 — WebSocket Execution Streaming
 
 **Goal:** Execution logs stream in real-time to the browser while the workflow runs.
 
@@ -376,7 +371,7 @@ Run a workflow → execution panel shows nodes lighting up in real-time.
 
 ---
 
-## Phase 9 — More Nodes
+## Phase 10 — More Nodes
 
 **Goal:** Core workflow nodes fully implemented.
 
@@ -402,7 +397,7 @@ Run a workflow → execution panel shows nodes lighting up in real-time.
 
 ---
 
-## Phase 10 — More Integrations
+## Phase 11 — More Integrations
 
 **Goal:** GitHub and one more integration fully working.
 
@@ -420,7 +415,7 @@ Run a workflow → execution panel shows nodes lighting up in real-time.
 
 ---
 
-## Phase 11 — Webhook Triggers
+## Phase 12 — Webhook Triggers
 
 **Goal:** Workflows can be started automatically by external webhook events.
 
@@ -454,7 +449,7 @@ curl -X POST localhost:8000/api/v1/webhooks/{trigger_id} \
 
 ---
 
-## Phase 12 — Schedule (Cron) Triggers
+## Phase 13 — Schedule (Cron) Triggers
 
 **Goal:** Workflows run automatically on a schedule.
 
@@ -475,7 +470,7 @@ curl -X POST localhost:8000/api/v1/webhooks/{trigger_id} \
 
 ---
 
-## Phase 13 — Browser Automation
+## Phase 14 — Browser Automation
 
 **Goal:** Playwright nodes work in the Celery worker.
 
@@ -501,7 +496,7 @@ curl -X POST localhost:8000/api/v1/webhooks/{trigger_id} \
 
 ---
 
-## Phase 14 — AI Nodes
+## Phase 15 — AI Nodes
 
 **Goal:** LLM nodes (OpenAI, Anthropic) fully working with streaming support.
 
@@ -609,19 +604,20 @@ Phase 1  → Real Authentication              (1–2 days)
 Phase 2  → Workflow CRUD API                (1–2 days)
 Phase 3  → Execution Pipeline               (2–3 days)
 Phase 4  → First Real Nodes                 (2 days)
-Phase 5  → Frontend Pages & Routing         (3–4 days)
-Phase 6  → Credential Management            (2–3 days)
-Phase 7  → First Integration (Slack)        (1–2 days)
-Phase 8  → WebSocket Streaming              (1–2 days)
-Phase 9  → More Nodes                       (2–3 days)
-Phase 10 → More Integrations                (2–3 days per integration)
-Phase 11 → Webhook Triggers                 (2 days)
-Phase 12 → Schedule Triggers                (1–2 days)
-Phase 13 → Browser Automation              (2–3 days)
-Phase 14 → AI Nodes                         (2 days)
-Phase 15 → Error Handling & Resilience      (2 days)
-Phase 16 → Testing                          (3–4 days)
-Phase 17 → Production Readiness             (2–3 days)
+Phase 5  → Variable Interpolation           (Completed)
+Phase 6  → Frontend Pages & Routing         (Completed)
+Phase 7  → Credential Management            (Completed)
+Phase 8  → First Integration (Slack)        (1–2 days)
+Phase 9  → WebSocket Streaming              (1–2 days)
+Phase 10 → More Nodes                       (2–3 days)
+Phase 11 → More Integrations                (2–3 days per integration)
+Phase 12 → Webhook Triggers                 (2 days)
+Phase 13 → Schedule Triggers                (1–2 days)
+Phase 14 → Browser Automation              (2–3 days)
+Phase 15 → AI Nodes                         (2 days)
+Phase 16 → Error Handling & Resilience      (2 days)
+Phase 17 → Testing                          (3–4 days)
+Phase 18 → Production Readiness             (2–3 days)
 ```
 
 **Total estimate: 6–9 weeks** solo, building full-time.

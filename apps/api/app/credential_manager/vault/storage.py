@@ -4,7 +4,7 @@ from typing import Any, cast
 from sqlalchemy import select
 
 from apps.api.app.core.database import AsyncSessionLocal
-from apps.api.app.credential_manager.encryption.aes import aes_service
+from apps.api.app.credential_manager.encryption.aes import encryption_service
 from apps.api.app.models.credential import Credential
 
 
@@ -16,14 +16,14 @@ class VaultStorage:
             if not credential:
                 raise ValueError("Credential not found")
 
-            decrypted_str = aes_service.decrypt(cast(str, credential.encrypted_data))
+            decrypted_str = encryption_service.decrypt(cast(str, credential.encrypted_data))
             return json.loads(decrypted_str)
 
     async def save_encrypted(
         self, name: str, type: str, data: dict[str, Any], metadata: dict[str, Any] | None = None
     ):
         async with AsyncSessionLocal() as db:
-            encrypted_data = aes_service.encrypt(json.dumps(data))
+            encrypted_data = encryption_service.encrypt(json.dumps(data))
             credential = Credential(
                 name=name, type=type, encrypted_data=encrypted_data, meta=metadata
             )

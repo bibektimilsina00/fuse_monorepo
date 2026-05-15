@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from typing import Any
 
 from apps.api.app.core.celery import celery_app
 from apps.api.app.core.logger import get_logger
@@ -21,19 +22,53 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
     from apps.api.app.core.database import AsyncSessionLocal
     from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
     from apps.api.app.repositories.execution_repository import ExecutionRepository
+    from apps.api.app.repositories.workflow_repository import WorkflowRepository
+    from apps.api.app.repositories.credential_repository import CredentialRepository
+    from apps.api.app.credential_manager.encryption.aes import encryption_service
+    import json
 
-    # 1. Setup Phase: Mark running
+    # 1. Setup Phase: Mark running and Load Context
+    credentials_dict = {}
     async with AsyncSessionLocal() as db:
-        repo = ExecutionRepository(db)
-        await repo.update_status(uuid.UUID(execution_id), "running")
-        await repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
+        exec_repo = ExecutionRepository(db)
+        wf_repo = WorkflowRepository(db)
+        cred_repo = CredentialRepository(db)
+        
+        await exec_repo.update_status(uuid.UUID(execution_id), "running")
+        await exec_repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
+        
+        # Fetch user_id from workflow
+        workflow = await wf_repo.get_by_id(uuid.UUID(workflow_id))
+        if workflow:
+            # Fetch and decrypt all credentials for this user
+            user_credentials = await cred_repo.list_by_user(workflow.user_id)
+            for cred in user_credentials:
+                try:
+                    decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
+                    # Use credential type as key (e.g., 'slack_oauth', 'openai_api_key')
+                    credentials_dict[cred.type] = decrypted_data
+                except Exception as e:
+                    logger.error(f"Failed to decrypt credential {cred.id}: {e}")
 
     # 2. Execution Phase: Run the runner (No DB session held here)
     try:
+        async def on_log(message: str, level: str = "info", node_id: str | None = None, payload: Any = None):
+            async with AsyncSessionLocal() as db:
+                repo = ExecutionRepository(db)
+                await repo.add_log(
+                    uuid.UUID(execution_id),
+                    message,
+                    level=level,
+                    node_id=node_id,
+                    payload=payload
+                )
+
         runner = WorkflowRunner(
             workflow_id=workflow_id,
             execution_id=execution_id,
             graph=graph,
+            on_log=on_log,
+            credentials=credentials_dict
         )
         output = await runner.run(trigger_data)
 

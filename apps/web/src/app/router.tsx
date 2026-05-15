@@ -13,6 +13,7 @@ import { RecentlyDeletedSettings } from '@/features/settings/pages/RecentlyDelet
 import LoginPage from '@/features/auth/login-page'
 import SignupPage from '@/features/auth/signup-page'
 import ResetPasswordPage from '@/features/auth/reset-password-page'
+import CredentialsPage from '@/features/credentials/CredentialsPage'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
@@ -94,6 +95,10 @@ export const router = createBrowserRouter([
       {
         path: 'workflows/:id',
         element: <Editor />,
+      },
+      {
+        path: 'credentials',
+        element: <CredentialsPage />,
       },
       {
         path: 'settings',

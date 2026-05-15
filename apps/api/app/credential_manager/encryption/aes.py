@@ -3,10 +3,11 @@ from cryptography.fernet import Fernet
 from apps.api.app.core.config import settings
 
 
-class AESService:
-    def __init__(self, key: str = None):
+class AESEncryptionService:
+    def __init__(self, key: str | None = None):
         self.key = key or settings.ENCRYPTION_KEY
         if not self.key or len(self.key) != 44:
+            # logger.warning("ENCRYPTION_KEY invalid — generating ephemeral key.")
             self.fernet = Fernet(Fernet.generate_key())
         else:
             self.fernet = Fernet(self.key.encode())
@@ -18,4 +19,4 @@ class AESService:
         return self.fernet.decrypt(token.encode()).decode()
 
 
-aes_service = AESService()
+encryption_service = AESEncryptionService()

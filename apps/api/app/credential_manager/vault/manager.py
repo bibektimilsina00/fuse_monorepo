@@ -4,7 +4,7 @@ from typing import Any, cast
 from sqlalchemy import select
 
 from apps.api.app.core.database import AsyncSessionLocal
-from apps.api.app.credential_manager.encryption.aes import aes_service as encryption_service
+from apps.api.app.credential_manager.encryption.aes import encryption_service
 from apps.api.app.models.credential import Credential
 
 

@@ -1,26 +1,56 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Workflow as WorkflowIcon, Folder as FolderIcon, Plus, Settings } from 'lucide-react'
 import { useWorkflows } from '@/features/dashboard/hooks/use-workflows'
 import { useFolders } from '@/features/dashboard/hooks/use-folders'
 import { useUIStore } from '@/stores/ui-store'
+import { useWorkflowStore } from '@/stores/workflow-store'
+import { NODE_REGISTRY } from '@/nodes/registry'
+import { CanvasEngine } from '@/features/workflow-editor/utils/canvas-engine'
+import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 
 /**
  * Hook to manage Command Palette logic: filtering, selection, and keyboard navigation.
  */
 export function useCommandPalette() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isSearchOpen, setSearchOpen } = useUIStore()
   const { data: workflows = [] } = useWorkflows()
   const { data: folders = [] } = useFolders()
-  
+  const { addNode } = useWorkflowStore()
+
   const [searchValue, setSearchValue] = useState('')
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+
+  const isEditor = location.pathname.startsWith('/workflows/') && location.pathname.length > 11
 
   const filteredResults = useMemo(() => {
     const query = searchValue.toLowerCase().trim()
-    
-    const results = [
+
+    if (isEditor) {
+      const items: any[] = []
+
+      NODE_REGISTRY.forEach(node => {
+        if (!query || node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query)) {
+          items.push({
+            id: node.type,
+            label: node.name,
+            icon: getIcon(node.icon),
+            bgColor: node.color,
+            onClick: () => {
+              // Add node to center or default position
+              const newNode = CanvasEngine.createNode(node.type, { x: 400, y: 300 })
+              addNode(newNode)
+            }
+          })
+        }
+      })
+
+      return items.length > 0 ? [{ title: 'Nodes', items }] : []
+    }
+
+    return [
       {
         title: 'Actions',
         items: [
@@ -36,7 +66,6 @@ export function useCommandPalette() {
             id: w.id,
             label: w.name,
             icon: WorkflowIcon,
-            color: 'text-blue-400',
             onClick: () => navigate(`/workflows/${w.id}`)
           }))
       },
@@ -48,14 +77,11 @@ export function useCommandPalette() {
             id: f.id,
             label: f.name,
             icon: FolderIcon,
-            color: 'text-amber-400',
             onClick: () => navigate(`/folders/${f.id}`)
           }))
       }
     ].filter(group => group.items.length > 0)
-
-    return results
-  }, [searchValue, workflows, folders, navigate])
+  }, [searchValue, workflows, folders, navigate, isEditor, addNode])
 
   const flatItems = useMemo(() => filteredResults.flatMap(g => g.items), [filteredResults])
 
@@ -78,7 +104,7 @@ export function useCommandPalette() {
   }, [flatItems, selectedIndex, setSearchOpen])
 
   useEffect(() => {
-    setSelectedIndex(0)
+    setSelectedIndex(-1)
   }, [searchValue])
 
   return {

@@ -78,7 +78,7 @@ export const Sidebar: React.FC = () => {
       {/* Resize handle */}
       {!isSidebarCollapsed && (
         <div
-          className="absolute top-0 right-0 w-1 h-full cursor-col-resize select-none z-50 hover:bg-[var(--brand-accent)]/30 transition-colors"
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize select-none z-50"
           onPointerDown={onDividerPointerDown}
           onPointerMove={onDividerPointerMove}
           onPointerUp={onDividerPointerUp}

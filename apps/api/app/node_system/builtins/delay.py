@@ -40,7 +40,7 @@ class DelayNode(BaseNode):
 
             return NodeResult(
                 success=True,
-                output_data={"delayed_for_ms": ms, **input_data},
+                output_data={"delayed_for_ms": ms},
             )
         except Exception as e:
             return NodeResult(success=False, error=str(e))

@@ -21,6 +21,8 @@ import { CopilotTab } from '@/features/workflow-editor/panels/inspector/CopilotT
 import { ToolbarTab } from '@/features/workflow-editor/panels/inspector/ToolbarTab'
 import { EditorTab } from '@/features/workflow-editor/panels/inspector/EditorTab'
 
+import { useExecution } from '@/features/workflow-editor/hooks/use-execution'
+
 interface EditorInspectorProps {
   style?: React.CSSProperties
   className?: string
@@ -31,6 +33,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
   const { nodes, selectedNodeId, updateNodeData } = useWorkflowStore()
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [editNameValue, setEditNameValue] = React.useState('')
+  const { run, isRunning } = useExecution()
   
   const selectedNode = React.useMemo(() => 
     nodes.find(n => n.id === selectedNodeId),
@@ -58,7 +61,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
 
   return (
     <aside
-      className={cn("flex flex-col border-l border-[var(--border-default)] bg-[var(--bg)] min-w-0 overflow-hidden", className)}
+      className={cn("flex flex-col h-full border-l border-[var(--border-default)] bg-[var(--bg)] min-w-0 overflow-hidden", className)}
       style={style}
     >
       {/* Top Action Bar */}
@@ -83,10 +86,23 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
               Deploy
             </button>
           </Tooltip>
-          <Tooltip content="Run workflow">
-            <button className="flex items-center gap-2 px-3 h-[32px] rounded-lg bg-[var(--brand-accent)] text-white text-[13px] font-semibold hover:bg-[var(--brand-accent-hover)] transition-all shadow-lg">
-              <Play className="w-3.5 h-3.5 fill-current" />
-              Run
+          <Tooltip content={isRunning ? "Running..." : "Run workflow"}>
+            <button 
+              onClick={() => !isRunning && run()}
+              disabled={isRunning}
+              className={cn(
+                "flex items-center gap-2 px-3 h-[32px] rounded-lg transition-all shadow-lg text-[13px] font-semibold",
+                isRunning 
+                  ? "bg-[var(--surface-active)] text-[var(--text-muted)] cursor-not-allowed"
+                  : "bg-[var(--brand-accent)] text-white hover:bg-[var(--brand-accent-hover)]"
+              )}
+            >
+              {isRunning ? (
+                <div className="size-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              {isRunning ? 'Running' : 'Run'}
             </button>
           </Tooltip>
         </div>

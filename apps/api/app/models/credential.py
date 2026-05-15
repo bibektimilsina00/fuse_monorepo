@@ -1,16 +1,20 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, String
+if TYPE_CHECKING:
+    from apps.api.app.models.user import User
+
+from sqlalchemy import JSON, DateTime, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.app.models.base import Base
 
 
 class Credential(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)  # e.g. slack_oauth, github_pat
     # Encrypted JSON data
@@ -25,3 +29,5 @@ class Credential(Base):
         default=lambda: datetime.now(UTC).replace(tzinfo=None),
         onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
+
+    user: Mapped["User"] = relationship("User", back_populates="credentials")

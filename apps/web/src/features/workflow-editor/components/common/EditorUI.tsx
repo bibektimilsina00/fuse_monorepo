@@ -40,46 +40,72 @@ export const OptionItem = memo(({ label, checked, onClick }: { label: string, ch
   </button>
 ))
 
-export const LogEntry = memo(({ icon, iconBg, label, duration, active = false, onClick }: { icon: React.ReactNode, iconBg: string, label: string, duration: string, active?: boolean, onClick?: () => void }) => (
+export const LogEntry = memo(({ icon, iconBg, label, duration, active = false, level = 'info', onClick }: { icon: React.ReactNode, iconBg: string, label: string, duration: string, active?: boolean, level?: string, onClick?: () => void }) => (
   <div
     onClick={onClick}
     className={cn(
       "group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 h-[30px] transition-all",
-      active ? "bg-[var(--surface-active)]" : "hover:bg-[var(--surface-hover)]"
+      active ? "bg-[var(--surface-active)]" : "hover:bg-[var(--surface-hover)]",
+      level === 'error' && !active && "bg-red-500/10 border border-red-500/20"
     )}
   >
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <div className="flex size-[16px] flex-shrink-0 items-center justify-center rounded-sm" style={{ background: iconBg }}>{icon}</div>
-      <span className="min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)]">{label}</span>
+      <div 
+        className={cn("flex size-[16px] flex-shrink-0 items-center justify-center rounded-sm", level === 'error' && "bg-red-500")} 
+        style={{ background: level === 'error' ? undefined : iconBg }}
+      >
+        {icon}
+      </div>
+      <span className={cn(
+        "min-w-0 truncate text-[13px] font-medium",
+        level === 'error' ? "text-red-400" : "text-[var(--text-primary)]"
+      )}>
+        {label}
+      </span>
     </div>
     <span className="flex-shrink-0 text-[12px] text-[var(--text-muted)]">{duration}</span>
   </div>
 ))
 
-export const DataNode = memo(({ label, type, value, initialCollapsed = false, wrap = false }: { label: string, type: string, value: string, initialCollapsed?: boolean, wrap?: boolean }) => {
+export const DataNode = memo(({ label, value, initialCollapsed = false, wrap = false }: { label: string, value: any, initialCollapsed?: boolean, wrap?: boolean }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(initialCollapsed)
+  const isObject = value !== null && typeof value === 'object'
+  const displayType = Array.isArray(value) ? 'array' : typeof value
+  
   return (
-    <div className="flex min-w-0 flex-col">
-      <div onClick={() => setIsCollapsed(!isCollapsed)} className="group flex min-h-[30px] cursor-pointer items-center gap-2 rounded-lg px-2 -mx-2 hover:bg-[var(--surface-active)] transition-all">
+    <div className="flex min-w-0 overflow-hidden flex-col">
+      <div 
+        onClick={() => setIsCollapsed(!isCollapsed)} 
+        className="group flex min-h-[30px] cursor-pointer items-center gap-2 rounded-lg px-2 -mx-2 hover:bg-[var(--surface-active)] transition-all"
+      >
         <span className="text-[12px] font-semibold text-[var(--text-primary)]">{label}</span>
-        <div className={cn("inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-bold tracking-tight", type === 'number' ? "bg-blue-500/10 text-blue-400" : "bg-zinc-500/10 text-zinc-400")}>{type}</div>
+        <div className={cn(
+          "inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-bold tracking-tight", 
+          displayType === 'number' ? "bg-blue-500/10 text-blue-400" : 
+          displayType === 'boolean' ? "bg-orange-500/10 text-orange-400" :
+          (displayType === 'object' || displayType === 'array') ? "bg-purple-500/10 text-purple-400" :
+          "bg-zinc-500/10 text-zinc-400"
+        )}>
+          {displayType}
+        </div>
         <ChevronDown className={cn("size-3 text-[var(--text-muted)] transition-transform duration-200", isCollapsed && "-rotate-90")} />
       </div>
       {!isCollapsed && (
-        <div className="mt-1 ml-[4px] border-l border-[var(--border-default)] pl-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className={cn("py-0.5 text-[13px] text-[var(--text-body)] font-mono [word-break:break-word]", wrap ? "whitespace-pre-wrap" : "whitespace-pre overflow-x-auto custom-scrollbar")}>
-            {value.includes('{') || value.includes('[') ? (
-              <Editor
-                value={value}
-                onValueChange={() => { }}
-                highlight={code => Prism.highlight(code, Prism.languages.json, 'json')}
-                padding={0}
-                className="prism-editor"
-                style={{ fontFamily: '"Fira code", "Fira Mono", monospace', fontSize: 13 }}
-                readOnly
-              />
-            ) : value}
-          </div>
+        <div className="mt-1 ml-[4px] border-l border-[var(--border-default)] pl-3 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+          {isObject ? (
+            <div className="flex flex-col gap-1">
+              {Object.entries(value).map(([k, v]) => (
+                <DataNode key={k} label={k} value={v} initialCollapsed={true} wrap={wrap} />
+              ))}
+              {Object.keys(value).length === 0 && (
+                <span className="text-[11px] text-[var(--text-muted)] italic py-1">Empty {displayType}</span>
+              )}
+            </div>
+          ) : (
+            <div className={cn("py-0.5 text-[13px] text-[var(--text-body)] font-mono [word-break:break-word]", wrap ? "whitespace-pre-wrap" : "whitespace-pre-wrap overflow-x-auto custom-scrollbar")}>
+              {String(value)}
+            </div>
+          )}
         </div>
       )}
     </div>

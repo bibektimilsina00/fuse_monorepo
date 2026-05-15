@@ -10,12 +10,12 @@
 |---|---|---|---|
 | 0 | [phase-00-environment.md](phase-00-environment.md) | Setup | ✅ Done |
 | 1 | [phase-01-authentication.md](phase-01-authentication.md) | Auth | ✅ Done |
-| 2 | [phase-02-workflow-crud.md](phase-02-workflow-crud.md) | Core | 🔄 In Progress |
-| 3 | [phase-03-execution-pipeline.md](phase-03-execution-pipeline.md) | Core | ⬜ |
-| 4 | [phase-04-first-nodes.md](phase-04-first-nodes.md) | Nodes | ⬜ |
-| 5 | [phase-05-variable-interpolation.md](phase-05-variable-interpolation.md) | Core | ⬜ |
-| 6 | [phase-06-frontend-pages.md](phase-06-frontend-pages.md) | Frontend | ⬜ |
-| 7 | [phase-07-credentials.md](phase-07-credentials.md) | Auth | ⬜ |
+| 2 | [phase-02-workflow-crud.md](phase-02-workflow-crud.md) | Core | ✅ Done |
+| 3 | [phase-03-execution-pipeline.md](phase-03-execution-pipeline.md) | Core | ✅ Done |
+| 4 | [phase-04-first-nodes.md](phase-04-first-nodes.md) | Nodes | ✅ Done |
+| 5 | [phase-05-variable-interpolation.md](phase-05-variable-interpolation.md) | Core | ✅ Done |
+| 6 | [phase-06-frontend-pages.md](phase-06-frontend-pages.md) | Frontend | ✅ Done |
+| 7 | [phase-07-credentials.md](phase-07-credentials.md) | Auth | 🔄 In Progress |
 | 8 | [phase-08-slack-integration.md](phase-08-slack-integration.md) | Integration | ⬜ |
 | 9 | [phase-09-websocket-streaming.md](phase-09-websocket-streaming.md) | Realtime | ⬜ |
 | 10 | [phase-10-more-nodes.md](phase-10-more-nodes.md) | Nodes | ⬜ |

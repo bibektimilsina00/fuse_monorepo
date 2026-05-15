@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { type NodeProps } from 'reactflow'
+import { useMemo, useEffect } from 'react'
+import { type NodeProps, useUpdateNodeInternals } from 'reactflow'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '@/nodes/registry'
 import { useWorkflowStore } from '@/stores/workflow-store'
@@ -10,8 +10,16 @@ import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-ha
 import { getPropValuePreview } from '@/features/workflow-editor/nodes/utils'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
-  const { removeNode } = useWorkflowStore()
   const definition = useMemo(() => NODE_REGISTRY.find(d => d.type === type), [type])
+  const updateNodeInternals = useUpdateNodeInternals()
+  const isLocked = data?.locked ?? false
+  const handleDirection = data?.handleDirection ?? 'horizontal'
+
+  useEffect(() => {
+    updateNodeInternals(id)
+    const t = setTimeout(() => updateNodeInternals(id), 50)
+    return () => clearTimeout(t)
+  }, [id, handleDirection, updateNodeInternals])
   
   if (!definition) return null
 
@@ -24,12 +32,13 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
         role="button" 
         tabIndex={0} 
         className={cn(
-          "workflow-drag-handle relative z-[20] w-[200px] cursor-grab select-none rounded-lg border bg-[var(--surface-2)] [&:active]:cursor-grabbing transition-colors",
-          selected ? "border-[var(--brand-accent)]" : "border-[#333]"
+          "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-all",
+          !isLocked ? "cursor-grab [&:active]:cursor-grabbing" : "cursor-default",
+          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-[#333]"
         )}
       >
-        <NodeToolbar id={id} onRemove={removeNode} />
-        <NodeHandles definition={definition} />
+        <NodeToolbar id={id} />
+        <NodeHandles definition={definition} direction={handleDirection} />
 
         <NodeHeader 
           label={data.label || definition.name} 
