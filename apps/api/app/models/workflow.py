@@ -1,11 +1,11 @@
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
-
 if TYPE_CHECKING:
     from apps.api.app.models.user import User
+    from apps.api.app.models.folder import Folder
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,12 +30,19 @@ class Workflow(Base):
         default=lambda: datetime.now(UTC).replace(tzinfo=None),
         onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    color: Mapped[str | None] = mapped_column(String, nullable=True)
+
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False
     )
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("folder.id", ondelete="CASCADE"), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="workflows")
+    folder: Mapped["Folder"] = relationship("Folder", back_populates="workflows")
     executions: Mapped[list["Execution"]] = relationship(
         "Execution", back_populates="workflow", cascade="all, delete-orphan"
     )

@@ -1,4 +1,4 @@
-export type NodePropertyType = 'string' | 'number' | 'boolean' | 'json' | 'options' | 'credential' | 'key-value' | 'list';
+export type NodePropertyType = 'string' | 'number' | 'boolean' | 'json' | 'options' | 'credential' | 'key-value' | 'list' | 'schema';
 
 export interface NodeProperty {
   name: string;

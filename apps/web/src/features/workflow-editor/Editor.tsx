@@ -11,9 +11,13 @@ import { EditorInspector } from '@/features/workflow-editor/panels/inspector/Edi
 import { EditorLogs } from '@/features/workflow-editor/panels/logs-panel/EditorLogs'
 import { WorkflowControls } from '@/features/workflow-editor/controls/WorkflowControls'
 import { useWorkflow } from '@/features/workflow-editor/hooks/use-workflow'
+import { useAutoSave } from '@/features/workflow-editor/hooks/use-auto-save'
 import { useWorkflowData } from '@/features/workflow-editor/hooks/use-workflow-data'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
 import { NODE_REGISTRY } from '@/nodes/registry'
+
+import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
+import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
 
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 600
@@ -69,10 +73,9 @@ export default function Editor() {
   )
 }
 
-import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
-import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
 
 function EditorContent() {
+  useAutoSave()
   const {
     nodes,
     edges,

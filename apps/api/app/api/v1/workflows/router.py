@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.api.v1.auth.dependencies import get_current_user
 from apps.api.app.core.database import get_db
 from apps.api.app.models.user import User
-from apps.api.app.schemas.workflow import WorkflowCreate, WorkflowOut, WorkflowUpdate
+from apps.api.app.schemas.workflow import WorkflowCreate, WorkflowOut, WorkflowUpdate, WorkflowBatchUpdate
 from apps.api.app.services.workflow_service import WorkflowService
 
 router = APIRouter()
@@ -50,6 +50,18 @@ async def update_workflow(
 ):
     service = WorkflowService(db)
     return await service.update_workflow(workflow_id, data, current_user)
+
+
+@router.patch("/batch", status_code=status.HTTP_204_NO_CONTENT)
+async def batch_update_workflows(
+    data: WorkflowBatchUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from apps.api.app.core.logger import logger
+    logger.info(f"Received batch update request: {data.model_dump_json()}")
+    service = WorkflowService(db)
+    await service.batch_update_workflows(data, current_user)
 
 
 @router.delete("/{workflow_id}", status_code=status.HTTP_204_NO_CONTENT)

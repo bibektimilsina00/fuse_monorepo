@@ -8,11 +8,13 @@ from apps.api.app.api.v1.integrations.router import router as integrations_route
 from apps.api.app.api.v1.triggers.webhook_handler import router as webhooks_router
 from apps.api.app.api.v1.websocket.router import router as websocket_router
 from apps.api.app.api.v1.workflows.router import router as workflows_router
+from apps.api.app.api.v1.folders.router import router as folders_router
 
 router = APIRouter()
 
 router.include_router(auth_router, prefix="/auth", tags=["auth"])
 router.include_router(workflows_router, prefix="/workflows", tags=["workflows"])
+router.include_router(folders_router, prefix="/folders", tags=["folders"])
 router.include_router(executions_router, prefix="/executions", tags=["executions"])
 router.include_router(credentials_router, prefix="/credentials", tags=["credentials"])
 router.include_router(integrations_router, prefix="/integrations", tags=["integrations"])

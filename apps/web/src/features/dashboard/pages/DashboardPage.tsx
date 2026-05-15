@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Table, Clock, Search, Workflow as WorkflowIcon } from 'lucide-react'
+import { Table, Clock, Search, Workflow as WorkflowIcon, Bot, FileText, Zap } from 'lucide-react'
 import { TemplateCard } from '@/features/dashboard/components/template-card'
 import { ChatInput } from '@/features/dashboard/components/chat-input'
 import { useAuthStore } from '@/stores/auth-store'
@@ -27,6 +27,9 @@ export const DashboardPage: React.FC = () => {
     { title: "Self-populating CRM", icon: Table },
     { title: "Meeting prep agent", icon: Clock },
     { title: "Resolve todo list", icon: Search },
+    { title: "Customer Support Bot", icon: Bot },
+    { title: "Invoice Generator", icon: FileText },
+    { title: "Automated Lead Scoring", icon: Zap },
   ]
 
   const filteredTemplates = useMemo(() => {
@@ -39,10 +42,10 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--bg)] custom-scrollbar">
-      <div className="flex min-h-full flex-col items-center px-6">
+      <div className="flex flex-col items-center px-6">
         
         {/* Chat Section */}
-        <div className="flex flex-1 flex-col items-center justify-center w-full pb-[2vh]">
+        <div className="flex flex-col items-center w-full pt-[35vh] pb-[10vh]">
           {/* Greeting */}
           <h1 className="mb-6 max-w-[42rem] text-balance font-[430] font-season text-[32px] text-[var(--text-primary)] tracking-[-0.02em]">
             What should we get done, {firstName || 'there'}?
@@ -56,7 +59,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Content Grid */}
-        <div className="w-full max-w-[68rem] pb-24 -mt-[30vh]">
+        <div className="w-full max-w-[68rem] pb-24">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="size-8 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-[var(--text-primary)]" />

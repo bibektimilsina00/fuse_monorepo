@@ -27,7 +27,9 @@ class WorkflowRepository:
 
     async def list_by_user(self, user_id: uuid.UUID) -> list[Workflow]:
         result = await self.db.execute(
-            select(Workflow).where(Workflow.user_id == user_id).order_by(Workflow.created_at.desc())
+            select(Workflow)
+            .where(Workflow.user_id == user_id)
+            .order_by(Workflow.position.asc(), Workflow.created_at.desc())
         )
         return list(result.scalars().all())
 
@@ -43,6 +45,13 @@ class WorkflowRepository:
         await self.db.commit()
         await self.db.refresh(workflow)
         return workflow
+
+    async def batch_update(self, updates: list[tuple[Workflow, dict]]) -> None:
+        for workflow, data in updates:
+            for key, value in data.items():
+                setattr(workflow, key, value)
+            self.db.add(workflow)
+        await self.db.commit()
 
     async def delete(self, workflow: Workflow) -> None:
         await self.db.delete(workflow)

@@ -5,7 +5,6 @@ import { requestJson } from '@/lib/api/client'
 import { WorkflowSchema } from '@/lib/api/contracts'
 import { workflowKeys } from '@/features/dashboard/hooks/keys'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { DEFAULT_WORKFLOW_ID, DEFAULT_WORKFLOW } from '@/features/dashboard/hooks/use-workflows'
 
 /**
  * Hook to fetch a single workflow by ID and sync it with the workflow store.
@@ -18,11 +17,6 @@ export function useWorkflowData() {
     queryKey: workflowKeys.detail(id || ''),
     queryFn: async ({ signal }) => {
       if (!id) throw new Error('Workflow ID is required')
-
-      // Fallback for default agent
-      if (id === DEFAULT_WORKFLOW_ID) {
-        return DEFAULT_WORKFLOW
-      }
 
       return requestJson(WorkflowSchema, {
         url: `/workflows/${id}`,

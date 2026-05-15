@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react'
 import { 
   Table, 
   Files, 
@@ -17,55 +18,64 @@ import {
 import type { LucideIcon } from 'lucide-react'
 
 export interface NavItem {
+  id: string
   label: string
-  href?: string
-  icon?: LucideIcon | React.ComponentType<{ className?: string }>
-  onClick?: () => void
-  type?: 'link' | 'button' | 'action'
+  href: string
+  icon: LucideIcon | ComponentType<{ className?: string }>
 }
 
 export interface NavSection {
+  id: string
   label: string
   items: NavItem[]
-  hasAdd?: boolean
 }
 
+/**
+ * Main application navigation configuration.
+ */
 export const MAIN_NAV: NavSection[] = [
   {
+    id: "workspace",
     label: "Workspace",
     items: [
-      { label: "Tables", href: "/tables", icon: Table },
-      { label: "Files", href: "/files", icon: Files },
-      { label: "Knowledge Base", href: "/kb", icon: Database },
-      { label: "Scheduled Tasks", href: "/scheduled", icon: Calendar },
-      { label: "Logs", href: "/logs", icon: ScrollText },
+      { id: "tables", label: "Tables", href: "/tables", icon: Table },
+      { id: "files", label: "Files", href: "/files", icon: Files },
+      { id: "kb", label: "Knowledge Base", href: "/kb", icon: Database },
+      { id: "scheduled", label: "Scheduled Tasks", href: "/scheduled", icon: Calendar },
+      { id: "logs", label: "Logs", href: "/logs", icon: ScrollText },
     ]
   }
 ]
 
+/**
+ * Settings-specific navigation configuration.
+ */
 export const SETTINGS_NAV: NavSection[] = [
   {
+    id: "account",
     label: "Account",
     items: [
-      { label: "General", href: "/settings/general", icon: User },
-      { label: "Integrations", href: "/settings/integrations", icon: Puzzle },
-      { label: "Secrets", href: "/settings/secrets", icon: Key },
+      { id: "general", label: "General", href: "/settings/general", icon: User },
+      { id: "integrations", label: "Integrations", href: "/settings/integrations", icon: Puzzle },
+      { id: "secrets", label: "Secrets", href: "/settings/secrets", icon: Key },
     ]
   },
   {
+    id: "tools",
     label: "Tools",
     items: [
-      { label: "Custom Tools", href: "/settings/custom-tools", icon: Wrench },
-      { label: "Skills", href: "/settings/skills", icon: Lightbulb },
-      { label: "MCP Tools", href: "/settings/mcp-tools", icon: Layers },
+      { id: "custom-tools", label: "Custom Tools", href: "/settings/custom-tools", icon: Wrench },
+      { id: "skills", label: "Skills", href: "/settings/skills", icon: Lightbulb },
+      { id: "mcp-tools", label: "MCP Tools", href: "/settings/mcp-tools", icon: Layers },
     ]
   },
   {
+    id: "system",
     label: "System",
     items: [
-      { label: "Fuse Keys", href: "/settings/keys", icon: KeyRound },
-      { label: "MCP Servers", href: "/settings/mcp-servers", icon: Server },
-      { label: "Recently Deleted", href: "/settings/deleted", icon: Trash2 },
+      { id: "keys", label: "Fuse Keys", href: "/settings/keys", icon: KeyRound },
+      { id: "mcp-servers", label: "MCP Servers", href: "/settings/mcp-servers", icon: Server },
+      { id: "deleted", label: "Recently Deleted", href: "/settings/deleted", icon: Trash2 },
     ]
   }
 ]

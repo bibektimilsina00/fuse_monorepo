@@ -10,6 +10,7 @@ import { CustomSelect } from '@/features/workflow-editor/panels/inspector/compon
 import { KeyValueField } from '@/features/workflow-editor/panels/inspector/components/key-value-field'
 import { ConnectionsPanel } from '@/features/workflow-editor/panels/inspector/components/connections-panel'
 import { ConditionListField } from '@/features/workflow-editor/panels/inspector/components/condition-list-field'
+import { SchemaEditorField } from '@/features/workflow-editor/panels/inspector/components/schema-editor-field'
 
 export const EditorTab: React.FC = () => {
   const { nodes, edges, selectedNodeId, updateNodeData } = useWorkflowStore()
@@ -143,12 +144,19 @@ export const EditorTab: React.FC = () => {
             />
           )}
 
+          {prop.type === 'schema' && (
+            <SchemaEditorField
+              value={propsData[prop.name] || prop.default || []}
+              onChange={(val: any) => handlePropertyChange(prop.name, val)}
+            />
+          )}
+
           {prop.type === 'json' && (
             <div className="w-full bg-[#222] rounded-md overflow-hidden transition-all">
               <Editor
-                value={currentValue}
+                value={typeof currentValue === 'object' ? JSON.stringify(currentValue, null, 2) : String(currentValue)}
                 onValueChange={(code) => handlePropertyChange(prop.name, code)}
-                highlight={code => Prism.highlight(code, Prism.languages.json, 'json')}
+                highlight={code => Prism.highlight(code || '', Prism.languages.json, 'json')}
                 padding={12}
                 className="prism-editor min-h-[100px] focus:outline-none"
                 textareaClassName="focus:outline-none"
