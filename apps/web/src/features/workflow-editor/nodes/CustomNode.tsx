@@ -6,7 +6,7 @@ import { NodeToolbar } from '@/features/workflow-editor/nodes/components/node-to
 import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-header'
 import { NodeProperty } from '@/features/workflow-editor/nodes/components/node-property'
 import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-handles'
-import { getPropValuePreview, shouldShowProperty } from '@/features/workflow-editor/nodes/utils'
+import { getPropValuePreview, shouldShowProperty, getDynamicLabel } from '@/features/workflow-editor/nodes/utils'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
@@ -49,13 +49,17 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
 
         {/* Properties list */}
         <div className="flex flex-col gap-1.5 py-2">
-          {visibleProps.map((prop) => (
-            <NodeProperty 
-              key={prop.name} 
-              label={prop.label} 
-              value={getPropValuePreview(data.properties?.[prop.name], prop.type)} 
-            />
-          ))}
+          {visibleProps.map((prop) => {
+            const modes = data.properties?._modes || {}
+            const mode = modes[prop.name] || (prop.loadOptions ? 'dynamic' : 'manual')
+            return (
+              <NodeProperty 
+                key={prop.name} 
+                label={getDynamicLabel(prop, mode)} 
+                value={getPropValuePreview(data.properties?.[prop.name], prop.type)} 
+              />
+            )
+          })}
           
           {hasErrorHandle && (
             <NodeProperty 

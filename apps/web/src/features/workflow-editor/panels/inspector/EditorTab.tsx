@@ -15,6 +15,7 @@ import { CredentialPicker } from '@/features/workflow-editor/panels/inspector/co
 import { FileListField } from '@/features/workflow-editor/panels/inspector/components/file-list-field'
 import { useNodeAncestors } from '@/features/workflow-editor/hooks/use-node-ancestors'
 import { InterpolationPicker } from '@/features/workflow-editor/panels/inspector/components/interpolation-picker'
+import { usePropertyField } from '@/features/workflow-editor/hooks/use-property-field'
 import { shouldShowProperty } from '@/features/workflow-editor/nodes/utils'
 
 // Add custom Prism rules for interpolation
@@ -41,116 +42,31 @@ interface PropertyFieldProps {
   definition: any
 }
 
-const PropertyField: React.FC<PropertyFieldProps> = ({ 
-  prop, 
-  selectedNode, 
-  handlePropertyChange,
-  onShowPicker,
-  isFirstClickAllowed,
-  onFirstClickUsed,
-  definition
-}) => {
-  const [mode, setMode] = useState<'manual' | 'dynamic'>(prop.loadOptions ? 'dynamic' : 'manual')
-  const [dynamicOptions, setDynamicOptions] = useState<any[]>([])
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false)
+const PropertyField: React.FC<PropertyFieldProps> = (props) => {
+  const { prop, handlePropertyChange, onShowPicker, isFirstClickAllowed, onFirstClickUsed, definition } = props
+  const {
+    mode,
+    dynamicOptions,
+    isLoadingOptions,
+    currentValue,
+    toggleMode,
+    handleInputInteraction,
+    handleKeyDown,
+    getLabel
+  } = usePropertyField(props)
 
-  const propsData = selectedNode.data?.properties || {}
-  const dependencies = prop.loadOptionsDependsOn || []
-  const dependencyValues = dependencies.map((d: string) => propsData[d]).join('|')
-
-  React.useEffect(() => {
-    if (mode === 'dynamic' && prop.loadOptions) {
-      fetchOptions()
-    }
-  }, [mode, prop.loadOptions, dependencyValues])
-
-  const fetchOptions = async () => {
-    setIsLoadingOptions(true)
-    try {
-      const params: Record<string, string> = {}
-      dependencies.forEach((d: string) => {
-        if (propsData[d]) params[d] = propsData[d]
-      })
-      
-      const response = await apiClient.get(prop.loadOptions, { params })
-      if (response.data.ok) {
-        setDynamicOptions(response.data.data || [])
-      }
-    } catch (err) {
-      console.error('Failed to fetch options:', err)
-    } finally {
-      setIsLoadingOptions(false)
-    }
-  }
-
-  const currentValue = propsData[prop.name] ?? prop.default ?? ''
-
-  const handleInputInteraction = (e: React.MouseEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) => {
-    if (isFirstClickAllowed()) {
-      const input = e.target as HTMLInputElement
-      const rect = input.getBoundingClientRect()
-      const start = input.selectionStart || 0
-      const end = input.selectionEnd || 0
-      const valueAtTrigger = input.value
-      
-      onShowPicker(rect, (val) => {
-        const textBefore = valueAtTrigger.substring(0, start)
-        const hasTrigger = textBefore.endsWith('{{')
-        const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
-        handlePropertyChange(prop.name, newVal)
-      })
-      onFirstClickUsed()
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const input = e.target as HTMLInputElement
-    // Show picker on {{
-    if (e.key === '{' && input.value[input.selectionStart! - 1] === '{') {
-      const rect = input.getBoundingClientRect()
-      // Capture state after a tiny delay to ensure the second { is in the value
-      setTimeout(() => {
-        const start = input.selectionStart || 0
-        const end = input.selectionEnd || 0
-        const valueAtTrigger = input.value
-        
-        onShowPicker(rect, (val) => {
-          const textBefore = valueAtTrigger.substring(0, start)
-          const hasTrigger = textBefore.endsWith('{{')
-          const newVal = (hasTrigger ? textBefore.slice(0, -2) : textBefore) + val + valueAtTrigger.substring(end)
-          handlePropertyChange(prop.name, newVal)
-        })
-      }, 0)
-    }
-  }
-
-  const getDynamicLabel = () => {
-    if (!prop.loadOptions) return prop.label
-    const isChannel = prop.name === 'channel'
-    const isUser = prop.name === 'user'
-    
-    if (mode === 'dynamic') {
-      if (isChannel) return 'Select Channel'
-      if (isUser) return 'Select User'
-      return `Select ${prop.label.replace(' ID', '')}`
-    }
-    
-    // Manual mode
-    if (isChannel) return 'Channel ID'
-    if (isUser) return 'User ID'
-    return prop.label
-  }
+  const propsData = props.selectedNode.data?.properties || {}
 
   return (
     <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
       <div className="flex items-center justify-between mb-1">
         <label className="text-[12px] font-bold text-white">
-          {getDynamicLabel()}
+          {getLabel()}
           {prop.required && <span className="text-red-500 ml-1.5">*</span>}
         </label>
         {prop.loadOptions && (
           <button 
-            onClick={() => setMode(mode === 'manual' ? 'dynamic' : 'manual')}
+            onClick={toggleMode}
             className="p-1 rounded hover:bg-[#333] text-[#555] hover:text-white transition-all active:scale-95"
             title={mode === 'manual' ? 'Switch to List' : 'Switch to Manual ID'}
           >
