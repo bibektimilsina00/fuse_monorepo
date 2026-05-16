@@ -15,12 +15,14 @@ class SlackService:
     async def send_message(
         self,
         channel: str,
-        text: str,
+        text: str | None = None,
         thread_ts: str | None = None,
         blocks: list | None = None,
         attachments: list | None = None,
     ) -> dict:
-        payload: dict = {"channel": channel, "text": text}
+        payload: dict = {"channel": channel}
+        if text:
+            payload["text"] = text
         if thread_ts:
             payload["thread_ts"] = thread_ts
         if blocks:
@@ -50,11 +52,13 @@ class SlackService:
         self,
         channel: str,
         user: str,
-        text: str,
+        text: str | None = None,
         thread_ts: str | None = None,
         blocks: list | None = None,
     ) -> dict:
-        payload: dict = {"channel": channel, "user": user, "text": text}
+        payload: dict = {"channel": channel, "user": user}
+        if text:
+            payload["text"] = text
         if thread_ts:
             payload["thread_ts"] = thread_ts
         if blocks:

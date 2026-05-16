@@ -1,6 +1,7 @@
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.api.v1.auth.dependencies import get_current_user
@@ -85,6 +86,7 @@ async def run_workflow(
     workflow_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    graph: dict[str, Any] | None = Body(default=None),
 ):
     service = WorkflowService(db)
     workflow = await service.get_workflow(workflow_id, current_user)
@@ -93,7 +95,9 @@ async def run_workflow(
 
     execution_id = await execution_engine.trigger_workflow(
         workflow_id=workflow.id,
-        graph=workflow.graph,
+        # Use client-provided graph if present (avoids auto-save race condition),
+        # fall back to persisted graph otherwise.
+        graph=graph if graph is not None else workflow.graph,
         trigger_type="manual",
     )
     return {"execution_id": str(execution_id)}

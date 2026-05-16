@@ -5,6 +5,7 @@ import { ExecutionSchema, type Execution } from '@/lib/api/contracts'
 import { z } from 'zod'
 import { useCallback, useEffect } from 'react'
 import { useExecutionStore } from '@/stores/execution-store'
+import { useWorkflowStore } from '@/stores/workflow-store'
 
 const RunResponseSchema = z.object({
   execution_id: z.string().uuid(),
@@ -25,14 +26,17 @@ export function useExecution() {
     addRun,
     updateRun,
   } = useExecutionStore()
+  const { nodes, edges } = useWorkflowStore()
   const queryClient = useQueryClient()
 
   const runMutation = useMutation({
     mutationFn: async () => {
       if (!workflowId) throw new Error('Workflow ID is required')
+      // Send current in-memory graph so execution is never blocked by auto-save debounce
       return requestJson(RunResponseSchema, {
         url: `/workflows/${workflowId}/run`,
         method: 'POST',
+        data: { nodes, edges },
       })
     },
     onSuccess: (data) => {

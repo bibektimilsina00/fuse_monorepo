@@ -22,12 +22,15 @@ class SlackIntegration(OAuthIntegration):
         # Implementation for OAuth token refresh via Slack API
         return {"access_token": "new_mock_token"}
 
-    async def send_message(self, channel: str, text: str):
+    async def send_message(self, channel: str, text: str | None = None):
         async with httpx.AsyncClient() as client:
+            payload = {"channel": channel}
+            if text:
+                payload["text"] = text
             response = await client.post(
                 "https://slack.com/api/chat.postMessage",
                 headers={"Authorization": f"Bearer {self.access_token}"},
-                json={"channel": channel, "text": text},
+                json=payload,
             )
             response.raise_for_status()
             return response.json()

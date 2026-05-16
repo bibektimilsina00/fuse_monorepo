@@ -359,15 +359,32 @@ class SlackNode(BaseNode[SlackProperties]):
 
             if op == "send_message":
                 target = self.props.channel if self.props.selectBy == "channel" else self.props.user
-                if not target or not self.props.text:
+                if not target:
                     return NodeResult(
-                        success=False, error="Channel/User and Text are required for send_message"
+                        success=False, error="Channel/User is required for send_message"
                     )
+                
+                is_blocks = self.props.messageFormat == "blocks"
+                if is_blocks:
+                    if not self.props.blocks:
+                        return NodeResult(
+                            success=False, error="Blocks JSON is required when Message Format is 'blocks'"
+                        )
+                    text = None
+                    blocks = self.props.blocks
+                else:
+                    if not self.props.text:
+                        return NodeResult(
+                            success=False, error="Message Text is required when Message Format is 'text'"
+                        )
+                    text = self.props.text
+                    blocks = None
+
                 output = await service.send_message(
                     channel=target,
-                    text=self.props.text,
+                    text=text,
                     thread_ts=self.props.thread_ts,
-                    blocks=self.props.blocks,
+                    blocks=blocks,
                     attachments=self.props.attachments,
                 )
 
@@ -395,11 +412,24 @@ class SlackNode(BaseNode[SlackProperties]):
                         success=False,
                         error="Channel and Timestamp (ts) are required for update_message",
                     )
+                
+                is_blocks = self.props.messageFormat == "blocks"
+                if is_blocks:
+                    if not self.props.blocks:
+                        return NodeResult(success=False, error="Blocks JSON is required when Message Format is 'blocks'")
+                    text = None
+                    blocks = self.props.blocks
+                else:
+                    if not self.props.text:
+                        return NodeResult(success=False, error="Message Text is required when Message Format is 'text'")
+                    text = self.props.text
+                    blocks = None
+
                 output = await service.update_message(
                     channel=self.props.channel,
                     ts=self.props.ts,
-                    text=self.props.text,
-                    blocks=self.props.blocks,
+                    text=text,
+                    blocks=blocks,
                 )
             elif op == "delete_message":
                 if not self.props.channel or not self.props.ts:
@@ -410,17 +440,30 @@ class SlackNode(BaseNode[SlackProperties]):
                 output = await service.delete_message(channel=self.props.channel, ts=self.props.ts)
             elif op == "send_ephemeral":
                 target = self.props.channel if self.props.selectBy == "channel" else self.props.user
-                if not target or not self.props.user or not self.props.text:
+                if not target or not self.props.user:
                     return NodeResult(
                         success=False,
-                        error="Channel/User, Recipient (user), and Text are required for send_ephemeral",
+                        error="Channel/User and Recipient (user) are required for send_ephemeral",
                     )
+                
+                is_blocks = self.props.messageFormat == "blocks"
+                if is_blocks:
+                    if not self.props.blocks:
+                        return NodeResult(success=False, error="Blocks JSON is required when Message Format is 'blocks'")
+                    text = None
+                    blocks = self.props.blocks
+                else:
+                    if not self.props.text:
+                        return NodeResult(success=False, error="Message Text is required when Message Format is 'text'")
+                    text = self.props.text
+                    blocks = None
+
                 output = await service.send_ephemeral_message(
                     channel=target,
                     user=self.props.user,
-                    text=self.props.text,
+                    text=text,
                     thread_ts=self.props.thread_ts,
-                    blocks=self.props.blocks,
+                    blocks=blocks,
                 )
             elif op == "list_channels":
                 output = await service.list_channels(
