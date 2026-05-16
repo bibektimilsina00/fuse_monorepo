@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 async def get_slack_service(
-    credential_id: str | None = None,
+    credential: str | None = None,
     bot_token: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -22,10 +22,10 @@ async def get_slack_service(
     if bot_token:
         return SlackService(access_token=bot_token)
     
-    if credential_id:
+    if credential:
         repo = CredentialRepository(db)
         import uuid
-        cred = await repo.get_by_id_and_user(uuid.UUID(credential_id), current_user.id)
+        cred = await repo.get_by_id_and_user(uuid.UUID(credential), current_user.id)
         if not cred or cred.type != "slack_oauth":
             raise HTTPException(status_code=404, detail="Slack credential not found")
         
@@ -42,12 +42,13 @@ async def get_slack_service(
 
 @router.get("/channels")
 async def list_slack_channels(
-    credential_id: str | None = Query(None),
+    credential: str | None = Query(None),
     bot_token: str | None = Query(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
-        service = await get_slack_service(credential_id, bot_token, db)
+        service = await get_slack_service(credential, bot_token, db, current_user)
         data = await service.list_channels(limit=1000)
         if not data.get("ok"):
             return {"ok": False, "error": data.get("error")}
@@ -63,18 +64,19 @@ async def list_slack_channels(
 
 @router.get("/users")
 async def list_slack_users(
-    credential_id: str | None = Query(None),
+    credential: str | None = Query(None),
     bot_token: str | None = Query(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
-        service = await get_slack_service(credential_id, bot_token, db)
+        service = await get_slack_service(credential, bot_token, db, current_user)
         data = await service.list_users(limit=1000)
         if not data.get("ok"):
             return {"ok": False, "error": data.get("error")}
         
         users = [
-            {"label": u['real_name'] or u['name'], "value": u['id']}
+            {"label": f"@{u.get('real_name') or u['name']}", "value": u['id']}
             for u in data.get("members", [])
             if not u.get("deleted") and not u.get("is_bot")
         ]

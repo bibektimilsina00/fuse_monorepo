@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useWorkflowStore } from '@/stores/workflow-store'
+import apiClient from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import { ChevronDown, List, RefreshCw, Type } from 'lucide-react'
 import Editor from 'react-simple-code-editor'
@@ -66,15 +67,14 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
   const fetchOptions = async () => {
     setIsLoadingOptions(true)
     try {
-      const params = new URLSearchParams()
+      const params: Record<string, string> = {}
       dependencies.forEach((d: string) => {
-        if (propsData[d]) params.append(d, propsData[d])
+        if (propsData[d]) params[d] = propsData[d]
       })
-      const url = `${prop.loadOptions}?${params.toString()}`
-      const response = await fetch(url)
-      const data = await response.json()
-      if (data.ok) {
-        setDynamicOptions(data.data || [])
+      
+      const response = await apiClient.get(prop.loadOptions, { params })
+      if (response.data.ok) {
+        setDynamicOptions(response.data.data || [])
       }
     } catch (err) {
       console.error('Failed to fetch options:', err)
@@ -124,11 +124,28 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
     }
   }
 
+  const getDynamicLabel = () => {
+    if (!prop.loadOptions) return prop.label
+    const isChannel = prop.name === 'channel'
+    const isUser = prop.name === 'user'
+    
+    if (mode === 'dynamic') {
+      if (isChannel) return 'Select Channel'
+      if (isUser) return 'Select User'
+      return `Select ${prop.label.replace(' ID', '')}`
+    }
+    
+    // Manual mode
+    if (isChannel) return 'Channel ID'
+    if (isUser) return 'User ID'
+    return prop.label
+  }
+
   return (
     <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
       <div className="flex items-center justify-between mb-1">
         <label className="text-[12px] font-bold text-white">
-          {prop.label}
+          {getDynamicLabel()}
           {prop.required && <span className="text-red-500 ml-1.5">*</span>}
         </label>
         {prop.loadOptions && (

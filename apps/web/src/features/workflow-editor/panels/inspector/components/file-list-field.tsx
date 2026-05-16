@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react'
 import { Upload, X, File, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import apiClient from '@/lib/api/client'
+
 interface FileListFieldProps {
   value: string[] // List of asset IDs
   onChange: (value: string[]) => void
@@ -29,17 +31,14 @@ export const FileListField: React.FC<FileListFieldProps> = ({ value = [], onChan
       const formData = new FormData()
       formData.append('file', files[0])
 
-      const response = await fetch('/api/v1/assets/upload', {
-        method: 'POST',
-        body: formData,
+      const response = await apiClient.post('/assets/upload', formData, {
         headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is in localStorage
+            'Content-Type': 'multipart/form-data'
         }
       })
 
-      const data = await response.json()
-      if (response.ok) {
-        const newAsset: Asset = data
+      if (response.status === 200 || response.status === 201) {
+        const newAsset: Asset = response.data
         setAssets([...assets, newAsset])
         onChange([...value, newAsset.id])
       }

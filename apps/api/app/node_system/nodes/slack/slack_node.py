@@ -129,7 +129,7 @@ class SlackNode(BaseNode[SlackProperties]):
                             {"field": "selectBy", "value": "channel"}
                         ]
                     },
-                    "loadOptions": "/api/v1/integrations/slack/channels",
+                    "loadOptions": "/integrations/slack/channels",
                     "loadOptionsDependsOn": ["authentication", "credential", "bot_token"]
                 },
                 {
@@ -148,7 +148,7 @@ class SlackNode(BaseNode[SlackProperties]):
                             }
                         ]
                     },
-                    "loadOptions": "/api/v1/integrations/slack/users",
+                    "loadOptions": "/integrations/slack/users",
                     "loadOptionsDependsOn": ["authentication", "credential", "bot_token"]
                 },
                 {

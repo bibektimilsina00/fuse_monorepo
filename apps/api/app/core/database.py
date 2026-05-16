@@ -5,7 +5,7 @@ from sqlalchemy.pool import NullPool
 
 from apps.api.app.core.config import settings
 
-engine = create_async_engine(settings.async_sqlalchemy_database_uri, echo=True, poolclass=NullPool)
+engine = create_async_engine(settings.async_sqlalchemy_database_uri, echo=False, poolclass=NullPool)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
