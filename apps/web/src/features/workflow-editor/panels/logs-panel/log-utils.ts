@@ -81,7 +81,7 @@ export function getLogDisplayData(
   }
 
   // Output: explicit output field takes priority
-  let output = (payload.output as Record<string, unknown>) || {}
+  const output = (payload.output as Record<string, unknown>) || {}
   
   if (log.level === 'error' || payload.error != null) {
     return { 

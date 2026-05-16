@@ -43,7 +43,7 @@ const PaletteItem: React.FC<{
       className={cn(
         "group flex h-[30px] w-full cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 text-left text-[12px] transition-all outline-none",
         isActive 
-          ? "border-white/10 bg-[#2a2a2a] text-white" 
+          ? "border-white/10 bg-surface-active text-white" 
           : "text-white/90 hover:bg-white/5 hover:text-white"
       )}
     >
@@ -85,7 +85,7 @@ export const CommandPalette: React.FC = () => {
       onClick={() => setSearchOpen(false)}
     >
       <div 
-        className="w-full max-w-[480px] bg-[#1c1c1c] border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200"
+        className="w-full max-w-[480px] bg-surface-modal border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Search Header */}

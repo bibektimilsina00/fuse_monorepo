@@ -5,7 +5,9 @@ import { SettingsSearchInput, SettingsButton } from '@/features/settings/compone
 import { SettingsItem, SettingsSection } from '@/features/settings/components/shared/SettingsList'
 import AddCredentialModal from '@/features/credentials/AddCredentialModal'
 import { useCredentialsManagement } from '@/features/credentials/hooks/use-credentials-management'
+import { Spinner, IconButton } from '@/components/ui'
 import api from '@/lib/api/client'
+import { logger } from '@/lib/logger'
 
 export const IntegrationsSettings: React.FC = () => {
   const {
@@ -35,7 +37,7 @@ export const IntegrationsSettings: React.FC = () => {
         // Only show integrations (not byok types) in this list
         setSupportedProviders(response.data.filter((p: any) => p.id.includes('oauth') || p.id === 'github_pat'))
       } catch (err) {
-        console.error('Failed to fetch providers:', err)
+        logger.error('Failed to fetch providers:', err)
       } finally {
         setIsProvidersLoading(false)
       }
@@ -75,13 +77,11 @@ export const IntegrationsSettings: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="flex items-center gap-2">
-            <button
+            <IconButton
+              icon={<RefreshCw size={16} className={isCredentialsLoading ? 'animate-spin' : ''} />}
+              tooltip="Refresh list"
               onClick={() => refresh()}
-              className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
-              title="Refresh list"
-            >
-              <RefreshCw size={18} className={isCredentialsLoading ? 'animate-spin' : ''} />
-            </button>
+            />
             <SettingsButton variant="primary" onClick={handleOpenMainConnect}>
               <Plus className="w-3.5 h-3.5" />
               Connect
@@ -93,7 +93,7 @@ export const IntegrationsSettings: React.FC = () => {
           <div className="flex flex-col gap-1">
             {isProvidersLoading ? (
               <div className="py-4 flex justify-center">
-                <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                <Spinner size="sm" color="muted" />
               </div>
             ) : (
               supportedProviders.map((provider) => (
@@ -102,11 +102,11 @@ export const IntegrationsSettings: React.FC = () => {
                   title={provider.name}
                   subtitle={provider.description}
                   icon={
-                    <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden">
+                    <div className="w-8 h-8 bg-surface-5 rounded-lg flex items-center justify-center overflow-hidden">
                       {provider.icon_url ? (
                         <img src={provider.icon_url} alt={provider.name} className="w-5 h-5 object-contain" />
                       ) : (
-                        <Key size={18} className="text-zinc-400" />
+                        <Key size={18} className="text-text-muted" />
                       )}
                     </div>
                   }
@@ -123,16 +123,16 @@ export const IntegrationsSettings: React.FC = () => {
 
         <SettingsSection label="Your Connected Accounts" className="mt-8">
           {isCredentialsLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <div className="flex flex-col items-center justify-center py-12 text-text-muted">
+              <Spinner size="sm" color="accent" className="mb-3" />
               <p className="text-xs">Loading integrations...</p>
             </div>
           ) : credentials.length === 0 ? (
             <div className="py-12 flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-zinc-800/50 rounded-xl flex items-center justify-center text-zinc-500 mb-4">
+              <div className="w-12 h-12 bg-surface-5/50 rounded-xl flex items-center justify-center text-text-muted mb-4">
                 <Key size={24} />
               </div>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-text-muted">
                 {searchQuery ? "No integrations match your search." : "No connected accounts yet."}
               </p>
             </div>
@@ -144,19 +144,19 @@ export const IntegrationsSettings: React.FC = () => {
                   title={cred.name}
                   subtitle={`${cred.type.replace(/_/g, ' ').toUpperCase()} · Added ${new Date(cred.created_at).toLocaleDateString()}`}
                   icon={
-                    <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 bg-surface-5 rounded-lg flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform">
                       {getServiceIcon(cred.type)}
                     </div>
                   }
                   action={
-                    <button
+                    <IconButton
+                      icon={<Trash2 size={16} />}
+                      tooltip="Delete integration"
+                      variant="danger"
                       onClick={() => handleDelete(cred.id)}
                       disabled={isDeleting}
-                      className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Delete integration"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                      className="opacity-0 group-hover:opacity-100"
+                    />
                   }
                 />
               ))}

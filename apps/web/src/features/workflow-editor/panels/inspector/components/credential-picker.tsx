@@ -1,6 +1,7 @@
 import React from 'react'
 import { Plus, Check, ChevronDown, Shield, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Spinner } from '@/components/ui'
 import AddCredentialModal from '@/features/credentials/AddCredentialModal'
 import { useCredentialPicker } from '@/features/workflow-editor/panels/inspector/hooks/use-credential-picker'
 
@@ -33,7 +34,7 @@ export const CredentialPicker: React.FC<CredentialPickerProps> = ({
     <div className="relative">
       <div
         onClick={toggleOpen}
-        className="w-full bg-[#222] border border-[#333] rounded-md px-3 h-[36px] flex items-center justify-between cursor-pointer hover:border-[#444] transition-colors"
+        className="w-full bg-surface-editor border border-border rounded-md px-3 h-[36px] flex items-center justify-between cursor-pointer hover:border-border-strong transition-colors"
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {selectedCredential ? (
@@ -46,10 +47,10 @@ export const CredentialPicker: React.FC<CredentialPickerProps> = ({
               <span className="text-[13px] text-white truncate">{selectedCredential.name}</span>
             </>
           ) : (
-            <span className="text-[13px] text-[#555]">{placeholder}</span>
+            <span className="text-[13px] text-text-placeholder">{placeholder}</span>
           )}
         </div>
-        <ChevronDown className={cn("w-4 h-4 text-[#555] transition-transform", isOpen && "rotate-180")} />
+        <ChevronDown className={cn("w-4 h-4 text-text-placeholder transition-transform", isOpen && "rotate-180")} />
       </div>
 
       {isOpen && (
@@ -58,14 +59,14 @@ export const CredentialPicker: React.FC<CredentialPickerProps> = ({
             className="fixed inset-0 z-[60]"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md shadow-2xl z-[70] py-1 max-h-[240px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-surface-modal border border-border rounded-md shadow-2xl z-[70] py-1 max-h-[240px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200">
             {isLoading ? (
               <div className="px-3 py-4 text-center">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <Spinner size="sm" color="accent" className="mx-auto" />
               </div>
             ) : filteredCredentials.length === 0 ? (
               <div className="px-3 py-4 text-center">
-                <p className="text-[11px] text-[#666]">No credentials found for this service</p>
+                <p className="text-[11px] text-text-muted">No credentials found for this service</p>
               </div>
             ) : (
               filteredCredentials.map((cred) => (
@@ -76,8 +77,8 @@ export const CredentialPicker: React.FC<CredentialPickerProps> = ({
                     setIsOpen(false)
                   }}
                   className={cn(
-                    "px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-[#222] transition-colors group",
-                    value === cred.id && "bg-[#222]"
+                    "px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-surface-editor transition-colors group",
+                    value === cred.id && "bg-surface-editor"
                   )}
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
@@ -98,7 +99,7 @@ export const CredentialPicker: React.FC<CredentialPickerProps> = ({
               ))
             )}
             
-            <div className="border-t border-[#333] mt-1 pt-1">
+            <div className="border-t border-border mt-1 pt-1">
               <button
                 onClick={openModal}
                 className="w-full px-3 py-2 flex items-center gap-2 text-[12px] font-bold text-blue-500 hover:bg-blue-500/5 transition-colors text-left"

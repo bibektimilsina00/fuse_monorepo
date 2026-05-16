@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import Editor from 'react-simple-code-editor'
 import Prism from 'prismjs'
-import 'prismjs/components/prism-json'
+;(globalThis as any).Prism = Prism
+import('prismjs/components/prism-json')
 import { cn } from '@/lib/utils'
 import { ToolbarButton, OptionItem, DataNode } from '@/features/workflow-editor/components/common/EditorUI'
 import { useExecutionStore } from '@/stores/execution-store'

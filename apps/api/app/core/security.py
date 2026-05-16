@@ -8,9 +8,11 @@ from passlib.context import CryptContext
 from apps.api.app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-fernet = Fernet(
-    settings.ENCRYPTION_KEY if len(settings.ENCRYPTION_KEY) == 44 else Fernet.generate_key()
-)
+
+try:
+    fernet = Fernet(settings.ENCRYPTION_KEY)
+except ValueError as exc:
+    raise ValueError("ENCRYPTION_KEY must be a valid Fernet key") from exc
 
 ALGORITHM = "HS256"
 

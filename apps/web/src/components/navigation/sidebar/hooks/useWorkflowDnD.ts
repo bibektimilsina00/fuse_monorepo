@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useSensor,
@@ -23,7 +23,10 @@ export function useWorkflowDnD({ workflows, folders }: UseWorkflowDnDProps) {
   const queryClient = useQueryClient()
   const { mutate: batchUpdate } = useBatchUpdateWorkflows()
   const batchUpdateRef = useRef(batchUpdate)
-  batchUpdateRef.current = batchUpdate
+
+  useEffect(() => {
+    batchUpdateRef.current = batchUpdate
+  }, [batchUpdate])
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())

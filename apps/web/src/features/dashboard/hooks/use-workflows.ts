@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { requestJson } from '@/lib/api/client'
-import { WorkflowSchema, type Workflow, WorkflowBatchUpdateSchema, type WorkflowBatchUpdate } from '@/lib/api/contracts'
-import { workflowKeys } from './keys'
+import { WorkflowSchema, type Workflow, type WorkflowBatchUpdate } from '@/lib/api/contracts'
+import { workflowKeys } from '@/features/dashboard/hooks/keys'
 
 const WorkflowListSchema = z.array(WorkflowSchema)
 
@@ -15,22 +15,12 @@ export function useWorkflows() {
   return useQuery({
     queryKey: workflowKeys.lists(),
     queryFn: async ({ signal }) => {
-      let workflows = await requestJson(WorkflowListSchema, {
+      const workflows = await requestJson(WorkflowListSchema, {
         url: '/workflows/',
         method: 'GET',
         signal,
       })
-      
-      // Auto-create default agent if empty
-      if (workflows.length === 0) {
-        const defaultWorkflow = await requestJson(WorkflowSchema, {
-          url: '/workflows/',
-          method: 'POST',
-          data: { name: 'default-agent', description: 'A default starting point for your automation.' },
-        })
-        workflows = [defaultWorkflow]
-      }
-      
+
       // Sort by position (ascending), then created_at (descending)
       return workflows.sort((a, b) => {
         const posA = a.position ?? 0

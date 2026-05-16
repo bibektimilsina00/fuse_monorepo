@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 
 from apps.api.app.models.base import Base
+
 
 class Asset(Base):
     __tablename__ = "asset"

@@ -64,6 +64,7 @@ async def batch_update_workflows(
     db: AsyncSession = Depends(get_db),
 ):
     from apps.api.app.core.logger import logger
+
     logger.info(f"Received batch update request: {data.model_dump_json()}")
     service = WorkflowService(db)
     await service.batch_update_workflows(data, current_user)

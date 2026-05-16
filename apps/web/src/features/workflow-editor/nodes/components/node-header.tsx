@@ -9,7 +9,7 @@ interface NodeHeaderProps {
 
 export const NodeHeader = ({ label, icon, color }: NodeHeaderProps) => {
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-[#333]">
+    <div className="flex items-center justify-between px-3 py-2 border-b border-border">
       <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2.5">
         <div
           className="flex size-[24px] flex-shrink-0 items-center justify-center rounded-md"

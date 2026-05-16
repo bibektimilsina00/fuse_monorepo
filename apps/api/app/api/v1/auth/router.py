@@ -24,9 +24,7 @@ async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(
-    user_login: UserLogin, db: AsyncSession = Depends(get_db)
-):
+async def login(user_login: UserLogin, db: AsyncSession = Depends(get_db)):
     auth_service = AuthService(db)
     user = await auth_service.authenticate(user_login)
     if not user:
@@ -46,9 +44,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/forgot-password")
-async def forgot_password(
-    request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
-):
+async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     auth_service = AuthService(db)
     await auth_service.forgot_password(request.email)
     return {"message": "If your account exists, a password reset link has been sent."}

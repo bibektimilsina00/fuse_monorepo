@@ -17,7 +17,7 @@ export const WorkflowDragOverlay: React.FC<WorkflowDragOverlayProps> = ({ active
   return (
     <DragOverlay dropAnimation={null}>
       <div 
-        className="opacity-90 pointer-events-none scale-[1.02] shadow-2xl ring-1 ring-white/10 rounded-lg overflow-hidden bg-[#1e1e1e]"
+        className="opacity-90 pointer-events-none scale-[1.02] shadow-2xl ring-1 ring-white/10 rounded-lg overflow-hidden bg-surface-1"
         style={{ width: 'calc(var(--current-sidebar-width) - 40px)' }}
       >
         <SidebarItem

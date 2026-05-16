@@ -1,9 +1,7 @@
 import React from 'react'
-import { createPortal } from 'react-dom'
 import { Check } from 'lucide-react'
-import type { Workflow } from '@/lib/api/contracts'
 
-export const WORKFLOW_COLORS = [
+const WORKFLOW_COLORS = [
   // Row 1: Blues/Indigos
   '#3b82f6', '#2563eb', '#1d4ed8', '#6366f1', '#4f46e5', '#4338ca',
   // Row 2: Cyans/Teals
@@ -28,7 +26,6 @@ interface ColorPaletteProps {
  * UI Component for the workflow color palette.
  */
 export const ColorPalette: React.FC<ColorPaletteProps> = ({ 
-  workflowId, 
   currentColor, 
   onSelect 
 }) => {

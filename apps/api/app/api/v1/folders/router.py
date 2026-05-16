@@ -57,7 +57,9 @@ async def update_folder(
     folder_in: FolderUpdate,
 ) -> Any:
     service = FolderService(db)
-    folder = await service.update_folder(user_id=current_user.id, folder_id=folder_id, schema=folder_in)
+    folder = await service.update_folder(
+        user_id=current_user.id, folder_id=folder_id, schema=folder_in
+    )
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
     return folder

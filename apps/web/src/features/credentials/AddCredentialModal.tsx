@@ -1,8 +1,8 @@
 import React from 'react'
 import { X, ChevronLeft, Check, Key } from 'lucide-react'
 import { useAddCredential } from '@/features/credentials/hooks/use-add-credential'
-import { cn } from '@/lib/utils'
 import { SettingsButton } from '@/features/settings/components/shared/SettingsInputs'
+import { Spinner, IconButton } from '@/components/ui'
 
 interface AddCredentialModalProps {
   isOpen: boolean
@@ -22,7 +22,6 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
     setName,
     description,
     setDescription,
-    isPending,
     isLoading,
     handleServiceSelect,
     handleSubmit,
@@ -41,36 +40,29 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
     onClose()
   }
 
-  // Permissions list (Mock for now, can be dynamic from backend)
-  const permissions = [
-    "Send messages to channels",
-    "View basic profile information",
-    "Read messages from public channels"
-  ]
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-      <div className="w-full max-w-[500px] bg-[#1c1c1c] border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-[500px] bg-surface-modal border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
           <h2 className="min-w-0 font-medium text-white text-base flex items-center gap-2.5">
             {step !== 'select' && (
-              <button 
+              <IconButton
+                icon={<ChevronLeft size={16} />}
                 onClick={() => setStep('select')}
-                className="inline-flex items-center justify-center font-medium transition-colors hover:bg-white/5 size-6 rounded-[4px] p-0 text-white/40 hover:text-white"
-              >
-                <ChevronLeft size={16} />
-              </button>
+                size="xs"
+                className="text-white/40 hover:text-white hover:bg-white/5"
+              />
             )}
             <span>{step === 'select' ? 'Add Integration' : `Connect ${selectedService?.name}`}</span>
           </h2>
-          <button 
+          <IconButton
+            icon={<X size={16} />}
             onClick={handleClose}
-            className="inline-flex items-center justify-center font-medium transition-colors hover:text-white text-white/40 size-[16px] flex-shrink-0 p-0"
-          >
-            <X size={16} />
-          </button>
+            size="xs"
+            className="text-white/40 hover:text-white"
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
@@ -78,7 +70,7 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
             <div className="flex flex-col gap-2">
               {isLoading ? (
                 <div className="py-12 flex justify-center">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <Spinner size="md" color="accent" />
                 </div>
               ) : (
                 displayProviders.map((service) => (
@@ -146,7 +138,7 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
                 <div className="space-y-2">
                   <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">Display name*</label>
                   <input 
-                    className="w-full h-[40px] px-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
+                    className="w-full h-[40px] px-3 rounded-lg bg-surface-editor border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
                     placeholder="Integration name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -157,7 +149,7 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
                 <div className="space-y-2">
                   <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">Description</label>
                   <textarea 
-                    className="w-full min-h-[80px] p-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner resize-none"
+                    className="w-full min-h-[80px] p-3 rounded-lg bg-surface-editor border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner resize-none"
                     placeholder="Optional description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -169,7 +161,7 @@ export default function AddCredentialModal({ isOpen, onClose, initialService, al
                     <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">{field.label}</label>
                     <input 
                       type={field.type}
-                      className="w-full h-[40px] px-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
+                      className="w-full h-[40px] px-3 rounded-lg bg-surface-editor border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
                       placeholder={field.placeholder}
                       value={formData[field.id] || ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, [field.id]: e.target.value }))}

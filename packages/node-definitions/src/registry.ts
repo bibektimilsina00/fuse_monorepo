@@ -1,3 +1,1 @@
-import { NodeDefinition } from './types';
-
-export const NODE_REGISTRY: NodeDefinition[] = [];
+export type { NodeDefinition, NodeProperty, NodePropertyType } from './types';

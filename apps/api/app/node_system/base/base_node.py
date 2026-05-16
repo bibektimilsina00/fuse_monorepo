@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -7,10 +7,8 @@ from apps.api.app.node_system.base.node_context import NodeContext
 from apps.api.app.node_system.base.node_metadata import NodeMetadata
 from apps.api.app.node_system.base.node_result import NodeResult
 
-TProps = TypeVar("TProps", bound=BaseModel)
 
-
-class BaseNode(ABC, Generic[TProps]):
+class BaseNode[TProps: BaseModel](ABC):
     # Default property model if none is specified
     class DefaultProps(BaseModel):
         pass
@@ -33,7 +31,7 @@ class BaseNode(ABC, Generic[TProps]):
     @classmethod
     def get_properties_model(cls) -> type[TProps]:
         """Override this to provide a Pydantic model for property validation."""
-        from typing import cast
+
         return cast(type[TProps], cls.DefaultProps)
 
     def validate_properties(self, properties: dict[str, Any]) -> TProps:

@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import { z } from 'zod'
 import { useAuthStore } from '@/stores/auth-store'
+import { logger } from '@/lib/logger'
 
 /**
  * Fuse API Client
@@ -55,7 +56,7 @@ export async function requestJson<T>(
   const result = schema.safeParse(response.data)
   
   if (!result.success) {
-    console.error('API Response Validation Failed:', result.error)
+    logger.error('API Response Validation Failed:', result.error)
     throw new Error('API contract violation: The server returned an unexpected response format.')
   }
   

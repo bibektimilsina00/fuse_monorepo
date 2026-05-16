@@ -40,7 +40,7 @@ export const InterpolationPicker: React.FC<InterpolationPickerProps> = ({ anchor
   return createPortal(
     <div
       ref={pickerRef}
-      className="fixed z-[9999] w-[180px] bg-[#1c1c1c] border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col"
+      className="fixed z-[9999] w-[180px] bg-surface-modal border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col"
       style={{
         top: anchorRect.bottom + 8,
         left: Math.min(anchorRect.left, window.innerWidth - 190),

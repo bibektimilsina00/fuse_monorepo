@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { Plus, Paperclip, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { IconButton } from '@/components/ui'
 
 interface ChatInputProps {
   placeholder?: string
@@ -65,20 +66,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <button 
-              type="button" 
-              className="flex size-[28px] items-center justify-center rounded-full border border-[var(--border-default)] transition-colors hover:bg-[var(--surface-hover)] text-[var(--text-icon)]" 
-              title="Add attachments or resources"
-            >
-              <Plus className="size-[16px]" strokeWidth={1.75} />
-            </button>
-            <button 
-              type="button" 
-              className="flex size-[28px] items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-hover)] text-[var(--text-icon)]" 
-              aria-label="Attach file"
-            >
-              <Paperclip className="size-[14px]" strokeWidth={2} />
-            </button>
+            <IconButton
+              icon={<Plus className="size-[16px]" strokeWidth={1.75} />}
+              tooltip="Add attachments"
+              size="sm"
+              className="rounded-full border border-[var(--border-default)]"
+            />
+            <IconButton
+              icon={<Paperclip className="size-[14px]" strokeWidth={2} />}
+              tooltip="Attach file"
+              size="sm"
+              className="rounded-full"
+            />
           </div>
 
           <div className="flex items-center gap-1.5">

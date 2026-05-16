@@ -83,3 +83,68 @@ export const ExecutionSchema = z.object({
 })
 
 export type Execution = z.infer<typeof ExecutionSchema>
+
+export const CredentialSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  type: z.string(),
+  meta: z.record(z.string(), z.any()).optional().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
+export type Credential = z.infer<typeof CredentialSchema>
+
+export const OAuthUrlResponseSchema = z.object({
+  url: z.string(),
+  state: z.string(),
+})
+
+export type OAuthUrlResponse = z.infer<typeof OAuthUrlResponseSchema>
+
+export const NodePropertySchema = z.object({
+  name: z.string(),
+  label: z.string(),
+  type: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.union([
+    z.boolean(),
+    z.object({
+      field: z.string(),
+      value: z.any(),
+    }),
+  ]).optional(),
+  options: z.array(z.object({ label: z.string(), value: z.any() })).optional(),
+  placeholder: z.string().optional(),
+  condition: z.any().optional(),
+  credentialType: z.string().optional(),
+  dependsOn: z.array(z.string()).optional(),
+  loadOptions: z.string().optional(),
+  loadOptionsDependsOn: z.array(z.string()).optional(),
+  mode: z.enum(['basic', 'advanced', 'both']).optional(),
+  secret: z.boolean().optional(),
+  visibility: z.enum(['user-or-llm', 'user-only', 'hidden']).optional(),
+})
+
+export const ApiNodeDefinitionSchema = z.object({
+  type: z.string(),
+  name: z.string(),
+  category: z.enum(['trigger', 'action', 'logic', 'ai', 'browser', 'integration']),
+  description: z.string(),
+  icon: z.string(),
+  color: z.string().optional(),
+  properties: z.array(NodePropertySchema),
+  inputs: z.number(),
+  outputs: z.number(),
+  outputs_schema: z.array(z.object({
+    label: z.string(),
+    type: z.string(),
+  }).passthrough()).optional(),
+  allow_error: z.boolean().optional(),
+  credential_type: z.string().nullable().optional(),
+})
+
+export const ApiNodeDefinitionListSchema = z.array(ApiNodeDefinitionSchema)
+
+export type ApiNodeDefinition = z.infer<typeof ApiNodeDefinitionSchema>

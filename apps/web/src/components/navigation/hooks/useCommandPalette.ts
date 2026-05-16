@@ -1,12 +1,21 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import type React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Workflow as WorkflowIcon, Folder as FolderIcon, Plus, Settings } from 'lucide-react'
-import { useWorkflows } from '@/features/dashboard/hooks/use-workflows'
+import { useCreateWorkflow, useWorkflows } from '@/features/dashboard/hooks/use-workflows'
 import { useFolders } from '@/features/dashboard/hooks/use-folders'
 import { useUIStore } from '@/stores/ui-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { CanvasEngine } from '@/features/workflow-editor/utils/canvas-engine'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
+
+interface CommandItem {
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  bgColor?: string
+  onClick: () => void
+}
 
 /**
  * Hook to manage Command Palette logic: filtering, selection, and keyboard navigation.
@@ -17,6 +26,7 @@ export function useCommandPalette() {
   const { isSearchOpen, setSearchOpen } = useUIStore()
   const { data: workflows = [] } = useWorkflows()
   const { data: folders = [] } = useFolders()
+  const createWorkflow = useCreateWorkflow()
   const { addNode, nodeDefinitions } = useWorkflowStore()
 
   const [searchValue, setSearchValue] = useState('')
@@ -28,7 +38,7 @@ export function useCommandPalette() {
     const query = searchValue.toLowerCase().trim()
 
     if (isEditor) {
-      const items: any[] = []
+      const items: CommandItem[] = []
 
       nodeDefinitions.forEach(node => {
         if (!query || node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query)) {
@@ -53,7 +63,7 @@ export function useCommandPalette() {
       {
         title: 'Actions',
         items: [
-          { id: 'create-workflow', label: 'Create New Workflow', icon: Plus, onClick: () => console.log('Create workflow') },
+          { id: 'create-workflow', label: 'Create New Workflow', icon: Plus, onClick: () => createWorkflow.mutate(undefined) },
           { id: 'settings', label: 'Settings', icon: Settings, onClick: () => navigate('/settings') },
         ].filter(item => !query || item.label.toLowerCase().includes(query))
       },
@@ -80,7 +90,7 @@ export function useCommandPalette() {
           }))
       }
     ].filter(group => group.items.length > 0)
-  }, [searchValue, workflows, folders, navigate, isEditor, addNode])
+  }, [searchValue, workflows, folders, navigate, isEditor, addNode, nodeDefinitions, createWorkflow])
 
   const flatItems = useMemo(() => filteredResults.flatMap(g => g.items), [filteredResults])
 
@@ -102,15 +112,16 @@ export function useCommandPalette() {
     }
   }, [flatItems, selectedIndex, setSearchOpen])
 
-  useEffect(() => {
+  const updateSearchValue = useCallback((value: string) => {
+    setSearchValue(value)
     setSelectedIndex(-1)
-  }, [searchValue])
+  }, [])
 
   return {
     isSearchOpen,
     setSearchOpen,
     searchValue,
-    setSearchValue,
+    setSearchValue: updateSearchValue,
     selectedIndex,
     filteredResults,
     handleKeyDown,

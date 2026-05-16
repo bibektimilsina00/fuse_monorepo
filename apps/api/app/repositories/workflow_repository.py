@@ -58,11 +58,18 @@ class WorkflowRepository:
         await self.db.commit()
 
     async def find_by_trigger_type(
-        self, trigger_type: str, property_filters: dict[str, str] | None = None
+        self,
+        trigger_type: str,
+        property_filters: dict[str, str] | None = None,
+        active_only: bool = True,
     ) -> list[Workflow]:
         # For now, simple list and filter to keep it database-agnostic in the schema
         # In production, we'd use JSONB queries: Workflow.graph['nodes'].contains([{'type': trigger_type}])
-        result = await self.db.execute(select(Workflow))
+        statement = select(Workflow)
+        if active_only:
+            statement = statement.where(Workflow.is_active.is_(True))
+
+        result = await self.db.execute(statement)
         workflows = list(result.scalars().all())
 
         matches = []

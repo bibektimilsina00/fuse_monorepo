@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Bot, Sparkles, Zap } from 'lucide-react'
+import { Bot, Zap } from 'lucide-react'
 import { SettingsPageContainer, SettingsPageHeader } from '@/features/settings/components/shared/SettingsLayout'
 import { SettingsSearchInput, SettingsButton } from '@/features/settings/components/shared/SettingsInputs'
 import { SettingsItem, SettingsSection } from '@/features/settings/components/shared/SettingsList'
@@ -43,7 +43,7 @@ export const CopilotKeysSettings: React.FC = () => {
               title={key.name}
               subtitle={key.description}
               icon={
-                <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden text-blue-400">
+                <div className="w-8 h-8 bg-surface-5 rounded-lg flex items-center justify-center overflow-hidden text-blue-400">
                   <key.icon size={18} />
                 </div>
               }

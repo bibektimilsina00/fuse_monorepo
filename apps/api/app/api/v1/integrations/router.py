@@ -8,6 +8,7 @@ router = APIRouter()
 
 router.include_router(slack_router, prefix="/slack", tags=["integrations"])
 
+
 @router.get("/")
 async def list_integrations(db: AsyncSession = Depends(get_db)):
     return []

@@ -7,15 +7,16 @@ class CredentialField(BaseModel):
     type: str
     placeholder: str
 
+
 class APIKeyProvider:
     def __init__(
-        self, 
-        id: str, 
-        name: str, 
-        description: str, 
-        icon_url: str, 
+        self,
+        id: str,
+        name: str,
+        description: str,
+        icon_url: str,
         hint: str,
-        fields: list[CredentialField]
+        fields: list[CredentialField],
     ):
         self.id = id
         self.name = name
@@ -25,6 +26,7 @@ class APIKeyProvider:
         self.hint = hint
         self.fields = fields
 
+
 PROVIDERS = {
     "openai": APIKeyProvider(
         id="openai_api_key",
@@ -32,7 +34,9 @@ PROVIDERS = {
         description="Use your OpenAI API key for AI nodes",
         icon_url="https://cdn.brandfetch.io/openai.com/icon",
         hint="sk-...",
-        fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="sk-...")]
+        fields=[
+            CredentialField(id="api_key", label="API Key", type="password", placeholder="sk-...")
+        ],
     ),
     "anthropic": APIKeyProvider(
         id="anthropic_api_key",
@@ -40,7 +44,11 @@ PROVIDERS = {
         description="Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku",
         icon_url="https://cdn.brandfetch.io/anthropic.com/icon",
         hint="sk-ant-...",
-        fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="sk-ant-...")]
+        fields=[
+            CredentialField(
+                id="api_key", label="API Key", type="password", placeholder="sk-ant-..."
+            )
+        ],
     ),
     "google": APIKeyProvider(
         id="google_api_key",
@@ -48,7 +56,9 @@ PROVIDERS = {
         description="Gemini 1.5 Pro, Gemini 1.5 Flash",
         icon_url="https://cdn.brandfetch.io/google.com/icon",
         hint="API Key",
-        fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="API Key")]
+        fields=[
+            CredentialField(id="api_key", label="API Key", type="password", placeholder="API Key")
+        ],
     ),
     "groq": APIKeyProvider(
         id="groq_api_key",
@@ -56,6 +66,8 @@ PROVIDERS = {
         description="Llama 3, Mixtral, Gemma (Ultra-fast inference)",
         icon_url="https://cdn.brandfetch.io/groq.com/icon",
         hint="gsk-...",
-        fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="gsk-...")]
-    )
+        fields=[
+            CredentialField(id="api_key", label="API Key", type="password", placeholder="gsk-...")
+        ],
+    ),
 }

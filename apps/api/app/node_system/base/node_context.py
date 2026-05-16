@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,4 +13,4 @@ class NodeContext:
     variables: dict[str, Any]
     credentials: list[dict[str, Any]]
     http_client: httpx.AsyncClient
-    db: Optional[AsyncSession] = None
+    db: AsyncSession | None = None

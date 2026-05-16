@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Eye, EyeOff, Key } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { SettingsButton } from '@/features/settings/components/shared/SettingsInputs'
+import { Spinner } from '@/components/ui'
+import { logger } from '@/lib/logger'
 
 interface BYOKModalProps {
   isOpen: boolean
@@ -46,7 +47,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
       setKey('')
       onClose()
     } catch (err) {
-      console.error('Failed to save BYOK key:', err)
+      logger.error('Failed to save BYOK key:', err)
     } finally {
       setIsSaving(false)
     }
@@ -58,7 +59,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-[480px] bg-[#1c1c1c] border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-[480px] bg-surface-modal border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="px-6 py-5 border-b border-white/5 bg-black/10 flex items-center gap-3">
@@ -87,7 +88,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder={provider.hint || `Paste your ${provider.name} key here...`}
-              className="w-full h-[36px] px-4 pr-10 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 outline-none focus:outline-none focus:ring-0 focus:border-white/10 transition-none shadow-inner select-none"
+              className="w-full h-[36px] px-4 pr-10 rounded-lg bg-surface-editor border border-white/10 text-[13px] text-white placeholder:text-white/20 outline-none focus:outline-none focus:ring-0 focus:border-white/10 transition-none shadow-inner select-none"
               autoComplete="off"
               spellCheck={false}
               required
@@ -116,14 +117,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
               size="sm"
               disabled={isSaving || !key.trim()}
             >
-              {isSaving ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 border-2 border-black/40 border-t-transparent rounded-full animate-spin" />
-                  <span>Saving...</span>
-                </div>
-              ) : (
-                "Save"
-              )}
+              {isSaving ? <><Spinner size="xs" color="current" /> Saving...</> : 'Save'}
             </SettingsButton>
           </div>
         </form>

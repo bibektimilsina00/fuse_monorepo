@@ -35,7 +35,7 @@ class VirtualHaptic {
 
       osc.start();
       osc.stop(this.audioCtx.currentTime + 0.1);
-    } catch (e) {
+    } catch {
       // Ignore if audio is blocked or fails
     }
   }
@@ -63,7 +63,7 @@ class VirtualHaptic {
 
       osc.start();
       osc.stop(this.audioCtx.currentTime + 0.15);
-    } catch (e) {
+    } catch {
       // Ignore
     }
   }

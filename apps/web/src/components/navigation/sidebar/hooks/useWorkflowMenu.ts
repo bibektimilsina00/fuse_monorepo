@@ -57,7 +57,7 @@ export function useWorkflowMenu({ workflowId }: UseWorkflowMenuProps) {
       variant: 'danger' as const,
       disabled: !canDelete
     },
-  ], [workflowId, deleteWorkflow, canDelete, currentWorkflow, updateWorkflow])
+  ], [workflowId, deleteWorkflow, canDelete])
 
   return { menuItems, currentWorkflow, updateWorkflow }
 }

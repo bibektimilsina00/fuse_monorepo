@@ -85,3 +85,5 @@ test-results/
 # ── Misc ──────────────────────────────────────────────────────────────────────
 tempfile/
 .claude/settings.local.json
+
+temp/

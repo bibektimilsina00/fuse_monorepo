@@ -61,14 +61,22 @@ class SlackService:
             payload["blocks"] = blocks
         return await self._client.post("/chat.postEphemeral", json=payload)
 
-    async def list_channels(self, limit: int = 100, types: str = "public_channel,private_channel", cursor: str | None = None) -> dict:
+    async def list_channels(
+        self,
+        limit: int = 100,
+        types: str = "public_channel,private_channel",
+        cursor: str | None = None,
+    ) -> dict:
         params = {"limit": limit, "types": types}
         if cursor:
             params["cursor"] = cursor
         return await self._client.get("/conversations.list", params=params)
 
     async def get_channel_info(self, channel: str, include_num_members: bool = True) -> dict:
-        return await self._client.get("/conversations.info", params={"channel": channel, "include_num_members": str(include_num_members).lower()})
+        return await self._client.get(
+            "/conversations.info",
+            params={"channel": channel, "include_num_members": str(include_num_members).lower()},
+        )
 
     async def list_members(self, channel: str, limit: int = 100, cursor: str | None = None) -> dict:
         params = {"channel": channel, "limit": limit}
@@ -77,7 +85,9 @@ class SlackService:
         return await self._client.get("/conversations.members", params=params)
 
     async def get_message(self, channel: str, ts: str) -> dict:
-        data = await self._client.get("/conversations.replies", params={"channel": channel, "ts": ts, "limit": 1})
+        data = await self._client.get(
+            "/conversations.replies", params={"channel": channel, "ts": ts, "limit": 1}
+        )
         messages = data.get("messages", [])
         return messages[0] if messages else {}
 
@@ -87,9 +97,13 @@ class SlackService:
         return data.get("channel", {})
 
     async def invite_to_channel(self, channel: str, users: list[str]) -> dict:
-        return await self._client.post("/conversations.invite", json={"channel": channel, "users": ",".join(users)})
+        return await self._client.post(
+            "/conversations.invite", json={"channel": channel, "users": ",".join(users)}
+        )
 
-    async def list_users(self, limit: int = 100, cursor: str | None = None, include_deleted: bool = False) -> dict:
+    async def list_users(
+        self, limit: int = 100, cursor: str | None = None, include_deleted: bool = False
+    ) -> dict:
         params = {"limit": limit, "include_locale": "false"}
         if cursor:
             params["cursor"] = cursor
@@ -103,10 +117,14 @@ class SlackService:
         return await self._client.get("/users.getPresence", params={"user": user_id})
 
     async def add_reaction(self, channel: str, timestamp: str, name: str) -> dict:
-        return await self._client.post("/reactions.add", json={"channel": channel, "timestamp": timestamp, "name": name})
+        return await self._client.post(
+            "/reactions.add", json={"channel": channel, "timestamp": timestamp, "name": name}
+        )
 
     async def remove_reaction(self, channel: str, timestamp: str, name: str) -> dict:
-        return await self._client.post("/reactions.remove", json={"channel": channel, "timestamp": timestamp, "name": name})
+        return await self._client.post(
+            "/reactions.remove", json={"channel": channel, "timestamp": timestamp, "name": name}
+        )
 
     # Views / Modals
     async def open_view(self, trigger_id: str, view: dict) -> dict:
@@ -115,28 +133,39 @@ class SlackService:
     async def push_view(self, trigger_id: str, view: dict) -> dict:
         return await self._client.post("/views.push", json={"trigger_id": trigger_id, "view": view})
 
-    async def update_view(self, view: dict, view_id: str | None = None, external_id: str | None = None, hash: str | None = None) -> dict:
+    async def update_view(
+        self,
+        view: dict,
+        view_id: str | None = None,
+        external_id: str | None = None,
+        hash: str | None = None,
+    ) -> dict:
         payload: dict[str, Any] = {"view": view}
-        if view_id: payload["view_id"] = view_id
-        if external_id: payload["external_id"] = external_id
-        if hash: payload["hash"] = hash
+        if view_id:
+            payload["view_id"] = view_id
+        if external_id:
+            payload["external_id"] = external_id
+        if hash:
+            payload["hash"] = hash
         return await self._client.post("/views.update", json=payload)
 
     async def publish_view(self, user_id: str, view: dict, hash: str | None = None) -> dict:
         payload: dict[str, Any] = {"user_id": user_id, "view": view}
-        if hash: payload["hash"] = hash
+        if hash:
+            payload["hash"] = hash
         return await self._client.post("/views.publish", json=payload)
 
-    async def upload_file(self, channels: str, file: str | bytes, filename: str | None = None, title: str | None = None, initial_comment: str | None = None) -> dict:
+    async def upload_file(
+        self,
+        channels: str,
+        file: str | bytes,
+        filename: str | None = None,
+        title: str | None = None,
+        initial_comment: str | None = None,
+    ) -> dict:
         """
         Upload a file to Slack using files.upload (legacy but simpler for small files).
         """
-        files = {}
-        if isinstance(file, str):
-            files["file"] = open(file, "rb")
-        else:
-            files["file"] = (filename or "file", file)
-            
         data = {
             "channels": channels,
         }
@@ -144,7 +173,13 @@ class SlackService:
             data["initial_comment"] = initial_comment
         if title:
             data["title"] = title
-            
+
+        if isinstance(file, str):
+            with open(file, "rb") as file_handle:
+                files = {"file": file_handle}
+                return await self._client.post("/files.upload", data=data, files=files)
+
+        files = {"file": (filename or "file", file)}
         return await self._client.post("/files.upload", data=data, files=files)
 
     async def close(self):

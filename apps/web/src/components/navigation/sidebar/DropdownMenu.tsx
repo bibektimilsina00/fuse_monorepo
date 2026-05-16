@@ -129,7 +129,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           ref={menuRef}
           role="menu"
           className={cn(
-            "fixed w-44 bg-[#1e1e1e] border border-white/5 rounded-lg shadow-2xl overflow-hidden z-[9999] py-1 transition-[opacity,transform] duration-150 ease-out",
+            "fixed w-44 bg-surface-1 border border-white/5 rounded-lg shadow-2xl overflow-hidden z-[9999] py-1 transition-[opacity,transform] duration-150 ease-out",
             isPositioned ? "opacity-100 scale-100" : "opacity-0 scale-95",
             origin === 'top' 
               ? (preferredSide === 'right' ? "origin-top-right" : "origin-top-left") 

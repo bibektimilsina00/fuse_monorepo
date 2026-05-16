@@ -17,11 +17,12 @@ class SlackOAuthProvider:
         "Read public and private channels",
         "View users and email addresses",
         "Manage reactions",
-        "Read and upload files"
+        "Read and upload files",
     ]
 
-    def get_authorization_url(self, state, code_challenge = None):
+    def get_authorization_url(self, state, code_challenge=None):
         from urllib.parse import urlencode
+
         params = {
             "client_id": settings.SLACK_CLIENT_ID,
             "scope": "chat:write,channels:read,groups:read,im:read,mpim:read,users:read,users:read.email,reactions:read,reactions:write,files:read,files:write",
@@ -31,11 +32,12 @@ class SlackOAuthProvider:
         if code_challenge:
             params["code_challenge"] = code_challenge
             params["code_challenge_method"] = "S256"
-            
+
         return f"https://slack.com/oauth/v2/authorize?{urlencode(params)}"
 
-    async def exchange_code(self, code, code_verifier = None):
+    async def exchange_code(self, code, code_verifier=None):
         import httpx
+
         data = {
             "client_id": settings.SLACK_CLIENT_ID,
             "client_secret": settings.SLACK_CLIENT_SECRET,
@@ -44,7 +46,7 @@ class SlackOAuthProvider:
         }
         if code_verifier:
             data["code_verifier"] = code_verifier
-            
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://slack.com/api/oauth.v2.access",
@@ -53,10 +55,10 @@ class SlackOAuthProvider:
         data = response.json()
         if not data.get("ok"):
             raise ValueError(f"Slack OAuth failed: {data.get('error')}")
-        
+
         # Slack v2 can return token at root (bot token) or in authed_user (user token)
         access_token = data.get("access_token") or data.get("authed_user", {}).get("access_token")
-        
+
         if not access_token:
             raise ValueError("Slack response missing access_token")
 
@@ -76,11 +78,12 @@ class GitHubOAuthProvider:
     scopes = [
         "Full access to public and private repositories",
         "Read-only access to user profile information",
-        "Manage organization memberships"
+        "Manage organization memberships",
     ]
 
-    def get_authorization_url(self, state, code_challenge = None):
+    def get_authorization_url(self, state, code_challenge=None):
         from urllib.parse import urlencode
+
         params = {
             "client_id": settings.GITHUB_CLIENT_ID,
             "scope": "repo,user",
@@ -90,11 +93,12 @@ class GitHubOAuthProvider:
         if code_challenge:
             params["code_challenge"] = code_challenge
             params["code_challenge_method"] = "S256"
-            
+
         return f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
-    async def exchange_code(self, code, code_verifier = None):
+    async def exchange_code(self, code, code_verifier=None):
         import httpx
+
         data = {
             "client_id": settings.GITHUB_CLIENT_ID,
             "client_secret": settings.GITHUB_CLIENT_SECRET,
@@ -104,7 +108,7 @@ class GitHubOAuthProvider:
         # GitHub also supports PKCE, though we aren't using it yet
         if code_verifier:
             data["code_verifier"] = code_verifier
-            
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://github.com/login/oauth/access_token",
@@ -114,7 +118,7 @@ class GitHubOAuthProvider:
         data = response.json()
         if "error" in data:
             raise ValueError(f"GitHub OAuth failed: {data.get('error_description')}")
-        
+
         return {
             "access_token": data["access_token"],
             "token_type": data["token_type"],

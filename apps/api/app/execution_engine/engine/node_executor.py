@@ -28,19 +28,27 @@ class NodeExecutor:
             if metadata.credential_type:
                 selected_cred_id = properties.get("credential")
                 credentials = context.credentials or []
-                
-                logger.info(f"Resolving credential for node {node_id}. Type: {metadata.credential_type}, Selected ID: {selected_cred_id}")
+
+                logger.info(
+                    f"Resolving credential for node {node_id}. Type: {metadata.credential_type}, Selected ID: {selected_cred_id}"
+                )
                 logger.info(f"Available credentials IDs: {[c.get('id') for c in credentials]}")
 
                 found_cred = None
                 if selected_cred_id:
-                    found_cred = next((c for c in credentials if str(c.get("id")) == str(selected_cred_id)), None)
-                
+                    found_cred = next(
+                        (c for c in credentials if str(c.get("id")) == str(selected_cred_id)), None
+                    )
+
                 if not found_cred:
-                    found_cred = next((c for c in credentials if c.get("type") == metadata.credential_type), None)
-                
+                    found_cred = next(
+                        (c for c in credentials if c.get("type") == metadata.credential_type), None
+                    )
+
                 if found_cred:
-                    logger.info(f"Found credential: {found_cred.get('id')} of type {found_cred.get('type')}")
+                    logger.info(
+                        f"Found credential: {found_cred.get('id')} of type {found_cred.get('type')}"
+                    )
                     node_instance.credential = found_cred.get("data")
                 else:
                     logger.warning(f"No credential found for node {node_id}")

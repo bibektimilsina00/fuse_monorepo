@@ -23,6 +23,14 @@ dependencies = [
 [tool.uv]
 managed = true
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["../.."]
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"

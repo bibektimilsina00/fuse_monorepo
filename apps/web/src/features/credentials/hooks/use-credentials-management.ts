@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useCredentials, useDeleteCredential } from '@/hooks/credentials/queries'
-import { useConfirm } from '@/components/ui/confirm-modal'
+import { useConfirm } from '@/components/ui/confirm-context'
 
 export function useCredentialsManagement() {
   const confirm = useConfirm()

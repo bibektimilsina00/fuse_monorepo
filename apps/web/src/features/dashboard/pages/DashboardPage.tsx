@@ -1,8 +1,17 @@
 import React, { useState, useMemo } from 'react'
-import { Table, Clock, Search, Workflow as WorkflowIcon, Bot, FileText, Zap } from 'lucide-react'
+import { Table, Clock, Search, Bot, FileText, Zap } from 'lucide-react'
 import { TemplateCard } from '@/features/dashboard/components/template-card'
 import { ChatInput } from '@/features/dashboard/components/chat-input'
 import { useAuthStore } from '@/stores/auth-store'
+
+const STATIC_TEMPLATES = [
+  { title: "Self-populating CRM", icon: Table },
+  { title: "Meeting prep agent", icon: Clock },
+  { title: "Resolve todo list", icon: Search },
+  { title: "Customer Support Bot", icon: Bot },
+  { title: "Invoice Generator", icon: FileText },
+  { title: "Automated Lead Scoring", icon: Zap },
+]
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore()
@@ -10,20 +19,10 @@ export const DashboardPage: React.FC = () => {
   
   const firstName = user?.full_name?.split(' ')[0]
 
-  // Mock templates for now, but filterable
-  const staticTemplates = [
-    { title: "Self-populating CRM", icon: Table },
-    { title: "Meeting prep agent", icon: Clock },
-    { title: "Resolve todo list", icon: Search },
-    { title: "Customer Support Bot", icon: Bot },
-    { title: "Invoice Generator", icon: FileText },
-    { title: "Automated Lead Scoring", icon: Zap },
-  ]
-
   const filteredTemplates = useMemo(() => {
-    if (!searchQuery.trim()) return staticTemplates
+    if (!searchQuery.trim()) return STATIC_TEMPLATES
     const query = searchQuery.toLowerCase()
-    return staticTemplates.filter(t => t.title.toLowerCase().includes(query))
+    return STATIC_TEMPLATES.filter(t => t.title.toLowerCase().includes(query))
   }, [searchQuery])
 
   const isEmpty = filteredTemplates.length === 0

@@ -3,41 +3,104 @@
 @import "tailwindcss/utilities";
 
 :root {
-  /* Dark Mode Tokens */
-  --bg: #1b1b1b;
-  --surface-1: #1e1e1e;
-  --surface-2: #232323;
-  --surface-3: #242424;
-  --surface-4: #292929;
-  --surface-5: #363636;
-  --surface-6: #454545;
-  --surface-7: #505050;
-  --surface-hover: #262626;
+  /* ── Surfaces ──────────────────────────────────────────────────────── */
+  --bg:             #1b1b1b;
+  --surface-1:      #1e1e1e;
+  --surface-2:      #232323;
+  --surface-3:      #242424;
+  --surface-4:      #292929;
+  --surface-5:      #363636;
+  --surface-6:      #454545;
+  --surface-7:      #505050;
+  --surface-hover:  #262626;
   --surface-active: #2c2c2c;
-  
-  --text-primary: #e6e6e6;
-  --text-body: #cdcdcd;
-  --text-secondary: #cccccc;
-  --text-tertiary: #b3b3b3;
-  --text-muted: #787878;
-  --text-subtle: #7d7d7d;
-  --text-icon: #939393;
-  
+
+  /* Editor-specific dark surfaces (used in inspector/node fields) */
+  --surface-editor:        #222222;
+  --surface-editor-border: #333333;
+  --surface-editor-placeholder: #555555;
+
+  /* Modal dark glass (used in credential / BYOK modals) */
+  --surface-modal:        #1c1c1c;
+  --surface-modal-header: #111111;
+  --surface-0:            #111111;
+
+  /* Semantic colors */
+  --color-error:          #ff4d4f;
+
+  /* ── Text ──────────────────────────────────────────────────────────── */
+  --text-primary:      #e6e6e6;
+  --text-body:         #cdcdcd;
+  --text-secondary:    #cccccc;
+  --text-tertiary:     #b3b3b3;
+  --text-muted:        #787878;
+  --text-subtle:       #7d7d7d;
+  --text-icon:         #939393;
+  --text-placeholder:  #555555;
+
+  /* ── Borders ───────────────────────────────────────────────────────── */
   --border-default: #333333;
-  --border-strong: #3d3d3d;
-  --border-muted: #424242;
+  --border-strong:  #3d3d3d;
+  --border-muted:   #424242;
   --border-divider: #393939;
 
-  --brand-secondary: #33b4ff;
-  --brand-accent: #33c482;
+  /* ── Brand ─────────────────────────────────────────────────────────── */
+  --brand-accent:       #33c482;
   --brand-accent-hover: #2dac72;
-  
-  --selection-dark: #4b83f7;
-  --selection-bg-dark: #264f78;
+  --brand-secondary:    #33b4ff;
 
-  --sidebar-width: 248px;
-  --sidebar-collapsed: 51px;
-  --motion-sidebar: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  /* ── Misc ──────────────────────────────────────────────────────────── */
+  --selection-dark:    #4b83f7;
+  --selection-bg-dark: #264f78;
+  --workflow-edge:     #555555;
+
+  --sidebar-width:      248px;
+  --sidebar-collapsed:  51px;
+  --motion-sidebar:     200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ── Light Theme ─────────────────────────────────────────────────────────── */
+.light {
+  --bg:             #f6f6f6;
+  --surface-1:      #f0f0f0;
+  --surface-2:      #ffffff;
+  --surface-3:      #f3f3f3;
+  --surface-4:      #eeeeee;
+  --surface-5:      #e4e4e4;
+  --surface-6:      #d8d8d8;
+  --surface-7:      #cccccc;
+  --surface-hover:  #ebebeb;
+  --surface-active: #e6e6e6;
+
+  --surface-editor:        #f5f5f5;
+  --surface-editor-border: #e0e0e0;
+  --surface-editor-placeholder: #aaaaaa;
+
+  --surface-modal:        #ffffff;
+  --surface-modal-header: #f5f5f5;
+  --surface-0:            #efefef;
+
+  --text-primary:     #111111;
+  --text-body:        #222222;
+  --text-secondary:   #333333;
+  --text-tertiary:    #555555;
+  --text-muted:       #888888;
+  --text-subtle:      #999999;
+  --text-icon:        #777777;
+  --text-placeholder: #aaaaaa;
+
+  --border-default: #e0e0e0;
+  --border-strong:  #d0d0d0;
+  --border-muted:   #e8e8e8;
+  --border-divider: #e4e4e4;
+
+  /* Brand unchanged */
+  --brand-accent:       #33c482;
+  --brand-accent-hover: #2dac72;
+  --brand-secondary:    #33b4ff;
+
+  --workflow-edge:  #bbbbbb;
+  --color-error:    #ff4d4f;
 }
 
 html {

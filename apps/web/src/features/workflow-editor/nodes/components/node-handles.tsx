@@ -1,6 +1,6 @@
 import { Handle, Position } from 'reactflow'
+import type { NodeDefinition } from '@fuse/node-definitions'
 import { cn } from '@/lib/utils'
-import type { NodeDefinition } from '@/nodes/registry'
 
 interface NodeHandlesProps {
   definition: NodeDefinition

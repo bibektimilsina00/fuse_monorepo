@@ -68,7 +68,7 @@ export const SidebarFlyout: React.FC<SidebarFlyoutProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="w-[180px] rounded-[10px] border border-white/5 bg-[#1c1c1c] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-left-2 duration-150">
+      <div className="w-[180px] rounded-[10px] border border-white/5 bg-surface-modal shadow-2xl overflow-hidden animate-in fade-in slide-in-from-left-2 duration-150">
         <div className="px-3 py-2 border-b border-white/5">
           <span className="text-[12px] font-semibold text-white tracking-tight truncate block">
             {title}

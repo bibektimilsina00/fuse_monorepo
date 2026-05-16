@@ -55,11 +55,11 @@ export const KeyValueField = ({
   }
 
   return (
-    <div className="flex flex-col border border-[#333] rounded-md overflow-hidden bg-[#222]">
-      <div className="flex bg-[#1a1a1a] border-b border-[#333]">
-        <div className="flex-1 py-1.5 px-2 text-[11px] font-bold text-[#888]">Key</div>
-        <div className="w-[1px] bg-[#333] flex-shrink-0" />
-        <div className="flex-1 py-1.5 px-2 text-[11px] font-bold text-[#888]">Value</div>
+    <div className="flex flex-col border border-border rounded-md overflow-hidden bg-surface-editor">
+      <div className="flex bg-surface-modal border-b border-border">
+        <div className="flex-1 py-1.5 px-2 text-[11px] font-bold text-text-muted">Key</div>
+        <div className="w-[1px] bg-surface-5 flex-shrink-0" />
+        <div className="flex-1 py-1.5 px-2 text-[11px] font-bold text-text-muted">Value</div>
         <div className="w-8 flex-shrink-0" /> {/* Match delete button width */}
       </div>
       {pairs.map((pair, idx) => {
@@ -68,7 +68,7 @@ export const KeyValueField = ({
         const valueId = `value-${idx}`
         
         return (
-          <div key={idx} className={cn("flex group", !isLast && "border-b border-[#333]")}>
+          <div key={idx} className={cn("flex group", !isLast && "border-b border-border")}>
             <input
               value={pair.key}
               onFocus={e => {
@@ -125,9 +125,9 @@ export const KeyValueField = ({
               }}
               onChange={e => handleChange(idx, 'key', e.target.value)}
               placeholder="Key"
-              className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-[#555] min-w-0"
+              className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-text-placeholder min-w-0"
             />
-            <div className="w-[1px] bg-[#333] flex-shrink-0" />
+            <div className="w-[1px] bg-surface-5 flex-shrink-0" />
             <input
               value={pair.value}
               onFocus={e => {
@@ -184,14 +184,14 @@ export const KeyValueField = ({
               }}
               onChange={e => handleChange(idx, 'value', e.target.value)}
               placeholder="Value"
-              className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-[#555] min-w-0"
+              className="flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white focus:outline-none placeholder:text-text-placeholder min-w-0"
             />
             <div className="w-8 flex-shrink-0 flex items-center justify-center">
               {!isLast && (
-                <button 
+                <button
                   onClick={() => handleDelete(idx)}
-                  className="opacity-0 group-hover:opacity-100 text-[#666] hover:text-red-500 transition-all p-1"
-                  title="Remove field"
+                  className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-500 transition-all p-1 rounded"
+                  aria-label="Remove field"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

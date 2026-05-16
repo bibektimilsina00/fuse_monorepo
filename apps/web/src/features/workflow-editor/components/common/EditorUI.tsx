@@ -1,10 +1,6 @@
 import React, { memo } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Editor from 'react-simple-code-editor'
-import Prism from 'prismjs'
-import 'prismjs/components/prism-json'
-import '@/styles/prism.css'
 
 // --- Shared Types ---
 export interface NodeItem {
@@ -84,7 +80,7 @@ export const DataNode = memo(({ label, value, initialCollapsed = false, wrap = f
           displayType === 'number' ? "bg-blue-500/10 text-blue-400" : 
           displayType === 'boolean' ? "bg-orange-500/10 text-orange-400" :
           (displayType === 'object' || displayType === 'array') ? "bg-purple-500/10 text-purple-400" :
-          "bg-zinc-500/10 text-zinc-400"
+          "bg-text-muted/10 text-text-muted"
         )}>
           {displayType}
         </div>
@@ -157,4 +153,3 @@ export const ToolbarItem = memo(({ label, icon, color, type, onClick }: NodeItem
     </div>
   )
 })
-

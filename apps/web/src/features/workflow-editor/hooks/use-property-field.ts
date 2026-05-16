@@ -1,6 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import apiClient from '@/lib/api/client'
+import { logger } from '@/lib/logger'
 import { getDynamicLabel } from '@/features/workflow-editor/nodes/utils'
+
+const normalizeOption = (option: any) => {
+  if (option && typeof option === 'object') {
+    const value = option.value ?? option.id ?? option.key ?? option.name ?? option.label
+    const label = option.label ?? option.name ?? option.title ?? String(value ?? '')
+    return { label, value }
+  }
+  return { label: String(option), value: option }
+}
+
+const normalizeOptionsResponse = (data: any) => {
+  const rawOptions = Array.isArray(data)
+    ? data
+    : data?.data ?? data?.options ?? data?.items ?? data?.results ?? []
+  return Array.isArray(rawOptions) ? rawOptions.map(normalizeOption) : []
+}
 
 interface UsePropertyFieldProps {
   prop: any
@@ -19,15 +36,14 @@ export const usePropertyField = ({
   onFirstClickUsed,
   isFirstClickAllowed
 }: UsePropertyFieldProps) => {
-  const propsData = selectedNode.data?.properties || {}
+  const propsData = useMemo(() => selectedNode.data?.properties || {}, [selectedNode.data?.properties])
   const modes = propsData._modes || {}
   const mode = modes[prop.name] || (prop.loadOptions ? 'dynamic' : 'manual')
   
   const [dynamicOptions, setDynamicOptions] = useState<any[]>([])
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
 
-  const dependencies = prop.loadOptionsDependsOn || []
-  const dependencyValues = dependencies.map((d: string) => propsData[d]).join('|')
+  const dependencies = useMemo(() => prop.loadOptionsDependsOn || [], [prop.loadOptionsDependsOn])
 
   const fetchOptions = useCallback(async () => {
     if (!prop.loadOptions) return
@@ -40,15 +56,13 @@ export const usePropertyField = ({
       })
       
       const response = await apiClient.get(prop.loadOptions, { params })
-      if (response.data.ok) {
-        setDynamicOptions(response.data.data || [])
-      }
+      setDynamicOptions(normalizeOptionsResponse(response.data))
     } catch (err) {
-      console.error('Failed to fetch options:', err)
+      logger.error('Failed to fetch options:', err)
     } finally {
       setIsLoadingOptions(false)
     }
-  }, [prop.loadOptions, dependencyValues, propsData, dependencies])
+  }, [prop.loadOptions, propsData, dependencies])
 
   useEffect(() => {
     if (mode === 'dynamic' && prop.loadOptions) {

@@ -55,8 +55,7 @@ class FolderService:
         if not folder:
             return False
 
-        await self.db.execute(delete(Workflow)
-        .where(Workflow.folder_id == folder_id))
+        await self.db.execute(delete(Workflow).where(Workflow.folder_id == folder_id))
 
         await self.db.delete(folder)
         await self.db.commit()

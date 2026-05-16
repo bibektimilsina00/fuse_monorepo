@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { authKeys } from './keys'
+import { authKeys } from '@/hooks/auth/keys'
 import { login, register, getMe, forgotPassword, resetPassword } from '@/services/auth'
 import type { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest } from '@/services/auth'
 import { useAuthStore } from '@/stores/auth-store'
@@ -52,7 +52,7 @@ export function useMe() {
   
   return useQuery({
     queryKey: authKeys.me(),
-    queryFn: async ({ signal }) => {
+    queryFn: async () => {
       try {
         const user = await getMe()
         setUser(user)

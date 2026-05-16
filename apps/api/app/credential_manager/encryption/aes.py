@@ -9,10 +9,13 @@ from apps.api.app.core.config import settings
 class AESEncryptionService:
     def __init__(self, key: str | None = None):
         raw_key = key or settings.ENCRYPTION_KEY
-        
+
         if not raw_key:
             from apps.api.app.core.logger import logger
-            logger.warning("ENCRYPTION_KEY missing — generating ephemeral key. WARNING: API and Worker will not share credentials!")
+
+            logger.warning(
+                "ENCRYPTION_KEY missing — generating ephemeral key. WARNING: API and Worker will not share credentials!"
+            )
             self.fernet = Fernet(Fernet.generate_key())
             return
 
@@ -28,6 +31,7 @@ class AESEncryptionService:
                 self.fernet = Fernet(fernet_key)
         except Exception as e:
             from apps.api.app.core.logger import logger
+
             logger.error(f"Invalid ENCRYPTION_KEY format: {e}. Falling back to ephemeral key.")
             self.fernet = Fernet(Fernet.generate_key())
 
@@ -36,5 +40,6 @@ class AESEncryptionService:
 
     def decrypt(self, token: str) -> str:
         return self.fernet.decrypt(token.encode()).decode()
+
 
 encryption_service = AESEncryptionService()

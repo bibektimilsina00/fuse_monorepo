@@ -104,14 +104,14 @@ class HttpRequestNode(BaseNode[HttpRequestProperties]):
 
             # Use shared client from context if available, otherwise create a temporary one
             client = context.http_client or httpx.AsyncClient(timeout=timeout_ms / 1000.0)
-            
+
             try:
                 request_kwargs = {
                     "method": method,
                     "url": url,
                     "headers": headers,
                     "params": params,
-                    "timeout": timeout_ms / 1000.0 if not context.http_client else None
+                    "timeout": timeout_ms / 1000.0 if not context.http_client else None,
                 }
 
                 if form_data:
@@ -126,7 +126,7 @@ class HttpRequestNode(BaseNode[HttpRequestProperties]):
                         request_kwargs["json"] = body
 
                 response = await client.request(**request_kwargs)
-                
+
                 # Try to parse response as JSON
                 try:
                     response_body = response.json()
@@ -148,7 +148,9 @@ class HttpRequestNode(BaseNode[HttpRequestProperties]):
                     await client.aclose()
 
         except httpx.TimeoutException:
-            return NodeResult(success=False, error=f"Request timed out after {self.props.timeout}ms")
+            return NodeResult(
+                success=False, error=f"Request timed out after {self.props.timeout}ms"
+            )
         except Exception as e:
             logger.error(f"HttpRequestNode failed: {e}", exc_info=True)
             return NodeResult(success=False, error=str(e))

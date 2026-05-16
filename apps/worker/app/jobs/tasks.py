@@ -34,27 +34,29 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
         exec_repo = ExecutionRepository(db)
         wf_repo = WorkflowRepository(db)
         cred_repo = CredentialRepository(db)
-        
+
         await exec_repo.update_status(uuid.UUID(execution_id), "running")
         await exec_repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
-        
+
         # Fetch user_id from workflow
         workflow = await wf_repo.get_by_id(uuid.UUID(workflow_id))
         if workflow:
-            logger.info(f"Fetching credentials for user {workflow.user_id} (workflow {workflow_id})")
+            logger.info(
+                f"Fetching credentials for user {workflow.user_id} (workflow {workflow_id})"
+            )
             # Fetch and decrypt all credentials for this user
             user_credentials = await cred_repo.list_by_user(workflow.user_id)
             logger.info(f"Found {len(user_credentials)} credentials for user {workflow.user_id}")
-            
+
             for cred in user_credentials:
                 try:
                     decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
-                    logger.info(f"Loaded credential: ID={cred.id}, Type={cred.type}, Name={cred.name}")
-                    credentials_list.append({
-                        "id": str(cred.id),
-                        "type": cred.type,
-                        "data": decrypted_data
-                    })
+                    logger.info(
+                        f"Loaded credential: ID={cred.id}, Type={cred.type}, Name={cred.name}"
+                    )
+                    credentials_list.append(
+                        {"id": str(cred.id), "type": cred.type, "data": decrypted_data}
+                    )
                 except Exception as e:
                     logger.error(f"Failed to decrypt credential {cred.id}: {str(e)}", exc_info=True)
         else:
@@ -62,15 +64,14 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
 
     # 2. Execution Phase: Run the runner
     try:
-        async def on_log(message: str, level: str = "info", node_id: str | None = None, payload: Any = None):
+
+        async def on_log(
+            message: str, level: str = "info", node_id: str | None = None, payload: Any = None
+        ):
             async with AsyncSessionLocal() as db:
                 repo = ExecutionRepository(db)
                 await repo.add_log(
-                    uuid.UUID(execution_id),
-                    message,
-                    level=level,
-                    node_id=node_id,
-                    payload=payload
+                    uuid.UUID(execution_id), message, level=level, node_id=node_id, payload=payload
                 )
 
         async with AsyncSessionLocal() as db:
@@ -80,7 +81,7 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
                 graph=graph,
                 db=db,
                 on_log=on_log,
-                credentials=credentials_list
+                credentials=credentials_list,
             )
             output = await runner.run(trigger_data)
 

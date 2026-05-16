@@ -22,16 +22,16 @@ export const CustomSelect = ({ value, options, onChange, placeholder }: any) => 
     <div className="relative" ref={ref}>
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#222] border border-[#333] rounded-md px-3 h-[32px] flex items-center justify-between cursor-pointer hover:border-[#444] transition-all"
+        className="w-full bg-surface-editor border border-border rounded-md px-3 h-[32px] flex items-center justify-between cursor-pointer hover:border-border-strong transition-all"
       >
-        <span className={cn("text-[12px]", value ? "text-white" : "text-[#666]")}>
+        <span className={cn("text-[12px]", value ? "text-white" : "text-text-muted")}>
           {selectedOption ? selectedOption.label : placeholder || 'Select...'}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-[#666]" />
+        <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
       </div>
       
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#222] border border-[#333] rounded-md shadow-xl z-50 overflow-hidden py-1">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-surface-editor border border-border rounded-md shadow-xl z-50 overflow-hidden py-1">
           {options?.map((opt: any) => (
             <div
               key={opt.value}
@@ -39,7 +39,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder }: any) => 
                 onChange(opt.value)
                 setIsOpen(false)
               }}
-              className="px-3 py-1.5 text-[12px] text-white hover:bg-[#333] cursor-pointer transition-colors"
+              className="px-3 py-1.5 text-[12px] text-white hover:bg-surface-5 cursor-pointer transition-colors"
             >
               {opt.label}
             </div>

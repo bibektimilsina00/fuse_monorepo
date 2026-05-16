@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { ProtectedRoute, PublicRoute } from '@/app/route-guards'
 import { MainLayout } from '@/layouts/MainLayout'
 import Editor from '@/features/workflow-editor/Editor'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
@@ -15,34 +16,6 @@ import { RecentlyDeletedSettings } from '@/features/settings/pages/RecentlyDelet
 import LoginPage from '@/features/auth/login-page'
 import SignupPage from '@/features/auth/signup-page'
 import ResetPasswordPage from '@/features/auth/reset-password-page'
-import { useAuthStore } from '@/stores/auth-store'
-
-/**
- * A wrapper component that redirects to /login if the user is not authenticated.
- */
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  return <>{children}</>
-}
-
-/**
- * A wrapper component that redirects to /dashboard if the user is already authenticated.
- * Used for auth pages (login/signup).
- */
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
-  
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
-  }
-
-  return <>{children}</>
-}
 
 export const router = createBrowserRouter([
   {
@@ -87,11 +60,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'workflows',
-        element: <div className="p-8 text-zinc-500">Workflow list coming soon...</div>,
+        element: <div className="p-8 text-text-muted">Workflow list coming soon...</div>,
       },
       {
         path: 'executions',
-        element: <div className="p-8 text-zinc-500">Execution history coming soon...</div>,
+        element: <div className="p-8 text-text-muted">Execution history coming soon...</div>,
       },
       {
         path: 'workflows/:id',
@@ -154,4 +127,3 @@ export const router = createBrowserRouter([
     ],
   },
 ])
-

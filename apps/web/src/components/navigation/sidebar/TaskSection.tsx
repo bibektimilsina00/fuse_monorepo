@@ -23,8 +23,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         label="New task"
         isCollapsed={isCollapsed}
         onMouseEnter={useCallback((e) => onItemMouseEnter('New task', [
-          { label: 'Analyze Repo', icon: <CirclePlus className="w-4 h-4 text-[var(--text-icon)]" />, onClick: () => console.log('Analyze') },
-          { label: 'Run Audit', icon: <CirclePlus className="w-4 h-4 text-[var(--text-icon)]" />, onClick: () => console.log('Audit') }
+          { label: 'Analyze Repo', icon: <CirclePlus className="w-4 h-4 text-[var(--text-icon)]" />, onClick: () => undefined },
+          { label: 'Run Audit', icon: <CirclePlus className="w-4 h-4 text-[var(--text-icon)]" />, onClick: () => undefined }
         ], e), [onItemMouseEnter])}
       />
     </SidebarSection>

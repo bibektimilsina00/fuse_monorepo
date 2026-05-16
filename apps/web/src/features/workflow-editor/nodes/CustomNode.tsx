@@ -7,6 +7,10 @@ import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-hea
 import { NodeProperty } from '@/features/workflow-editor/nodes/components/node-property'
 import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-handles'
 import { getPropValuePreview, shouldShowProperty, getDynamicLabel } from '@/features/workflow-editor/nodes/utils'
+import {
+  buildCanonicalIndex,
+  isSubBlockVisibleForMode,
+} from '@/features/workflow-editor/panels/inspector/visibility'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
@@ -15,16 +19,26 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
   const isLocked = data?.locked ?? false
   const handleDirection = data?.handleDirection ?? 'horizontal'
 
+  const canonicalIndex = useMemo(
+    () => definition ? buildCanonicalIndex(definition.properties) : { groupsById: {}, canonicalIdByPropName: {} },
+    [definition],
+  )
+
   useEffect(() => {
     updateNodeInternals(id)
     const t = setTimeout(() => updateNodeInternals(id), 50)
     return () => clearTimeout(t)
   }, [id, handleDirection, updateNodeInternals])
-  
+
   if (!definition) return null
   const properties = data.properties || {}
+  const canonicalModes = data.canonicalModes || {}
 
-  const visibleProps = definition.properties.filter(p => shouldShowProperty(p, properties, definition))
+  const visibleProps = definition.properties
+    .filter(p => p.visibility !== 'hidden')
+    .filter(p => shouldShowProperty(p, properties, definition))
+    // Mirror inspector logic: hide standalone advanced fields; respect canonical pair swap
+    .filter(p => isSubBlockVisibleForMode(p, false, canonicalIndex, properties, canonicalModes))
   const hasErrorHandle = !!definition.allowError
 
   return (
@@ -35,7 +49,7 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
         className={cn(
           "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-all",
           !isLocked ? "cursor-grab [&:active]:cursor-grabbing" : "cursor-default",
-          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-[#333]"
+          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-border"
         )}
       >
         <NodeToolbar id={id} />
@@ -66,7 +80,7 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
               label="error" 
               value="-" 
               handleId="error"
-              handleClass="!bg-[#ff4d4f]"
+              handleClass="!bg-error"
             />
           )}
         </div>
@@ -74,5 +88,4 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
     </div>
   )
 }
-
 

@@ -2,8 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { requestJson } from '@/lib/api/client'
 import { FolderSchema, type Folder, type Workflow } from '@/lib/api/contracts'
-import { folderKeys } from './keys'
-import { workflowKeys } from './keys'
+import { folderKeys, workflowKeys } from '@/features/dashboard/hooks/keys'
 
 const FolderListSchema = z.array(FolderSchema)
 

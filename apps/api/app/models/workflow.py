@@ -20,7 +20,7 @@ class Workflow(Base):
     schema_version: Mapped[str] = mapped_column(String, default="1.0.0")
     # Store the React Flow graph (nodes and edges)
     graph: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default={"nodes": [], "edges": []}
+        JSON, nullable=False, default=lambda: {"nodes": [], "edges": []}
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -33,7 +33,6 @@ class Workflow(Base):
     )
     position: Mapped[int] = mapped_column(Integer, default=0)
     color: Mapped[str | None] = mapped_column(String, nullable=True)
-
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False

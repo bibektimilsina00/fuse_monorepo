@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Globe, Shield, Lock, type LucideIcon } from 'lucide-react'
+import { type LucideIcon } from 'lucide-react'
 import { useCreateCredential } from '@/hooks/credentials/queries'
 import api from '@/lib/api/client'
+import { logger } from '@/lib/logger'
 
 export interface CredentialField {
   id: string
@@ -52,7 +53,7 @@ export function useAddCredential(onClose: () => void, initialService?: Supported
         const response = await api.get('/credentials/providers')
         setSupportedServices(response.data)
       } catch (err) {
-        console.error('Failed to fetch providers:', err)
+        logger.error('Failed to fetch providers:', err)
       } finally {
         setIsLoading(false)
       }
@@ -88,7 +89,7 @@ export function useAddCredential(onClose: () => void, initialService?: Supported
         window.location.href = response.data.url
       }
     } catch (err) {
-      console.error('Failed to start OAuth flow:', err)
+      logger.error('Failed to start OAuth flow:', err)
     }
   }
 
@@ -114,7 +115,7 @@ export function useAddCredential(onClose: () => void, initialService?: Supported
       onClose()
       reset()
     } catch (err) {
-      console.error('Failed to create credential:', err)
+      logger.error('Failed to create credential:', err)
     }
   }
 

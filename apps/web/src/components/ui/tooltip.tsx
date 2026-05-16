@@ -68,8 +68,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
       // 3. Absolute Positioning Math
       let top = 0
       let left = 0
-      let aTop = 0
-      let aLeft = 0
 
       const triggerCenterH = triggerRect.left + triggerRect.width / 2
       const triggerCenterV = triggerRect.top + triggerRect.height / 2

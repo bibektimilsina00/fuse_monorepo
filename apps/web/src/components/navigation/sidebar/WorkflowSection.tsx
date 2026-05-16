@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FolderPlus, Import } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
@@ -43,7 +43,7 @@ export const WorkflowSection: React.FC<WorkflowSectionProps> = ({
   })
 
   const moreMenuItems = useMemo(() => [
-    { label: 'Import', icon: <Import className="w-4 h-4 text-[var(--text-muted)]" />, onClick: () => console.log('Import') },
+    { label: 'Import', icon: <Import className="w-4 h-4 text-[var(--text-muted)]" />, onClick: () => undefined },
     { label: 'Create folder', icon: <FolderPlus className="w-4 h-4 text-[var(--text-muted)]" />, onClick: onCreateFolder }
   ], [onCreateFolder])
 

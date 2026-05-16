@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == */.env* || \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == */.env ]]; then echo 'BLOCKED: .env files must not be edited by Claude — edit manually to avoid accidental credential exposure'; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$FILE\" == *.py ]]; then uvx ruff format \"$FILE\" 2>/dev/null && uvx ruff check --fix --silent \"$FILE\" 2>/dev/null; elif [[ \"$FILE\" == *.tsx || \"$FILE\" == *.ts ]]; then cd /Users/bibektimilsina/projects/fuse_new && pnpm --filter web exec eslint --fix \"$FILE\" 2>/dev/null; fi; true"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "claude-code-setup@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "ralph-loop@claude-plugins-official": true
+  }
+}

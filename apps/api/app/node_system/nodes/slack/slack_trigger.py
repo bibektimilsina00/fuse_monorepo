@@ -16,7 +16,6 @@ class SlackTriggerProperties(BaseModel):
 
 
 class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
-
     @classmethod
     def get_metadata(cls) -> NodeMetadata:
         return NodeMetadata(
@@ -43,7 +42,7 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
                     "type": "credential",
                     "credentialType": "slack_oauth",
                     "required": True,
-                    "condition": {"field": "authentication", "value": "fuse_bot"}
+                    "condition": {"field": "authentication", "value": "fuse_bot"},
                 },
                 {
                     "name": "bot_token",
@@ -52,7 +51,7 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
                     "required": True,
                     "secret": True,
                     "placeholder": "xoxb-...",
-                    "condition": {"field": "authentication", "value": "custom_bot"}
+                    "condition": {"field": "authentication", "value": "custom_bot"},
                 },
                 {
                     "name": "event_type",
@@ -80,8 +79,17 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
                     "label": "Channel Filter (Optional)",
                     "type": "string",
                     "placeholder": "C1234567890",
-                    "condition": {"field": "event_type", "value": ["message", "reaction_added", "reaction_removed", "member_joined_channel", "member_left_channel"]}
-                }
+                    "condition": {
+                        "field": "event_type",
+                        "value": [
+                            "message",
+                            "reaction_added",
+                            "reaction_removed",
+                            "member_joined_channel",
+                            "member_left_channel",
+                        ],
+                    },
+                },
             ],
             inputs=0,
             outputs=1,

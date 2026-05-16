@@ -24,33 +24,37 @@ router = APIRouter()
 @router.get("/providers", response_model=list[ProviderOut])
 async def list_providers():
     providers = []
-    
+
     # Collect OAuth providers
     for p in OAUTH_PROVIDERS.values():
-        providers.append({
-            "id": p.id,
-            "name": p.name,
-            "type": p.type,
-            "description": p.description,
-            "icon_url": p.icon_url,
-            "fields": getattr(p, "fields", None),
-            "hint": getattr(p, "hint", None),
-            "scopes": getattr(p, "scopes", None)
-        })
-        
+        providers.append(
+            {
+                "id": p.id,
+                "name": p.name,
+                "type": p.type,
+                "description": p.description,
+                "icon_url": p.icon_url,
+                "fields": getattr(p, "fields", None),
+                "hint": getattr(p, "hint", None),
+                "scopes": getattr(p, "scopes", None),
+            }
+        )
+
     # Collect API Key providers
     for p in API_KEY_PROVIDERS.values():
-        providers.append({
-            "id": p.id,
-            "name": p.name,
-            "type": p.type,
-            "description": p.description,
-            "icon_url": p.icon_url,
-            "fields": p.fields,
-            "hint": p.hint,
-            "scopes": getattr(p, "scopes", None)
-        })
-        
+        providers.append(
+            {
+                "id": p.id,
+                "name": p.name,
+                "type": p.type,
+                "description": p.description,
+                "icon_url": p.icon_url,
+                "fields": p.fields,
+                "hint": p.hint,
+                "scopes": getattr(p, "scopes", None),
+            }
+        )
+
     return providers
 
 
@@ -97,6 +101,7 @@ async def get_oauth_url(
 ):
     try:
         from apps.api.app.credential_manager.oauth.flow import get_oauth_provider
+
         provider = get_oauth_provider(service_name)
         if not provider:
             raise HTTPException(
@@ -108,14 +113,14 @@ async def get_oauth_url(
         import base64
         import hashlib
         import json
-        
+
         state_data = {
             "nonce": secrets.token_urlsafe(16),
             "name": name,
             "description": description,
-            "user_id": str(current_user.id)
+            "user_id": str(current_user.id),
         }
-        
+
         # Add PKCE for Slack
         code_challenge = None
         if service_name == "slack":
@@ -124,20 +129,20 @@ async def get_oauth_url(
             # SHA256 hash of verifier, then base64url encoded
             challenge_hash = hashlib.sha256(code_verifier.encode()).digest()
             code_challenge = base64.urlsafe_b64encode(challenge_hash).decode().replace("=", "")
-            
+
         state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
-        
+
         if service_name == "slack":
             url = provider.get_authorization_url(state=state, code_challenge=code_challenge)
         else:
             url = provider.get_authorization_url(state=state)
-            
+
         return OAuthUrlResponse(url=url, state=state)
-    except ImportError:
+    except ImportError as exc:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OAuth flow not yet implemented",
-        )
+        ) from exc
 
 
 @router.get("/oauth/{service_name}/callback")
@@ -150,14 +155,16 @@ async def oauth_callback(
     try:
         # Decode metadata from state
         import base64
+        import binascii
         import json
+
         try:
             state_data = json.loads(base64.urlsafe_b64decode(state).decode())
             custom_name = state_data.get("name")
             custom_description = state_data.get("description")
             code_verifier = state_data.get("code_verifier")
             user_id = state_data.get("user_id")
-        except:
+        except (binascii.Error, UnicodeDecodeError, ValueError):
             custom_name = None
             custom_description = None
             code_verifier = None
@@ -169,12 +176,14 @@ async def oauth_callback(
         from sqlalchemy import select
 
         from apps.api.app.models.user import User
+
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         from apps.api.app.credential_manager.oauth.callback import handle_oauth_callback
+
         await handle_oauth_callback(
             service_name=service_name,
             code=code,
@@ -182,13 +191,14 @@ async def oauth_callback(
             db=db,
             custom_name=custom_name,
             custom_description=custom_description,
-            code_verifier=code_verifier
+            code_verifier=code_verifier,
         )
         from apps.api.app.core.config import settings
+
         # Redirect back to frontend integrations settings page
         return RedirectResponse(url=f"{settings.FRONTEND_URL}/settings/integrations")
-    except ImportError:
+    except ImportError as exc:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OAuth callback not yet implemented",
-        )
+        ) from exc

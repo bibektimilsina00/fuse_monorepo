@@ -33,16 +33,11 @@ class WorkflowService:
                     {
                         "id": str(uuid.uuid4()),
                         "type": "trigger.manual",
-                        "data": {
-                            "name": "Start",
-                            "properties": {
-                                "startWorkflow": "manual"
-                            }
-                        },
-                        "position": {"x": 100, "y": 100}
+                        "data": {"name": "Start", "properties": {"startWorkflow": "manual"}},
+                        "position": {"x": 100, "y": 100},
                     }
                 ],
-                "edges": []
+                "edges": [],
             }
 
         workflow = Workflow(
@@ -69,12 +64,12 @@ class WorkflowService:
         for item in data.updates:
             workflow = await self.repository.get_by_id_and_user(item.id, user.id)
             if workflow:
-                update_dict = item.model_dump(exclude_unset=True, exclude={'id'})
+                update_dict = item.model_dump(exclude_unset=True, exclude={"id"})
                 logger.info(f"Updating workflow {workflow.id} with {update_dict}")
                 updates.append((workflow, update_dict))
             else:
                 logger.warning(f"Workflow {item.id} not found or doesn't belong to user {user.id}")
-        
+
         if updates:
             await self.repository.batch_update(updates)
             logger.info(f"Successfully committed batch update for {len(updates)} workflows")

@@ -2,7 +2,6 @@ import { useMemo, useEffect } from 'react'
 import { type NodeProps, useUpdateNodeInternals } from 'reactflow'
 import { cn } from '@/lib/utils'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 import { NodeToolbar } from '@/features/workflow-editor/nodes/components/node-toolbar'
 import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-header'
 import { NodeProperty } from '@/features/workflow-editor/nodes/components/node-property'
@@ -37,7 +36,7 @@ export function ConditionNode({ id, type, data, selected }: NodeProps) {
         className={cn(
           "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-all",
           !isLocked ? "cursor-grab [&:active]:cursor-grabbing" : "cursor-default",
-          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-[#333]"
+          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-border"
         )}
       >
         <NodeToolbar id={id} />
@@ -77,7 +76,7 @@ export function ConditionNode({ id, type, data, selected }: NodeProps) {
               label="error" 
               value="-" 
               handleId="error"
-              handleClass="!bg-[#ff4d4f]"
+              handleClass="!bg-error"
               direction={handleDirection}
               index={conditions.length + 1}
               total={totalOutputHandles}

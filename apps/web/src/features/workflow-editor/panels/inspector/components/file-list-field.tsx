@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react'
 import { Upload, X, File, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 import apiClient from '@/lib/api/client'
+import { logger } from '@/lib/logger'
 
 interface FileListFieldProps {
   value: string[] // List of asset IDs
@@ -43,7 +43,7 @@ export const FileListField: React.FC<FileListFieldProps> = ({ value = [], onChan
         onChange([...value, newAsset.id])
       }
     } catch (err) {
-      console.error('Upload failed:', err)
+      logger.error('Upload failed:', err)
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -62,13 +62,13 @@ export const FileListField: React.FC<FileListFieldProps> = ({ value = [], onChan
         {assets.map((asset) => (
           <div 
             key={asset.id}
-            className="flex items-center gap-2 bg-[#222] border border-[#333] rounded px-2 py-1.5 group animate-in zoom-in-95 duration-200"
+            className="flex items-center gap-2 bg-surface-editor border border-border rounded px-2 py-1.5 group animate-in zoom-in-95 duration-200"
           >
             <File size={14} className="text-blue-400" />
             <span className="text-[12px] text-white truncate max-w-[120px]">{asset.name}</span>
             <button 
               onClick={() => removeAsset(asset.id)}
-              className="p-0.5 rounded hover:bg-[#444] text-[#666] hover:text-white transition-all"
+              className="p-0.5 rounded hover:bg-surface-6 text-text-muted hover:text-white transition-all"
             >
               <X size={12} />
             </button>
@@ -79,7 +79,7 @@ export const FileListField: React.FC<FileListFieldProps> = ({ value = [], onChan
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
-        className="w-full h-[36px] flex items-center justify-center gap-2 border-2 border-dashed border-[#333] hover:border-[#444] rounded-md text-[13px] text-[#888] hover:text-white transition-all"
+        className="w-full h-[36px] flex items-center justify-center gap-2 border-2 border-dashed border-border hover:border-border-strong rounded-md text-[13px] text-text-muted hover:text-white transition-all"
       >
         {isUploading ? (
           <Loader2 size={16} className="animate-spin" />

@@ -1,9 +1,10 @@
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from apps.api.app.core.logger import get_logger
 from apps.api.app.execution_engine.engine.node_executor import node_executor
 from apps.api.app.node_system.base.node_context import NodeContext
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = get_logger(__name__)
 
@@ -87,6 +88,7 @@ class WorkflowRunner:
         resolved_properties = resolver.resolve_properties(raw_properties)
 
         from apps.api.app.core.http import get_http_client
+
         http_client = await get_http_client()
 
         context = NodeContext(
@@ -96,7 +98,7 @@ class WorkflowRunner:
             variables={},  # To be populated from state
             credentials=self.credentials,
             http_client=http_client,
-            db=self.db
+            db=self.db,
         )
 
         result = await node_executor.execute_node(
@@ -118,7 +120,7 @@ class WorkflowRunner:
         if result.success:
             # Store output for future interpolation
             self.node_outputs[node_id] = result.output_data
-            
+
             await self._log(
                 f"Node {label} executed successfully",
                 node_id=node_id,
@@ -132,11 +134,11 @@ class WorkflowRunner:
             branch = result.output_data.get("branch")
             for edge in next_edges:
                 edge_handle = edge.get("sourceHandle")
-                
+
                 # SKIP error branches on success
-                if edge_handle == 'error':
+                if edge_handle == "error":
                     continue
-                    
+
                 # Handle specific logical branches (e.g. from Condition node)
                 if branch and edge_handle and edge_handle != branch:
                     continue
@@ -147,9 +149,9 @@ class WorkflowRunner:
             error_payload = {
                 "input": resolved_properties,
                 "data_in": input_data,
-                "error": result.error
+                "error": result.error,
             }
-            
+
             await self._log(
                 f"Node {label} failed: {result.error}",
                 level="error",
@@ -159,7 +161,7 @@ class WorkflowRunner:
 
             # Check if we have an error handler branch
             error_edges = [e for e in next_edges if e.get("sourceHandle") == "error"]
-            
+
             if error_edges:
                 logger.info(f"Node {node_id} failed, following {len(error_edges)} error branch(es)")
                 for edge in error_edges:

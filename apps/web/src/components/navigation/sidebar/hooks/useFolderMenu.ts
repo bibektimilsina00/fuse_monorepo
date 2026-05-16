@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Edit2, Trash2, CirclePlus, FolderPlus, Lock, Copy, Download } from 'lucide-react'
-import { useDeleteFolder, useFolders, useUpdateFolder } from '@/features/dashboard/hooks/use-folders'
+import { useDeleteFolder, useFolders } from '@/features/dashboard/hooks/use-folders'
 import { useWorkflows } from '@/features/dashboard/hooks/use-workflows'
 import { logger } from '@/lib/logger'
 
@@ -15,7 +15,6 @@ export function useFolderMenu({ folderId }: UseFolderMenuProps) {
   const { data: workflows = [] } = useWorkflows()
   const { data: folders = [] } = useFolders()
   const { mutate: deleteFolder } = useDeleteFolder()
-  const { mutate: updateFolder } = useUpdateFolder()
 
   const canDelete = useMemo(() => {
     // 1. Identify all folder IDs that will be deleted (this folder + children)

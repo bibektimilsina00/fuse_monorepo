@@ -16,16 +16,16 @@ from apps.api.app.models.base import Base
 class Folder(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    
+
     # Optional parent folder for nesting
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("folder.id"), nullable=True
     )
-    
+
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False
     )
-    
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
@@ -37,5 +37,9 @@ class Folder(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="folders")
     parent: Mapped["Folder"] = relationship("Folder", back_populates="children", remote_side=[id])
-    children: Mapped[list["Folder"]] = relationship("Folder", back_populates="parent", cascade="all, delete-orphan")
-    workflows: Mapped[list["Workflow"]] = relationship("Workflow", back_populates="folder", cascade="all, delete-orphan")
+    children: Mapped[list["Folder"]] = relationship(
+        "Folder", back_populates="parent", cascade="all, delete-orphan"
+    )
+    workflows: Mapped[list["Workflow"]] = relationship(
+        "Workflow", back_populates="folder", cascade="all, delete-orphan"
+    )

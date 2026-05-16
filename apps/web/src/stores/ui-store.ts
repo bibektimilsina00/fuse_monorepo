@@ -1,7 +1,9 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type InspectorTabType = 'Copilot' | 'Toolbar' | 'Editor'
 export type LogViewMode = 'structured' | 'raw'
+export type ThemeMode = 'dark' | 'light' | 'system'
 
 interface UIState {
   inspectorTab: InspectorTabType
@@ -10,26 +12,39 @@ interface UIState {
   toggleSidebar: () => void
   isSearchOpen: boolean
   setSearchOpen: (open: boolean) => void
-  // Log inspector view preferences (persisted across remounts)
+  // Log inspector view preferences
   logViewMode: LogViewMode
   setLogViewMode: (mode: LogViewMode) => void
   logWrapView: boolean
   setLogWrapView: (wrap: boolean) => void
   logOpenOnRun: boolean
   setLogOpenOnRun: (open: boolean) => void
+  // Theme
+  theme: ThemeMode
+  setTheme: (theme: ThemeMode) => void
 }
 
-export const useUIStore = create<UIState>((set) => ({
-  inspectorTab: 'Editor',
-  setInspectorTab: (tab) => set({ inspectorTab: tab }),
-  isSidebarCollapsed: false,
-  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
-  isSearchOpen: false,
-  setSearchOpen: (open) => set({ isSearchOpen: open }),
-  logViewMode: 'structured',
-  setLogViewMode: (mode) => set({ logViewMode: mode }),
-  logWrapView: false,
-  setLogWrapView: (wrap) => set({ logWrapView: wrap }),
-  logOpenOnRun: true,
-  setLogOpenOnRun: (open) => set({ logOpenOnRun: open }),
-}))
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      inspectorTab: 'Editor',
+      setInspectorTab: (tab) => set({ inspectorTab: tab }),
+      isSidebarCollapsed: false,
+      toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+      isSearchOpen: false,
+      setSearchOpen: (open) => set({ isSearchOpen: open }),
+      logViewMode: 'structured',
+      setLogViewMode: (mode) => set({ logViewMode: mode }),
+      logWrapView: false,
+      setLogWrapView: (wrap) => set({ logWrapView: wrap }),
+      logOpenOnRun: true,
+      setLogOpenOnRun: (open) => set({ logOpenOnRun: open }),
+      theme: 'dark',
+      setTheme: (theme) => set({ theme }),
+    }),
+    {
+      name: 'fuse-ui',
+      partialState: (state) => ({ theme: state.theme }),
+    } as any,
+  ),
+)

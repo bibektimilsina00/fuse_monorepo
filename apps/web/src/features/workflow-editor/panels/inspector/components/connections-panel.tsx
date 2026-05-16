@@ -9,42 +9,12 @@ interface ConnectionsPanelProps {
   connectedNodes: { node: any, direction: 'incoming' | 'outgoing' }[]
 }
 
-const KNOWN_OUTPUTS: Record<string, { label: string, type: string }[]> = {
-  'trigger.manual': [
-    { label: 'input_data', type: 'object' }
-  ],
-  'trigger.webhook': [
-    { label: 'body', type: 'object' },
-    { label: 'headers', type: 'object' },
-    { label: 'query', type: 'object' }
-  ],
-  'action.http_request': [
-    { label: 'body', type: 'object' },
-    { label: 'status_code', type: 'number' },
-    { label: 'headers', type: 'object' },
-    { label: 'ok', type: 'boolean' }
-  ],
-  'logic.condition': [
-    { label: 'matched_id', type: 'string' },
-    { label: 'matched_index', type: 'number' },
-    { label: 'is_else', type: 'boolean' }
-  ],
-  'action.delay': [
-    { label: 'delayed_for_ms', type: 'number' }
-  ],
-  'action.slack_send_message': [
-    { label: 'ts', type: 'string' },
-    { label: 'channel', type: 'string' },
-    { label: 'message', type: 'object' }
-  ]
-}
-
-const NodeItem = ({ node, direction, nodeDefinitions }: { node: any, direction: 'incoming' | 'outgoing', nodeDefinitions: any[] }) => {
+const NodeItem = ({ node, nodeDefinitions }: { node: any, direction: 'incoming' | 'outgoing', nodeDefinitions: any[] }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const def = nodeDefinitions.find(d => d.type === node.type)
   if (!def) return null
 
-  const outputs = KNOWN_OUTPUTS[node.type] || []
+  const outputs = def.outputsSchema || []
 
   return (
     <div className="flex flex-col gap-1 w-full">
@@ -88,14 +58,14 @@ const NodeItem = ({ node, direction, nodeDefinitions }: { node: any, direction: 
                   out.type === 'number' ? "bg-blue-500/10 text-blue-400" : 
                   out.type === 'boolean' ? "bg-orange-500/10 text-orange-400" :
                   out.type === 'object' ? "bg-purple-500/10 text-purple-400" :
-                  "bg-zinc-500/10 text-zinc-400"
+                  "bg-text-muted/10 text-text-muted"
                 )}>
                   {out.type}
                 </div>
               </div>
             ))
           ) : (
-            <span className="text-[11px] text-[#555] italic">No output schema defined</span>
+            <span className="text-[11px] text-text-placeholder italic">No output schema defined</span>
           )}
         </div>
       )}
@@ -139,7 +109,7 @@ export const ConnectionsPanel: React.FC<ConnectionsPanelProps> = ({ connectedNod
         onClick={() => setIsConnectionsOpen(!isConnectionsOpen)}
         className="flex items-center gap-2 h-[38px] px-4 cursor-pointer flex-shrink-0 hover:bg-[var(--surface-active)] transition-colors"
       >
-        <ChevronDown className={cn("w-3.5 h-3.5 text-[#888] transition-transform duration-200", !isConnectionsOpen && "-rotate-90")} />
+        <ChevronDown className={cn("w-3.5 h-3.5 text-text-muted transition-transform duration-200", !isConnectionsOpen && "-rotate-90")} />
         <h3 className="text-[11px] font-extrabold text-white uppercase tracking-[0.1em]">Connections</h3>
       </div>
       
@@ -150,7 +120,7 @@ export const ConnectionsPanel: React.FC<ConnectionsPanelProps> = ({ connectedNod
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 opacity-20 py-8">
              <Workflow className="size-8 text-[var(--text-muted)]" />
-             <span className="text-[12px] text-[#666] font-medium italic">No connections found</span>
+             <span className="text-[12px] text-text-muted font-medium italic">No connections found</span>
           </div>
         )}
       </div>

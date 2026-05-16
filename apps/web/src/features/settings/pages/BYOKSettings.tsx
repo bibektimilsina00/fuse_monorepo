@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, RefreshCw, Key } from 'lucide-react'
+import { Key } from 'lucide-react'
 import { SettingsPageContainer, SettingsPageHeader } from '@/features/settings/components/shared/SettingsLayout'
 import { SettingsSearchInput, SettingsButton } from '@/features/settings/components/shared/SettingsInputs'
+import { Spinner } from '@/components/ui'
 import { SettingsItem, SettingsSection } from '@/features/settings/components/shared/SettingsList'
 import { BYOKModal } from '@/features/credentials/BYOKModal'
 import { useCreateCredential } from '@/hooks/credentials/queries'
 import api from '@/lib/api/client'
+import { logger } from '@/lib/logger'
 
 export const BYOKSettings: React.FC = () => {
   const [providers, setProviders] = useState<any[]>([])
@@ -22,7 +24,7 @@ export const BYOKSettings: React.FC = () => {
         // Filter for BYOK providers (usually api_key based and model-focused)
         setProviders(response.data.filter((p: any) => p.id.includes('api_key')))
       } catch (err) {
-        console.error('Failed to fetch BYOK providers:', err)
+        logger.error('Failed to fetch BYOK providers:', err)
       } finally {
         setIsLoading(false)
       }
@@ -63,7 +65,7 @@ export const BYOKSettings: React.FC = () => {
         <div className="flex flex-col gap-1">
           {isLoading ? (
             <div className="py-12 flex justify-center">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <Spinner size="md" color="accent" />
             </div>
           ) : (
             providers.map((provider) => (
@@ -72,11 +74,11 @@ export const BYOKSettings: React.FC = () => {
                 title={provider.name}
                 subtitle={provider.description}
                 icon={
-                  <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-8 h-8 bg-surface-5 rounded-lg flex items-center justify-center overflow-hidden">
                     {provider.icon_url ? (
                       <img src={provider.icon_url} alt={provider.name} className="w-5 h-5 object-contain" />
                     ) : (
-                      <Key size={18} className="text-zinc-400" />
+                      <Key size={18} className="text-text-muted" />
                     )}
                   </div>
                 }

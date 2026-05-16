@@ -1,20 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import { AlertTriangle, X } from 'lucide-react'
+import React, { useState, useCallback, type ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
+import { ConfirmContext, type ConfirmOptions } from '@/components/ui/confirm-context'
 import { cn } from '@/lib/utils'
-
-interface ConfirmOptions {
-  title: string
-  message: string
-  confirmText?: string
-  cancelText?: string
-  type?: 'danger' | 'warning' | 'info'
-}
-
-interface ConfirmContextType {
-  confirm: (options: ConfirmOptions) => Promise<boolean>
-}
-
-const ConfirmContext = createContext<ConfirmContextType | undefined>(undefined)
 
 export const ConfirmProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false)
@@ -43,7 +30,7 @@ export const ConfirmProvider: React.FC<{ children: ReactNode }> = ({ children })
           onClick={() => handleClose(false)}
         >
           <div 
-            className="w-full max-w-[400px] bg-[#1A1A1A] border border-[#333] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+            className="w-full max-w-[400px] bg-surface-modal border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-6">
@@ -58,17 +45,17 @@ export const ConfirmProvider: React.FC<{ children: ReactNode }> = ({ children })
                   <h3 className="text-[16px] font-bold text-white leading-tight mb-1">
                     {options.title}
                   </h3>
-                  <p className="text-[13px] text-[#888] leading-relaxed">
+                  <p className="text-[13px] text-text-muted leading-relaxed">
                     {options.message}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-[#111] border-t border-[#333] flex items-center justify-end gap-3">
+            <div className="px-6 py-4 bg-surface-0 border-t border-border flex items-center justify-end gap-3">
               <button
                 onClick={() => handleClose(false)}
-                className="px-4 h-9 rounded-md text-[13px] font-medium text-[#666] hover:text-white transition-all"
+                className="px-4 h-9 rounded-md text-[13px] font-medium text-text-muted hover:text-white transition-all"
               >
                 {options.cancelText || 'Cancel'}
               </button>
@@ -76,7 +63,7 @@ export const ConfirmProvider: React.FC<{ children: ReactNode }> = ({ children })
                 onClick={() => handleClose(true)}
                 className={cn(
                   "px-5 h-9 rounded-md text-[13px] font-bold text-white transition-all active:scale-95",
-                  options.type === 'danger' ? "bg-red-600 hover:bg-red-700" : "bg-[#333] hover:bg-[#444]"
+                  options.type === 'danger' ? "bg-red-600 hover:bg-red-700" : "bg-surface-5 hover:bg-surface-6"
                 )}
               >
                 {options.confirmText || 'Confirm'}
@@ -87,12 +74,4 @@ export const ConfirmProvider: React.FC<{ children: ReactNode }> = ({ children })
       )}
     </ConfirmContext.Provider>
   )
-}
-
-export const useConfirm = () => {
-  const context = useContext(ConfirmContext)
-  if (!context) {
-    throw new Error('useConfirm must be used within a ConfirmProvider')
-  }
-  return context.confirm
 }

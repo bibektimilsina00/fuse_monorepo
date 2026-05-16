@@ -63,17 +63,18 @@ class AuthService(BaseService):
             # For security, we return True even if user doesn't exist
             # to prevent email enumeration
             return True
-        
+
         # Generate a password reset token (15 mins expiry)
         reset_token = self.create_access_token(
-            data={"sub": user.email, "type": "password_reset"}, 
-            expires_delta=timedelta(minutes=15)
+            data={"sub": user.email, "type": "password_reset"}, expires_delta=timedelta(minutes=15)
         )
-        
+
         # MOCK EMAIL SENDING
         # In a real app, you would use an email service (SendGrid, Mailgun, etc.)
-        logger.info(f"PASSWORD RESET LINK for {email}: http://localhost:5173/reset-password?token={reset_token}")
-        
+        logger.info(
+            f"PASSWORD RESET LINK for {email}: http://localhost:5173/reset-password?token={reset_token}"
+        )
+
         return True
 
     async def reset_password(self, token: str, new_password: str) -> bool:
@@ -81,25 +82,22 @@ class AuthService(BaseService):
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             email: str | None = payload.get("sub")
             token_type: str | None = payload.get("type")
-            
+
             if email is None or token_type != "password_reset":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired reset token"
+                    detail="Invalid or expired reset token",
                 )
-        except JWTError:
+        except JWTError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired reset token"
-            )
-            
+                detail="Invalid or expired reset token",
+            ) from exc
+
         user = await self.user_repo.get_by_email(email)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-            
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
         user.hashed_password = self.get_password_hash(new_password)
         await self.user_repo.update(user)
         return True
