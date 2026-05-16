@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useCredentials, useDeleteCredential } from '@/hooks/credentials/queries'
+import { useConfirm } from '@/components/ui/confirm-modal'
 
 export function useCredentialsManagement() {
+  const confirm = useConfirm()
   const { data: credentials = [], isLoading, refetch } = useCredentials()
   const deleteCredential = useDeleteCredential()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -17,7 +19,14 @@ export function useCredentialsManagement() {
   }, [credentials, searchQuery])
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this integration? Nodes using it will fail.')) {
+    const ok = await confirm({
+      title: 'Delete Integration',
+      message: 'Are you sure you want to delete this integration? Nodes using it will fail.',
+      confirmText: 'Delete',
+      type: 'danger'
+    })
+    
+    if (ok) {
       await deleteCredential.mutateAsync(id)
     }
   }
