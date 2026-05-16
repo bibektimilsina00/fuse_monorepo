@@ -87,3 +87,4 @@ tempfile/
 .claude/settings.local.json
 
 temp/
+*_doc/
