@@ -3,7 +3,6 @@ import type { Node } from 'reactflow'
 import { cn } from '@/lib/utils'
 import { useExecutionStore } from '@/stores/execution-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 import type { ExecutionLog } from '@/lib/api/contracts'
 import { deduplicateLogs, formatDuration } from '@/features/workflow-editor/panels/logs-panel/log-utils'
@@ -12,7 +11,7 @@ interface LogListProps {
   isCollapsed: boolean
 }
 
-function resolveNodeInfo(log: ExecutionLog, nodes: Node[]) {
+function resolveNodeInfo(log: ExecutionLog, nodes: Node[], nodeDefinitions: any[]) {
   if (!log.node_id) {
     return { iconName: null, color: null, label: log.message, isSystem: true }
   }

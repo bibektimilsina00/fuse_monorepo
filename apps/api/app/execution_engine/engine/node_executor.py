@@ -19,7 +19,14 @@ class NodeExecutor:
     ) -> NodeResult:
         try:
             node_class = node_registry.get_node(node_type)
+            metadata = node_class.get_metadata()
+
+            # 1. Instantiate (Pydantic validation happens in __init__)
             node_instance = node_class(node_id=node_id, properties=properties)
+
+            # 2. Step 3: Automatic Credential Injection
+            if metadata.credential_type:
+                node_instance.credential = context.credentials.get(metadata.credential_type)
 
             logger.info(f"Executing node {node_id} of type {node_type}")
             result = await node_instance.execute(input_data, context)

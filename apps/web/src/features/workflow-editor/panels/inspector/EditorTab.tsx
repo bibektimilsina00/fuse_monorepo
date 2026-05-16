@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import Editor from 'react-simple-code-editor'
@@ -265,7 +264,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
 }
 
 export const EditorTab: React.FC = () => {
-  const { nodes, edges, selectedNodeId, nodeSelectionTimestamp, updateNodeData } = useWorkflowStore()
+  const { nodes, edges, selectedNodeId, nodeSelectionTimestamp, updateNodeData, nodeDefinitions } = useWorkflowStore()
   const [showAdditional, setShowAdditional] = useState(false)
   const [usedFields, setUsedFields] = useState<Set<string>>(new Set())
   const [picker, setPicker] = useState<{ rect: DOMRect, onSelect: (val: string) => void } | null>(null)
@@ -276,7 +275,7 @@ export const EditorTab: React.FC = () => {
   }, [selectedNodeId, nodeSelectionTimestamp])
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId)
-  const definition = selectedNode ? NODE_REGISTRY.find(d => d.type === selectedNode.type) : null
+  const definition = selectedNode ? nodeDefinitions.find(d => d.type === selectedNode.type) : null
 
   const connectedNodes = useNodeAncestors(selectedNodeId, nodes, edges)
 

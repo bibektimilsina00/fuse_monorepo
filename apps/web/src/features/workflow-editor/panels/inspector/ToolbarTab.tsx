@@ -1,14 +1,15 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
 import { ToolbarItem } from '@/features/workflow-editor/components/common/EditorUI'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 import { useWorkflow } from '@/features/workflow-editor/hooks/use-workflow'
+import { useNodes } from '@/hooks/nodes/queries'
 
 export const ToolbarTab = React.memo(() => {
   const [triggersHeight, setTriggersHeight] = useState(300)
   const toolbarRef = useRef<HTMLDivElement>(null)
   const { addNode } = useWorkflow()
+  const { data: nodeRegistry = [], isLoading, error, refetch } = useNodes()
 
   const internalResizer = useResizable({
     direction: 'vertical',
@@ -19,7 +20,7 @@ export const ToolbarTab = React.memo(() => {
   })
 
   const { triggers, nodes } = useMemo(() => {
-    const triggers = NODE_REGISTRY.filter(n => n.category === 'trigger').map(n => ({
+    const triggers = nodeRegistry.filter(n => n.category === 'trigger').map(n => ({
       id: n.type,
       label: n.name,
       type: n.type,
@@ -27,7 +28,7 @@ export const ToolbarTab = React.memo(() => {
       color: n.color || '#10b981'
     }))
 
-    const nodes = NODE_REGISTRY.filter(n => n.category !== 'trigger').map(n => ({
+    const nodes = nodeRegistry.filter(n => n.category !== 'trigger').map(n => ({
       id: n.type,
       label: n.name,
       type: n.type,
@@ -36,7 +37,7 @@ export const ToolbarTab = React.memo(() => {
     }))
 
     return { triggers, nodes }
-  }, [])
+  }, [nodeRegistry])
 
   const handleNodeClick = (type: string) => {
     // Add node at a default position (e.g., center-ish)
@@ -46,7 +47,27 @@ export const ToolbarTab = React.memo(() => {
 
   return (
     <div ref={toolbarRef} className="flex-1 flex flex-col overflow-hidden">
-      {/* Triggers Section */}
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg)]/50 backdrop-blur-[2px]">
+          <div className="size-5 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-[var(--text-primary)]" />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex flex-col items-center justify-center p-4 text-center h-full">
+          <p className="text-[12px] text-red-400 mb-2 font-medium">Failed to load nodes</p>
+          <button 
+            onClick={() => refetch()}
+            className="text-[11px] px-3 py-1 bg-[var(--surface-3)] hover:bg-[var(--surface-hover)] text-white rounded-md transition-all"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!error && (
+        <>
+          {/* Triggers Section */}
       <div 
         className="flex flex-col min-h-0 overflow-hidden"
         style={{ height: triggersHeight }}
@@ -88,6 +109,8 @@ export const ToolbarTab = React.memo(() => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 })

@@ -1,32 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { createPortal } from 'react-dom'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { useNodeAncestors } from '@/features/workflow-editor/hooks/use-node-ancestors'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
-import { ChevronRight, Search, Workflow } from 'lucide-react'
+import { ChevronRight, Workflow } from 'lucide-react'
 
-const KNOWN_OUTPUTS: Record<string, { label: string, type: string }[]> = {
-  'trigger.manual': [{ label: 'input_data', type: 'object' }],
-  'trigger.webhook': [
-    { label: 'body', type: 'object' },
-    { label: 'headers', type: 'object' },
-    { label: 'query', type: 'object' }
-  ],
-  'action.http_request': [
-    { label: 'body', type: 'object' },
-    { label: 'status_code', type: 'number' },
-    { label: 'headers', type: 'object' },
-    { label: 'ok', type: 'boolean' }
-  ],
-  'logic.condition': [
-    { label: 'matched_id', type: 'string' },
-    { label: 'matched_index', type: 'number' },
-    { label: 'is_else', type: 'boolean' }
-  ],
-  'action.delay': [{ label: 'delayed_for_ms', type: 'number' }]
-}
 
 interface InterpolationPickerProps {
   anchorRect: DOMRect | null
@@ -35,7 +14,7 @@ interface InterpolationPickerProps {
 }
 
 export const InterpolationPicker: React.FC<InterpolationPickerProps> = ({ anchorRect, onSelect, onClose }) => {
-  const { nodes, edges, selectedNodeId } = useWorkflowStore()
+  const { nodes, edges, selectedNodeId, nodeDefinitions } = useWorkflowStore()
   const ancestors = useNodeAncestors(selectedNodeId, nodes, edges)
   const [search, setSearch] = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -53,13 +32,13 @@ export const InterpolationPicker: React.FC<InterpolationPickerProps> = ({ anchor
   if (!anchorRect) return null
 
   const filteredAncestors = ancestors.filter(a => {
-    const def = NODE_REGISTRY.find(d => d.type === a.node.type)
+    const def = nodeDefinitions.find(d => d.type === a.node.type)
     const label = a.node.data?.label || def?.name || ''
     return label.toLowerCase().includes(search.toLowerCase())
   })
 
   return createPortal(
-    <div 
+    <div
       ref={pickerRef}
       className="fixed z-[9999] w-[180px] bg-[#1c1c1c] border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col"
       style={{
@@ -68,10 +47,25 @@ export const InterpolationPicker: React.FC<InterpolationPickerProps> = ({ anchor
         maxHeight: '320px'
       }}
     >
+      <div className="p-2 border-b border-white/5">
+        <input
+          autoFocus
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search variables..."
+          className="w-full bg-white/5 border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder:text-white/20 focus:outline-none"
+        />
+      </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-1 flex flex-col gap-0.5">
-        {ancestors.length > 0 ? (
-          ancestors.map(({ node }) => (
-            <PickerNodeItem key={node.id} node={node} onSelect={onSelect} />
+        {filteredAncestors.length > 0 ? (
+          filteredAncestors.map(({ node }) => (
+            <PickerNodeItem
+              key={node.id}
+              node={node}
+              onSelect={onSelect}
+              def={nodeDefinitions.find(d => d.type === node.type)}
+            />
           ))
         ) : (
           <div className="py-3 flex flex-col items-center justify-center opacity-20">
@@ -85,12 +79,11 @@ export const InterpolationPicker: React.FC<InterpolationPickerProps> = ({ anchor
   )
 }
 
-const PickerNodeItem = ({ node, onSelect }: { node: any, onSelect: (val: string) => void }) => {
+const PickerNodeItem = ({ node, onSelect, def }: { node: any, onSelect: (val: string) => void, def: any }) => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const def = NODE_REGISTRY.find(d => d.type === node.type)
   if (!def) return null
 
-  const outputs = KNOWN_OUTPUTS[node.type] || []
+  const outputs = def.outputs_schema || []
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -101,7 +94,7 @@ const PickerNodeItem = ({ node, onSelect }: { node: any, onSelect: (val: string)
           "text-white/80 hover:bg-white/5 hover:text-white"
         )}
       >
-        <div 
+        <div
           className="flex size-[14px] flex-shrink-0 items-center justify-center rounded-sm"
           style={{ backgroundColor: def.color || '#3b82f6' }}
         >
@@ -122,9 +115,9 @@ const PickerNodeItem = ({ node, onSelect }: { node: any, onSelect: (val: string)
               <span className="text-white/60 group-hover/out:text-white">{out.label}</span>
               <span className={cn(
                 "px-1 rounded-sm text-[8px] font-bold opacity-40 group-hover/out:opacity-80",
-                out.type === 'number' ? "bg-blue-500/10 text-blue-400" : 
-                out.type === 'boolean' ? "bg-orange-500/10 text-orange-400" :
-                "bg-purple-500/10 text-purple-400"
+                out.type === 'number' ? "bg-blue-500/10 text-blue-400" :
+                  out.type === 'boolean' ? "bg-orange-500/10 text-orange-400" :
+                    "bg-purple-500/10 text-purple-400"
               )}>
                 {out.type}
               </span>

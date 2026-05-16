@@ -13,9 +13,9 @@ import {
 import { cn } from '@/lib/utils'
 import { useUIStore, type InspectorTabType } from '@/stores/ui-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 import { Tooltip } from '@/components/ui/tooltip'
+import { useNodes } from '@/hooks/nodes/queries'
 
 import { CopilotTab } from '@/features/workflow-editor/panels/inspector/CopilotTab'
 import { ToolbarTab } from '@/features/workflow-editor/panels/inspector/ToolbarTab'
@@ -31,6 +31,7 @@ interface EditorInspectorProps {
 export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, className }) => {
   const { inspectorTab: activeTab, setInspectorTab: setActiveTab } = useUIStore()
   const { nodes, selectedNodeId, updateNodeData } = useWorkflowStore()
+  const { data: nodeRegistry = [] } = useNodes()
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [editNameValue, setEditNameValue] = React.useState('')
   const { run, isRunning } = useExecution()
@@ -41,8 +42,8 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
   )
 
   const definition = React.useMemo(() => 
-    selectedNode ? NODE_REGISTRY.find(d => d.type === selectedNode.type) : null,
-    [selectedNode]
+    selectedNode ? nodeRegistry.find(d => d.type === selectedNode.type) : null,
+    [selectedNode, nodeRegistry]
   )
 
   const handleEditClick = () => {

@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,6 +11,8 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = "32_byte_base64_encryption_key_here"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     ALGORITHM: str = "HS256"
+    BASE_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -24,7 +28,11 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).resolve().parents[4] / ".env"),
+        case_sensitive=True, 
+        extra="ignore"
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

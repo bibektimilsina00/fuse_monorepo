@@ -15,14 +15,18 @@ import type {
   OnNodesChange,
 } from 'reactflow'
 
+import type { NodeDefinition } from '@fuse/node-definitions'
+
 interface WorkflowState {
   nodes: Node[]
   edges: Edge[]
+  nodeDefinitions: NodeDefinition[]
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
   onConnect: OnConnect
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
+  setNodeDefinitions: (definitions: NodeDefinition[]) => void
   addNode: (node: Node) => void
   updateNodeData: (id: string, data: any) => void
   removeNode: (id: string) => void
@@ -38,6 +42,7 @@ interface WorkflowState {
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   nodes: [],
   edges: [],
+  nodeDefinitions: [],
   onNodesChange: (changes: NodeChange[]) => {
     set({ nodes: applyNodeChanges(changes, get().nodes) })
   },
@@ -49,6 +54,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
   setNodes: (nodes: Node[]) => set({ nodes }),
   setEdges: (edges: Edge[]) => set({ edges }),
+  setNodeDefinitions: (nodeDefinitions: NodeDefinition[]) => set({ nodeDefinitions }),
   addNode: (node: Node) => set({ nodes: [...get().nodes, node] }),
   updateNodeData: (id: string, data: any) => {
     set({

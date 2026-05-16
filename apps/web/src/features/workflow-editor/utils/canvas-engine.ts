@@ -1,6 +1,5 @@
 import { addEdge } from 'reactflow';
 import type { Node, Edge, Connection } from 'reactflow';
-import { NODE_REGISTRY } from '@/nodes/registry'
 
 export class CanvasEngine {
   static onConnect(params: Connection, edges: Edge[]): Edge[] {
@@ -15,12 +14,11 @@ export class CanvasEngine {
     } as any, edges);
   }
 
-  static createNode(type: string, position: { x: number, y: number }): Node {
-    const definition = NODE_REGISTRY.find(d => d.type === type);
+  static createNode(type: string, position: { x: number, y: number }, definition?: any): Node {
     const properties: Record<string, any> = {};
 
     if (definition) {
-      definition.properties.forEach(prop => {
+      definition.properties.forEach((prop: any) => {
         if (prop.default !== undefined) {
           properties[prop.name] = prop.default;
         }

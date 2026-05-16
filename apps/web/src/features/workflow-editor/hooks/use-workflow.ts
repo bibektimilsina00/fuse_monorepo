@@ -3,6 +3,7 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 import { CanvasEngine } from '@/features/workflow-editor/utils/canvas-engine';
 import { type Connection, useReactFlow } from 'reactflow';
 import { useUIStore } from '@/stores/ui-store';
+import { useNodes } from '@/hooks/nodes/queries';
 
 export const useWorkflow = () => {
   const { 
@@ -18,13 +19,15 @@ export const useWorkflow = () => {
   const { screenToFlowPosition } = useReactFlow();
   const { setInspectorTab } = useUIStore();
   const [mode, setMode] = useState<'select' | 'pan'>('select');
+  const { data: nodeRegistry = [] } = useNodes();
 
   const addNode = useCallback((type: string, position: { x: number, y: number }) => {
-    const newNode = CanvasEngine.createNode(type, position);
+    const definition = nodeRegistry.find(d => d.type === type);
+    const newNode = CanvasEngine.createNode(type, position, definition);
     setNodes([...nodes, newNode]);
     setSelectedNodeId(newNode.id);
     setInspectorTab('Editor');
-  }, [nodes, setNodes, setInspectorTab, setSelectedNodeId]);
+  }, [nodes, setNodes, setInspectorTab, setSelectedNodeId, nodeRegistry]);
 
   const onConnect = useCallback((params: Connection) => {
     if (CanvasEngine.validateConnection(params)) {

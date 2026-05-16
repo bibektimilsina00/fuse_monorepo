@@ -9,15 +9,16 @@ async def handle_oauth_callback(
     service_name: str, 
     code: str, 
     user: User, 
-    db: AsyncSession,
-    custom_name: Optional[str] = None,
-    custom_description: Optional[str] = None
+    db: AsyncSession, 
+    custom_name: Optional[str] = None, 
+    custom_description: Optional[str] = None,
+    code_verifier: Optional[str] = None
 ):
     provider = get_oauth_provider(service_name)
     if not provider:
         raise ValueError(f"Unknown OAuth service: {service_name}")
 
-    token_data = await provider.exchange_code(code)
+    token_data = await provider.exchange_code(code, code_verifier=code_verifier)
 
     service = CredentialService(db)
     

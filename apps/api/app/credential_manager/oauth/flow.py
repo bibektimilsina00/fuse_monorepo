@@ -1,9 +1,10 @@
+from typing import Optional
 from apps.api.app.core.config import settings
 from apps.api.app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-REDIRECT_URI = "http://localhost:8000/api/v1/credentials/oauth/{service}/callback"
+REDIRECT_URI = f"{settings.BASE_URL}/api/v1/credentials/oauth/{{service}}/callback"
 
 
 class SlackOAuthProvider:
@@ -18,36 +19,50 @@ class SlackOAuthProvider:
         "Read messages from public channels"
     ]
 
-    def get_authorization_url(self, state: str) -> str:
+    def get_authorization_url(self, state, code_challenge = None):
         from urllib.parse import urlencode
-        params = urlencode({
+        params = {
             "client_id": settings.SLACK_CLIENT_ID,
             "scope": "chat:write,channels:read",
             "redirect_uri": REDIRECT_URI.format(service="slack"),
             "state": state,
-        })
-        return f"https://slack.com/oauth/v2/authorize?{params}"
+        }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
+            
+        return f"https://slack.com/oauth/v2/authorize?{urlencode(params)}"
 
-    async def exchange_code(self, code: str) -> dict:
+    async def exchange_code(self, code, code_verifier = None):
         import httpx
+        data = {
+            "client_id": settings.SLACK_CLIENT_ID,
+            "client_secret": settings.SLACK_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": REDIRECT_URI.format(service="slack"),
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
+            
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://slack.com/api/oauth.v2.access",
-                data={
-                    "client_id": settings.SLACK_CLIENT_ID,
-                    "client_secret": settings.SLACK_CLIENT_SECRET,
-                    "code": code,
-                    "redirect_uri": REDIRECT_URI.format(service="slack"),
-                },
+                data=data,
             )
         data = response.json()
         if not data.get("ok"):
             raise ValueError(f"Slack OAuth failed: {data.get('error')}")
         
+        # Slack v2 can return token at root (bot token) or in authed_user (user token)
+        access_token = data.get("access_token") or data.get("authed_user", {}).get("access_token")
+        
+        if not access_token:
+            raise ValueError("Slack response missing access_token")
+
         return {
-            "access_token": data["authed_user"]["access_token"],
-            "team_id": data["team"]["id"],
-            "team_name": data["team"]["name"],
+            "access_token": access_token,
+            "team_id": data.get("team", {}).get("id"),
+            "team_name": data.get("team", {}).get("name"),
         }
 
 
@@ -63,28 +78,37 @@ class GitHubOAuthProvider:
         "Manage organization memberships"
     ]
 
-    def get_authorization_url(self, state: str) -> str:
+    def get_authorization_url(self, state, code_challenge = None):
         from urllib.parse import urlencode
-        params = urlencode({
+        params = {
             "client_id": settings.GITHUB_CLIENT_ID,
             "scope": "repo,user",
             "redirect_uri": REDIRECT_URI.format(service="github"),
             "state": state,
-        })
-        return f"https://github.com/login/oauth/authorize?{params}"
+        }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
+            
+        return f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
-    async def exchange_code(self, code: str) -> dict:
+    async def exchange_code(self, code, code_verifier = None):
         import httpx
+        data = {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": REDIRECT_URI.format(service="github"),
+        }
+        # GitHub also supports PKCE, though we aren't using it yet
+        if code_verifier:
+            data["code_verifier"] = code_verifier
+            
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://github.com/login/oauth/access_token",
                 headers={"Accept": "application/json"},
-                data={
-                    "client_id": settings.GITHUB_CLIENT_ID,
-                    "client_secret": settings.GITHUB_CLIENT_SECRET,
-                    "code": code,
-                    "redirect_uri": REDIRECT_URI.format(service="github"),
-                },
+                data=data,
             )
         data = response.json()
         if "error" in data:

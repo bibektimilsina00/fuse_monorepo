@@ -1,7 +1,8 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 import httpx
+from pydantic import BaseModel, Field
 
 from apps.api.app.core.logger import get_logger
 from apps.api.app.node_system.base.base_node import BaseNode
@@ -12,7 +13,22 @@ from apps.api.app.node_system.base.node_result import NodeResult
 logger = get_logger(__name__)
 
 
-class HttpRequestNode(BaseNode):
+class HttpRequestProperties(BaseModel):
+    url: str
+    method: str = "GET"
+    headers: Optional[dict[str, Any]] = Field(default_factory=dict)
+    params: Optional[dict[str, Any]] = Field(default_factory=dict)
+    pathParams: Optional[dict[str, Any]] = Field(default_factory=dict)
+    body: Optional[Any] = None
+    formData: Optional[dict[str, Any]] = Field(default_factory=dict)
+    timeout: int = 30000
+
+
+class HttpRequestNode(BaseNode[HttpRequestProperties]):
+    @classmethod
+    def get_properties_model(cls) -> type[HttpRequestProperties]:
+        return HttpRequestProperties
+
     @classmethod
     def get_metadata(cls) -> NodeMetadata:
         return NodeMetadata(
@@ -61,48 +77,41 @@ class HttpRequestNode(BaseNode):
             ],
             inputs=1,
             outputs=1,
+            outputs_schema=[
+                {"label": "status_code", "type": "number"},
+                {"label": "body", "type": "object"},
+                {"label": "headers", "type": "object"},
+                {"label": "ok", "type": "boolean"},
+            ],
             allow_error=True,
         )
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
-        timeout_ms = 30000.0
         try:
-            url = self.properties.get("url")
-            method = self.properties.get("method", "GET").upper()
-            headers = self.properties.get("headers") or {}
-            params = self.properties.get("params") or {}
-            path_params = self.properties.get("pathParams") or {}
-            form_data = self.properties.get("formData") or {}
-            body = self.properties.get("body")
-            timeout_ms = float(self.properties.get("timeout") or 30000)
-
-            if not url:
-                return NodeResult(success=False, error="URL is required")
+            url = self.props.url
+            method = self.props.method.upper()
+            headers = self.props.headers or {}
+            params = self.props.params or {}
+            path_params = self.props.pathParams or {}
+            form_data = self.props.formData or {}
+            body = self.props.body
+            timeout_ms = float(self.props.timeout)
 
             # Handle path parameters (e.g. /users/:id)
             for key, val in path_params.items():
                 url = url.replace(f":{key}", str(val))
                 url = url.replace(f"{{{key}}}", str(val))
 
-            # Parse headers/params if they came in as strings (should be dict/list from UI)
-            def ensure_dict(val: Any) -> dict:
-                if isinstance(val, str):
-                    try:
-                        return json.loads(val)
-                    except Exception:
-                        return {}
-                return val or {}
-
-            headers = ensure_dict(headers)
-            params = ensure_dict(params)
-            form_data = ensure_dict(form_data)
-
-            async with httpx.AsyncClient(timeout=timeout_ms / 1000.0) as client:
+            # Use shared client from context if available, otherwise create a temporary one
+            client = context.http_client or httpx.AsyncClient(timeout=timeout_ms / 1000.0)
+            
+            try:
                 request_kwargs = {
                     "method": method,
                     "url": url,
                     "headers": headers,
                     "params": params,
+                    "timeout": timeout_ms / 1000.0 if not context.http_client else None
                 }
 
                 if form_data:
@@ -117,24 +126,29 @@ class HttpRequestNode(BaseNode):
                         request_kwargs["json"] = body
 
                 response = await client.request(**request_kwargs)
+                
+                # Try to parse response as JSON
+                try:
+                    response_body = response.json()
+                except Exception:
+                    response_body = response.text
 
-            # Try to parse response as JSON
-            try:
-                response_body = response.json()
-            except Exception:
-                response_body = response.text
+                return NodeResult(
+                    success=True,
+                    output_data={
+                        "status_code": response.status_code,
+                        "body": response_body,
+                        "headers": dict(response.headers),
+                        "ok": response.is_success,
+                    },
+                )
+            finally:
+                # ONLY close if we created it locally
+                if not context.http_client:
+                    await client.aclose()
 
-            return NodeResult(
-                success=True,
-                output_data={
-                    "status_code": response.status_code,
-                    "body": response_body,
-                    "headers": dict(response.headers),
-                    "ok": response.is_success,
-                },
-            )
         except httpx.TimeoutException:
-            return NodeResult(success=False, error=f"Request timed out after {timeout_ms}ms")
+            return NodeResult(success=False, error=f"Request timed out after {self.props.timeout}ms")
         except Exception as e:
             logger.error(f"HttpRequestNode failed: {e}", exc_info=True)
             return NodeResult(success=False, error=str(e))

@@ -1,4 +1,5 @@
 from typing import Any
+from pydantic import BaseModel
 
 from apps.api.app.node_system.base.base_node import BaseNode
 from apps.api.app.node_system.base.node_context import NodeContext
@@ -6,7 +7,15 @@ from apps.api.app.node_system.base.node_metadata import NodeMetadata
 from apps.api.app.node_system.base.node_result import NodeResult
 
 
-class WebhookTriggerNode(BaseNode):
+class WebhookTriggerProperties(BaseModel):
+    path: str = "webhook-id"
+
+
+class WebhookTriggerNode(BaseNode[WebhookTriggerProperties]):
+    @classmethod
+    def get_properties_model(cls) -> type[WebhookTriggerProperties]:
+        return WebhookTriggerProperties
+
     @classmethod
     def get_metadata(cls) -> NodeMetadata:
         return NodeMetadata(
@@ -14,6 +23,8 @@ class WebhookTriggerNode(BaseNode):
             name="Webhook Trigger",
             category="trigger",
             description="Trigger workflow via HTTP POST request",
+            icon="Zap",
+            color="#ec4899",
             properties=[
                 {
                     "name": "path",

@@ -14,7 +14,8 @@ import { useWorkflow } from '@/features/workflow-editor/hooks/use-workflow'
 import { useAutoSave } from '@/features/workflow-editor/hooks/use-auto-save'
 import { useWorkflowData } from '@/features/workflow-editor/hooks/use-workflow-data'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
-import { NODE_REGISTRY } from '@/nodes/registry'
+import { useNodes } from '@/hooks/nodes/queries'
+import { useWorkflowStore } from '@/stores/workflow-store'
 
 import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
 import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
@@ -94,10 +95,19 @@ function EditorContent() {
     setMode,
   } = useWorkflow()
 
-  // Generate nodeTypes from NODE_REGISTRY dynamically so any node type uses CustomNode
+  const { data: nodeRegistry = [] } = useNodes()
+  const setNodeDefinitions = useWorkflowStore(s => s.setNodeDefinitions)
+
+  React.useEffect(() => {
+    if (nodeRegistry.length > 0) {
+      setNodeDefinitions(nodeRegistry)
+    }
+  }, [nodeRegistry, setNodeDefinitions])
+
+  // Generate nodeTypes from dynamic registry
   const dynamicNodeTypes = React.useMemo(() => {
     const types: Record<string, any> = {}
-    NODE_REGISTRY.forEach(node => {
+    nodeRegistry.forEach(node => {
       if (node.type === 'logic.condition') {
         types[node.type] = ConditionNode
       } else {
@@ -105,7 +115,7 @@ function EditorContent() {
       }
     })
     return types
-  }, [])
+  }, [nodeRegistry])
 
   const [connectionColor, setConnectionColor] = React.useState('var(--workflow-edge, #555)')
 

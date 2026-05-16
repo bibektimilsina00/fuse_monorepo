@@ -83,12 +83,16 @@ class WorkflowRunner:
         raw_properties = node_data.get("data", {}).get("properties", {})
         resolved_properties = resolver.resolve_properties(raw_properties)
 
+        from apps.api.app.core.http import get_http_client
+        http_client = await get_http_client()
+
         context = NodeContext(
             execution_id=self.execution_id,
             workflow_id=self.workflow_id,
             node_id=node_id,
             variables={},  # To be populated from state
             credentials=self.credentials,
+            http_client=http_client,
         )
 
         result = await node_executor.execute_node(

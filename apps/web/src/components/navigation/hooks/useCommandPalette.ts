@@ -5,7 +5,6 @@ import { useWorkflows } from '@/features/dashboard/hooks/use-workflows'
 import { useFolders } from '@/features/dashboard/hooks/use-folders'
 import { useUIStore } from '@/stores/ui-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { CanvasEngine } from '@/features/workflow-editor/utils/canvas-engine'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 
@@ -18,7 +17,7 @@ export function useCommandPalette() {
   const { isSearchOpen, setSearchOpen } = useUIStore()
   const { data: workflows = [] } = useWorkflows()
   const { data: folders = [] } = useFolders()
-  const { addNode } = useWorkflowStore()
+  const { addNode, nodeDefinitions } = useWorkflowStore()
 
   const [searchValue, setSearchValue] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -31,7 +30,7 @@ export function useCommandPalette() {
     if (isEditor) {
       const items: any[] = []
 
-      NODE_REGISTRY.forEach(node => {
+      nodeDefinitions.forEach(node => {
         if (!query || node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query)) {
           items.push({
             id: node.type,
@@ -40,7 +39,7 @@ export function useCommandPalette() {
             bgColor: node.color,
             onClick: () => {
               // Add node to center or default position
-              const newNode = CanvasEngine.createNode(node.type, { x: 400, y: 300 })
+              const newNode = CanvasEngine.createNode(node.type, { x: 400, y: 300 }, node)
               addNode(newNode)
             }
           })

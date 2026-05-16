@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any
+from pydantic import BaseModel, Field
 
 from apps.api.app.node_system.base.base_node import BaseNode
 from apps.api.app.node_system.base.node_context import NodeContext
@@ -7,7 +8,15 @@ from apps.api.app.node_system.base.node_metadata import NodeMetadata
 from apps.api.app.node_system.base.node_result import NodeResult
 
 
-class DelayNode(BaseNode):
+class DelayProperties(BaseModel):
+    milliseconds: int = 1000
+
+
+class DelayNode(BaseNode[DelayProperties]):
+    @classmethod
+    def get_properties_model(cls) -> type[DelayProperties]:
+        return DelayProperties
+
     @classmethod
     def get_metadata(cls) -> NodeMetadata:
         return NodeMetadata(
@@ -15,6 +24,8 @@ class DelayNode(BaseNode):
             name="Delay",
             category="action",
             description="Wait for a specified number of milliseconds",
+            icon="Clock",
+            color="#6366f1",
             properties=[
                 {
                     "name": "milliseconds",
@@ -30,7 +41,7 @@ class DelayNode(BaseNode):
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
         try:
-            ms = int(self.properties.get("milliseconds") or 1000)
+            ms = self.props.milliseconds
             if ms < 0:
                 return NodeResult(success=False, error="Delay must be >= 0")
             if ms > 300_000:

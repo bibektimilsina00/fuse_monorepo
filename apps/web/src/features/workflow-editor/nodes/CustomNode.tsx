@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { type NodeProps, useUpdateNodeInternals } from 'reactflow'
 import { cn } from '@/lib/utils'
-import { NODE_REGISTRY } from '@/nodes/registry'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { NodeToolbar } from '@/features/workflow-editor/nodes/components/node-toolbar'
 import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-header'
@@ -10,7 +9,8 @@ import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-ha
 import { getPropValuePreview } from '@/features/workflow-editor/nodes/utils'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
-  const definition = useMemo(() => NODE_REGISTRY.find(d => d.type === type), [type])
+  const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
+  const definition = useMemo(() => nodeDefinitions.find(d => d.type === type), [type, nodeDefinitions])
   const updateNodeInternals = useUpdateNodeInternals()
   const isLocked = data?.locked ?? false
   const handleDirection = data?.handleDirection ?? 'horizontal'

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronRight, Workflow } from 'lucide-react'
 import { useResizable } from '@/features/workflow-editor/hooks/use-resizable'
-import { NODE_REGISTRY } from '@/nodes/registry'
+import { useWorkflowStore } from '@/stores/workflow-store'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 
 interface ConnectionsPanelProps {
@@ -31,12 +31,17 @@ const KNOWN_OUTPUTS: Record<string, { label: string, type: string }[]> = {
   ],
   'action.delay': [
     { label: 'delayed_for_ms', type: 'number' }
+  ],
+  'action.slack_send_message': [
+    { label: 'ts', type: 'string' },
+    { label: 'channel', type: 'string' },
+    { label: 'message', type: 'object' }
   ]
 }
 
-const NodeItem = ({ node, direction }: { node: any, direction: 'incoming' | 'outgoing' }) => {
+const NodeItem = ({ node, direction, nodeDefinitions }: { node: any, direction: 'incoming' | 'outgoing', nodeDefinitions: any[] }) => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const def = NODE_REGISTRY.find(d => d.type === node.type)
+  const def = nodeDefinitions.find(d => d.type === node.type)
   if (!def) return null
 
   const outputs = KNOWN_OUTPUTS[node.type] || []
@@ -102,6 +107,7 @@ export const ConnectionsPanel: React.FC<ConnectionsPanelProps> = ({ connectedNod
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(true)
   const [panelHeight, setPanelHeight] = useState(220)
   const containerRef = useRef<HTMLDivElement>(null)
+  const { nodeDefinitions } = useWorkflowStore()
   
   const heightResizer = useResizable({
     direction: 'vertical',
@@ -140,7 +146,7 @@ export const ConnectionsPanel: React.FC<ConnectionsPanelProps> = ({ connectedNod
       {/* Panel Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1">
         {connectedNodes.length > 0 ? (
-          connectedNodes.map(item => <NodeItem key={item.node.id} {...item} />)
+          connectedNodes.map(item => <NodeItem key={item.node.id} {...item} nodeDefinitions={nodeDefinitions} />)
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 opacity-20 py-8">
              <Workflow className="size-8 text-[var(--text-muted)]" />

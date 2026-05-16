@@ -108,14 +108,31 @@ async def get_oauth_url(
         # Include metadata in state to retrieve on callback
         import json
         import base64
+        import hashlib
+        
         state_data = {
             "nonce": secrets.token_urlsafe(16),
             "name": name,
-            "description": description
+            "description": description,
+            "user_id": str(current_user.id)
         }
+        
+        # Add PKCE for Slack
+        code_challenge = None
+        if service_name == "slack":
+            code_verifier = secrets.token_urlsafe(64)
+            state_data["code_verifier"] = code_verifier
+            # SHA256 hash of verifier, then base64url encoded
+            challenge_hash = hashlib.sha256(code_verifier.encode()).digest()
+            code_challenge = base64.urlsafe_b64encode(challenge_hash).decode().replace("=", "")
+            
         state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
         
-        url = provider.get_authorization_url(state=state)
+        if service_name == "slack":
+            url = provider.get_authorization_url(state=state, code_challenge=code_challenge)
+        else:
+            url = provider.get_authorization_url(state=state)
+            
         return OAuthUrlResponse(url=url, state=state)
     except ImportError:
         raise HTTPException(
@@ -129,7 +146,6 @@ async def oauth_callback(
     service_name: str,
     code: str,
     state: str,
-    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -140,21 +156,37 @@ async def oauth_callback(
             state_data = json.loads(base64.urlsafe_b64decode(state).decode())
             custom_name = state_data.get("name")
             custom_description = state_data.get("description")
+            code_verifier = state_data.get("code_verifier")
+            user_id = state_data.get("user_id")
         except:
             custom_name = None
             custom_description = None
+            code_verifier = None
+            user_id = None
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid state: user_id missing")
+
+        from apps.api.app.models.user import User
+        from sqlalchemy import select
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
         from apps.api.app.credential_manager.oauth.callback import handle_oauth_callback
         await handle_oauth_callback(
             service_name=service_name,
             code=code,
-            user=current_user,
+            user=user,
             db=db,
             custom_name=custom_name,
-            custom_description=custom_description
+            custom_description=custom_description,
+            code_verifier=code_verifier
         )
+        from apps.api.app.core.config import settings
         # Redirect back to frontend integrations settings page
-        return RedirectResponse(url="http://localhost:5173/settings/integrations")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/settings/integrations")
     except ImportError:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,

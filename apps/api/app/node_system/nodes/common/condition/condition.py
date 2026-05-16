@@ -1,23 +1,27 @@
-from typing import Any
+from typing import Any, Optional
+from pydantic import BaseModel, Field
 
 from apps.api.app.node_system.base.base_node import BaseNode
 from apps.api.app.node_system.base.node_context import NodeContext
 from apps.api.app.node_system.base.node_metadata import NodeMetadata
 from apps.api.app.node_system.base.node_result import NodeResult
 
-OPERATORS = {
-    "==": lambda a, b: str(a) == str(b),
-    "!=": lambda a, b: str(a) != str(b),
-    ">": lambda a, b: float(a) > float(b),
-    "<": lambda a, b: float(a) < float(b),
-    ">=": lambda a, b: float(a) >= float(b),
-    "<=": lambda a, b: float(a) <= float(b),
-    "contains": lambda a, b: str(b).lower() in str(a).lower(),
-    "not_contains": lambda a, b: str(b).lower() not in str(a).lower(),
-}
+
+class ConditionItem(BaseModel):
+    id: str
+    label: str
+    expression: str
 
 
-class ConditionNode(BaseNode):
+class ConditionProperties(BaseModel):
+    conditions: list[ConditionItem] = Field(default_factory=list)
+
+
+class ConditionNode(BaseNode[ConditionProperties]):
+    @classmethod
+    def get_properties_model(cls) -> type[ConditionProperties]:
+        return ConditionProperties
+
     @classmethod
     def get_metadata(cls) -> NodeMetadata:
         return NodeMetadata(
@@ -25,6 +29,8 @@ class ConditionNode(BaseNode):
             name="Condition",
             category="logic",
             description="Branch workflow based on boolean expressions",
+            icon="GitFork",
+            color="#f59e0b",
             properties=[
                 {
                     "name": "conditions",
@@ -40,18 +46,17 @@ class ConditionNode(BaseNode):
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
         try:
-            conditions = self.properties.get("conditions", [])
+            conditions = self.props.conditions
 
             matched_id = "else"
             matched_index = -1
 
             for i, cond in enumerate(conditions):
-                expr = cond.get("expression", "")
-                if not expr:
+                if not cond.expression:
                     continue
 
-                if self._evaluate_expression(expr, input_data, context):
-                    matched_id = cond.get("id", f"output-{i}")
+                if self._evaluate_expression(cond.expression, input_data, context):
+                    matched_id = cond.id or f"output-{i}"
                     matched_index = i
                     break
 
