@@ -12,6 +12,7 @@ class CredentialBase(BaseModel):
 
 class CredentialCreate(CredentialBase):
     data: dict[str, Any]  # Raw sensitive data, will be encrypted
+    meta: Optional[dict[str, Any]] = None
 
 
 class CredentialUpdate(BaseModel):
@@ -32,3 +33,21 @@ class CredentialOut(CredentialBase):
 class OAuthUrlResponse(BaseModel):
     url: str
     state: str
+
+
+class ProviderField(BaseModel):
+    id: str
+    label: str
+    type: str
+    placeholder: str
+
+
+class ProviderOut(BaseModel):
+    id: str
+    name: str
+    type: str
+    description: str
+    icon_url: Optional[str] = None
+    fields: Optional[list[ProviderField]] = None
+    hint: Optional[str] = None
+    scopes: Optional[list[str]] = None

@@ -5,6 +5,8 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { SettingsLayout } from '@/features/settings/layouts/SettingsLayout'
 import { GeneralSettings } from '@/features/settings/pages/GeneralSettings'
 import { IntegrationsSettings } from '@/features/settings/pages/IntegrationsSettings'
+import { BYOKSettings } from '@/features/settings/pages/BYOKSettings'
+import { CopilotKeysSettings } from '@/features/settings/pages/CopilotKeysSettings'
 import { SecretsSettings } from '@/features/settings/pages/SecretsSettings'
 import { CustomToolsSettings, SkillsSettings, MCPToolsSettings } from '@/features/settings/pages/ToolSettings'
 import { FuseKeysSettings } from '@/features/settings/pages/FuseKeysSettings'
@@ -13,7 +15,6 @@ import { RecentlyDeletedSettings } from '@/features/settings/pages/RecentlyDelet
 import LoginPage from '@/features/auth/login-page'
 import SignupPage from '@/features/auth/signup-page'
 import ResetPasswordPage from '@/features/auth/reset-password-page'
-import CredentialsPage from '@/features/credentials/CredentialsPage'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
@@ -97,10 +98,6 @@ export const router = createBrowserRouter([
         element: <Editor />,
       },
       {
-        path: 'credentials',
-        element: <CredentialsPage />,
-      },
-      {
         path: 'settings',
         element: <SettingsLayout />,
         children: [
@@ -115,6 +112,14 @@ export const router = createBrowserRouter([
           {
             path: 'integrations',
             element: <IntegrationsSettings />,
+          },
+          {
+            path: 'byok',
+            element: <BYOKSettings />,
+          },
+          {
+            path: 'copilot-keys',
+            element: <CopilotKeysSettings />,
           },
           {
             path: 'secrets',

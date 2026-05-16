@@ -1,170 +1,204 @@
-import React, { useState } from 'react'
-import { X, Shield, Lock, Key, Globe, Info } from 'lucide-react'
-import { useCreateCredential } from '@/hooks/credentials/queries'
+import React from 'react'
+import { X, ChevronLeft, Check, Key } from 'lucide-react'
+import { useAddCredential } from '@/features/credentials/hooks/use-add-credential'
+import { cn } from '@/lib/utils'
+import { SettingsButton } from '@/features/settings/components/shared/SettingsInputs'
 
 interface AddCredentialModalProps {
   isOpen: boolean
   onClose: () => void
+  initialService?: any
+  allowedProviders?: any[]
 }
 
-const SUPPORTED_SERVICES = [
-  {
-    id: 'slack_oauth',
-    name: 'Slack',
-    type: 'oauth',
-    icon: Globe,
-    description: 'Connect to your Slack workspace using OAuth 2.0',
-  },
-  {
-    id: 'openai_api_key',
-    name: 'OpenAI',
-    type: 'api_key',
-    icon: Shield,
-    description: 'Use your OpenAI API key for AI nodes',
-    fields: [{ id: 'api_key', label: 'API Key', type: 'password', placeholder: 'sk-...' }],
-  },
-  {
-    id: 'github_pat',
-    name: 'GitHub',
-    type: 'api_key',
-    icon: Lock,
-    description: 'Connect using a Personal Access Token',
-    fields: [{ id: 'token', label: 'Access Token', type: 'password', placeholder: 'ghp_...' }],
-  },
-]
+export default function AddCredentialModal({ isOpen, onClose, initialService, allowedProviders }: AddCredentialModalProps) {
+  const {
+    step,
+    setStep,
+    selectedService,
+    formData,
+    setFormData,
+    name,
+    setName,
+    description,
+    setDescription,
+    isPending,
+    isLoading,
+    handleServiceSelect,
+    handleSubmit,
+    handleOAuthStart,
+    supportedServices,
+    reset
+  } = useAddCredential(onClose, initialService)
 
-export default function AddCredentialModal({ isOpen, onClose }: AddCredentialModalProps) {
-  const [step, setStep] = useState<'select' | 'form'>('select')
-  const [selectedService, setSelectedService] = useState<(typeof SUPPORTED_SERVICES)[0] | null>(null)
-  const [formData, setFormData] = useState<Record<string, string>>({})
-  const [name, setName] = useState('')
-  const createCredential = useCreateCredential()
+  // Use allowedProviders if provided, otherwise fallback to all supportedServices
+  const displayProviders = allowedProviders || supportedServices
 
   if (!isOpen) return null
 
-  const handleServiceSelect = (service: (typeof SUPPORTED_SERVICES)[0]) => {
-    setSelectedService(service)
-    if (service.type === 'oauth') {
-      // Redirect to OAuth flow
-      window.location.href = `http://localhost:8000/api/v1/credentials/oauth/${service.id.split('_')[0]}/url`
-    } else {
-      setStep('form')
-      setName(`${service.name} Credential`)
-    }
+  const handleClose = () => {
+    reset()
+    onClose()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedService) return
-
-    try {
-      await createCredential.mutateAsync({
-        name,
-        type: selectedService.id,
-        data: formData,
-      })
-      onClose()
-      setStep('select')
-      setSelectedService(null)
-      setFormData({})
-    } catch (err) {
-      console.error('Failed to create credential:', err)
-    }
-  }
+  // Permissions list (Mock for now, can be dynamic from backend)
+  const permissions = [
+    "Send messages to channels",
+    "View basic profile information",
+    "Read messages from public channels"
+  ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="text-lg font-semibold text-slate-900">
-            {step === 'select' ? 'Add Credential' : `Configure ${selectedService?.name}`}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+      <div className="w-full max-w-[500px] bg-[#1c1c1c] border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
+          <h2 className="min-w-0 font-medium text-white text-base flex items-center gap-2.5">
+            {step !== 'select' && (
+              <button 
+                onClick={() => setStep('select')}
+                className="inline-flex items-center justify-center font-medium transition-colors hover:bg-white/5 size-6 rounded-[4px] p-0 text-white/40 hover:text-white"
+              >
+                <ChevronLeft size={16} />
+              </button>
+            )}
+            <span>{step === 'select' ? 'Add Integration' : `Connect ${selectedService?.name}`}</span>
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          <button 
+            onClick={handleClose}
+            className="inline-flex items-center justify-center font-medium transition-colors hover:text-white text-white/40 size-[16px] flex-shrink-0 p-0"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
           {step === 'select' ? (
-            <div className="grid gap-3">
-              {SUPPORTED_SERVICES.map((service) => (
-                <button
-                  key={service.id}
-                  onClick={() => handleServiceSelect(service)}
-                  className="flex items-start gap-4 p-4 text-left border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 transition-all group"
-                >
-                  <div className="p-2 bg-slate-100 rounded-lg text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                    <service.icon size={24} />
-                  </div>
-                  <div>
-                    <div className="font-medium text-slate-900">{service.name}</div>
-                    <div className="text-sm text-slate-500">{service.description}</div>
-                  </div>
-                </button>
-              ))}
+            <div className="flex flex-col gap-2">
+              {isLoading ? (
+                <div className="py-12 flex justify-center">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                displayProviders.map((service) => (
+                  <button
+                    key={service.id}
+                    onClick={() => handleServiceSelect(service)}
+                    className="flex items-center gap-4 p-3 text-left border border-white/5 rounded-xl hover:bg-white/5 transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center overflow-hidden border border-white/10 group-hover:border-white/20 transition-all">
+                      {service.icon_url ? (
+                        <img src={service.icon_url} alt={service.name} className="w-6 h-6 object-contain" />
+                      ) : (
+                        <Key size={20} className="text-white/40 group-hover:text-white transition-colors" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[13px] font-semibold text-white">{service.name}</div>
+                      <div className="text-[11px] text-white/40">{service.description}</div>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                  placeholder="e.g. Production OpenAI Key"
-                  required
-                />
+            <div className="flex flex-col gap-6">
+              {/* Service Identity Section */}
+              <div className="flex items-center gap-4">
+                <div className="flex size-[48px] flex-shrink-0 items-center justify-center rounded-[12px] bg-white/5 border border-white/10 overflow-hidden">
+                  {selectedService?.icon_url ? (
+                    <img src={selectedService.icon_url} alt={selectedService.name} className="size-[24px] object-contain" />
+                  ) : (
+                    <Key size={24} className="text-white/40" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-[14px] text-white">Connect your {selectedService?.name} account</p>
+                  <p className="text-[12px] text-white/40">Grant access to use {selectedService?.name} in your workflows</p>
+                </div>
               </div>
 
-              {selectedService?.fields?.map((field) => (
-                <div key={field.id}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    value={formData[field.id] || ''}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    placeholder={field.placeholder}
+              {/* Permissions Section (Only for OAuth or if scopes exist) */}
+              {(selectedService?.type === 'oauth' || selectedService?.scopes) && (
+                <div className="rounded-[12px] border border-white/5 bg-white/[0.02] overflow-hidden">
+                  <div className="border-white/5 border-b px-4 py-3 bg-white/[0.02]">
+                    <h4 className="font-semibold text-[12px] text-white/60 tracking-wide uppercase">Permissions requested</h4>
+                  </div>
+                  <ul className="max-h-[160px] space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
+                    {(selectedService?.scopes || [
+                      "Connect this service to your workflows",
+                      "Allow automation to perform actions on your behalf"
+                    ]).map((perm: string, i: number) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <div className="mt-0.5 flex size-[16px] flex-shrink-0 items-center justify-center">
+                          <Check size={14} className="text-white/40" />
+                        </div>
+                        <span className="text-[12px] text-white/80">{perm}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">Display name*</label>
+                  <input 
+                    className="w-full h-[40px] px-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
+                    placeholder="Integration name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
-              ))}
 
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3">
-                <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-800 leading-relaxed">
-                  Your credentials are encrypted at rest using AES-256 and are never stored in plain text.
-                </p>
-              </div>
+                <div className="space-y-2">
+                  <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">Description</label>
+                  <textarea 
+                    className="w-full min-h-[80px] p-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner resize-none"
+                    placeholder="Optional description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('select')}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={createCredential.isPending}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm shadow-blue-200 transition-all active:scale-[0.98]"
-                >
-                  {createCredential.isPending ? 'Saving...' : 'Save Credential'}
-                </button>
+                {selectedService?.type === 'api_key' && selectedService.fields?.map((field: any) => (
+                  <div key={field.id} className="space-y-2">
+                    <label className="text-[12px] font-bold text-white/40 uppercase tracking-widest px-1">{field.label}</label>
+                    <input 
+                      type={field.type}
+                      className="w-full h-[40px] px-3 rounded-lg bg-[#222] border border-white/10 text-[13px] text-white placeholder:text-white/20 focus:outline-none transition-all shadow-inner"
+                      placeholder={field.placeholder}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, [field.id]: e.target.value }))}
+                      required
+                    />
+                  </div>
+                ))}
               </div>
-            </form>
+            </div>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 border-t border-white/5 bg-white/[0.02] px-4 py-4">
+          <SettingsButton 
+            variant="secondary" 
+            size="sm" 
+            onClick={step === 'select' ? handleClose : () => setStep('select')}
+          >
+            {step === 'select' ? 'Cancel' : 'Back'}
+          </SettingsButton>
+          <SettingsButton 
+            variant="primary" 
+            size="sm"
+            disabled={step === 'form' && !name.trim()}
+            onClick={step === 'select' ? undefined : (selectedService?.type === 'oauth' ? handleOAuthStart : handleSubmit)}
+          >
+            {step === 'select' ? 'Connect' : (selectedService?.type === 'oauth' ? 'Connect' : 'Save')}
+          </SettingsButton>
         </div>
       </div>
     </div>

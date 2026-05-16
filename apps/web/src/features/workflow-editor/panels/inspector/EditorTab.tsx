@@ -11,6 +11,7 @@ import { KeyValueField } from '@/features/workflow-editor/panels/inspector/compo
 import { ConnectionsPanel } from '@/features/workflow-editor/panels/inspector/components/connections-panel'
 import { ConditionListField } from '@/features/workflow-editor/panels/inspector/components/condition-list-field'
 import { SchemaEditorField } from '@/features/workflow-editor/panels/inspector/components/schema-editor-field'
+import { CredentialPicker } from '@/features/workflow-editor/panels/inspector/components/credential-picker'
 import { useNodeAncestors } from '@/features/workflow-editor/hooks/use-node-ancestors'
 import { InterpolationPicker } from '@/features/workflow-editor/panels/inspector/components/interpolation-picker'
 
@@ -35,6 +36,7 @@ interface PropertyFieldProps {
   onShowPicker: (rect: DOMRect, onSelect: (val: string) => void) => void
   isFirstClickAllowed: (subId?: string) => boolean
   onFirstClickUsed: (subId?: string) => void
+  definition: any
 }
 
 const PropertyField: React.FC<PropertyFieldProps> = ({ 
@@ -43,7 +45,8 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
   handlePropertyChange,
   onShowPicker,
   isFirstClickAllowed,
-  onFirstClickUsed
+  onFirstClickUsed,
+  definition
 }) => {
   const propsData = selectedNode.data?.properties || {}
   const currentValue = propsData[prop.name] ?? prop.default ?? ''
@@ -177,6 +180,15 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
         <SchemaEditorField
           value={propsData[prop.name] || prop.default || []}
           onChange={(val: any) => handlePropertyChange(prop.name, val)}
+        />
+      )}
+
+      {prop.type === 'credential' && (
+        <CredentialPicker
+          value={currentValue}
+          onChange={(val: string) => handlePropertyChange(prop.name, val)}
+          credentialType={definition?.credentialType}
+          placeholder={prop.placeholder}
         />
       )}
 
@@ -324,6 +336,7 @@ export const EditorTab: React.FC = () => {
                 onShowPicker={(rect, onSelect) => setPicker({ rect, onSelect })}
                 isFirstClickAllowed={(subId) => !usedFields.has(subId || prop.name)}
                 onFirstClickUsed={(subId) => setUsedFields(prev => new Set(prev).add(subId || prop.name))}
+                definition={definition}
               />
             </React.Fragment>
           ))}
@@ -353,6 +366,7 @@ export const EditorTab: React.FC = () => {
                       onShowPicker={(rect, onSelect) => setPicker({ rect, onSelect })}
                       isFirstClickAllowed={(subId) => !usedFields.has(subId || prop.name)}
                       onFirstClickUsed={(subId) => setUsedFields(prev => new Set(prev).add(subId || prop.name))}
+                      definition={definition}
                     />
                   ))}
                 </div>

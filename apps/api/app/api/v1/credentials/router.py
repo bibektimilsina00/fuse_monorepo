@@ -1,6 +1,6 @@
 import secrets
 import uuid
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -9,14 +9,50 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.api.v1.auth.dependencies import get_current_user
 from apps.api.app.core.database import get_db
 from apps.api.app.models.user import User
+from apps.api.app.credential_manager.oauth.flow import PROVIDERS as OAUTH_PROVIDERS
+from apps.api.app.credential_manager.api_keys import PROVIDERS as API_KEY_PROVIDERS
 from apps.api.app.schemas.credential import (
     CredentialCreate,
     CredentialOut,
     OAuthUrlResponse,
+    ProviderOut,
 )
 from apps.api.app.services.credential_service import CredentialService
 
 router = APIRouter()
+
+
+@router.get("/providers", response_model=list[ProviderOut])
+async def list_providers():
+    providers = []
+    
+    # Collect OAuth providers
+    for p in OAUTH_PROVIDERS.values():
+        providers.append({
+            "id": p.id,
+            "name": p.name,
+            "type": p.type,
+            "description": p.description,
+            "icon_url": p.icon_url,
+            "fields": getattr(p, "fields", None),
+            "hint": getattr(p, "hint", None),
+            "scopes": getattr(p, "scopes", None)
+        })
+        
+    # Collect API Key providers
+    for p in API_KEY_PROVIDERS.values():
+        providers.append({
+            "id": p.id,
+            "name": p.name,
+            "type": p.type,
+            "description": p.description,
+            "icon_url": p.icon_url,
+            "fields": p.fields,
+            "hint": p.hint,
+            "scopes": getattr(p, "scopes", None)
+        })
+        
+    return providers
 
 
 @router.get("/", response_model=List[CredentialOut])
@@ -56,10 +92,10 @@ async def delete_credential(
 @router.get("/oauth/{service_name}/url", response_model=OAuthUrlResponse)
 async def get_oauth_url(
     service_name: str,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
-    # This will be implemented fully when providers are added
-    # For now, returning a mock or placeholder logic as per plan
     try:
         from apps.api.app.credential_manager.oauth.flow import get_oauth_provider
         provider = get_oauth_provider(service_name)
@@ -69,7 +105,16 @@ async def get_oauth_url(
                 detail=f"Unknown OAuth service: {service_name}",
             )
 
-        state = secrets.token_urlsafe(32)
+        # Include metadata in state to retrieve on callback
+        import json
+        import base64
+        state_data = {
+            "nonce": secrets.token_urlsafe(16),
+            "name": name,
+            "description": description
+        }
+        state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+        
         url = provider.get_authorization_url(state=state)
         return OAuthUrlResponse(url=url, state=state)
     except ImportError:
@@ -88,15 +133,28 @@ async def oauth_callback(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        # Decode metadata from state
+        import json
+        import base64
+        try:
+            state_data = json.loads(base64.urlsafe_b64decode(state).decode())
+            custom_name = state_data.get("name")
+            custom_description = state_data.get("description")
+        except:
+            custom_name = None
+            custom_description = None
+
         from apps.api.app.credential_manager.oauth.callback import handle_oauth_callback
         await handle_oauth_callback(
             service_name=service_name,
             code=code,
             user=current_user,
             db=db,
+            custom_name=custom_name,
+            custom_description=custom_description
         )
-        # Redirect back to frontend credentials page
-        return RedirectResponse(url="http://localhost:5173/credentials")
+        # Redirect back to frontend integrations settings page
+        return RedirectResponse(url="http://localhost:5173/settings/integrations")
     except ImportError:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,

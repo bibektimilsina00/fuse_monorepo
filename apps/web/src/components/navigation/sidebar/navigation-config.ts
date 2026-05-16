@@ -13,7 +13,9 @@ import {
   Layers,
   KeyRound,
   Server,
-  Trash2
+  Trash2,
+  Cpu,
+  Bot
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -75,7 +77,9 @@ export const SETTINGS_NAV: NavSection[] = [
     items: [
       { id: "keys", label: "Fuse Keys", href: "/settings/keys", icon: KeyRound },
       { id: "mcp-servers", label: "MCP Servers", href: "/settings/mcp-servers", icon: Server },
-      { id: "deleted", label: "Recently Deleted", href: "/settings/deleted", icon: Trash2 },
+      { id: "byok", label: "BYOK", href: "/settings/byok", icon: Cpu },
+      { id: "copilot-keys", label: "Copilot Keys", href: "/settings/copilot-keys", icon: Bot },
+      { id: "recently-deleted", label: "Recently Deleted", href: "/settings/deleted", icon: Trash2 },
     ]
   }
 ]

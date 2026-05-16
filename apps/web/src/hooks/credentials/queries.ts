@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { credentialKeys } from './keys'
-import { api } from '@/services/api'
+import api from '@/lib/api/client'
 
 export interface Credential {
   id: string
@@ -25,7 +25,7 @@ export function useCredentials() {
 export function useCreateCredential() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: { name: string; type: string; data: Record<string, any> }) => {
+    mutationFn: async (data: { name: string; type: string; data: Record<string, any>; meta?: Record<string, any> }) => {
       const response = await api.post<Credential>('/credentials/', data)
       return response.data
     },
