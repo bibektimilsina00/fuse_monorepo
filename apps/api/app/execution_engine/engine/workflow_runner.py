@@ -3,6 +3,7 @@ from typing import Any
 from apps.api.app.core.logger import get_logger
 from apps.api.app.execution_engine.engine.node_executor import node_executor
 from apps.api.app.node_system.base.node_context import NodeContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = get_logger(__name__)
 
@@ -13,8 +14,9 @@ class WorkflowRunner:
         workflow_id: str,
         execution_id: str,
         graph: dict[str, Any],
+        db: AsyncSession | None = None,
         on_log: Any = None,
-        credentials: dict[str, Any] = None,
+        credentials: list[dict[str, Any]] | None = None,
     ):
         self.workflow_id = workflow_id
         self.execution_id = execution_id
@@ -24,7 +26,8 @@ class WorkflowRunner:
         self.executed_nodes: dict[str, Any] = {}
         self.node_outputs: dict[str, dict[str, Any]] = {}
         self.trigger_data: dict[str, Any] = {}
-        self.credentials = credentials or {}
+        self.credentials = credentials or []
+        self.db = db
         self.on_log = on_log
         self.failed = False
         self.error_message = None
@@ -93,6 +96,7 @@ class WorkflowRunner:
             variables={},  # To be populated from state
             credentials=self.credentials,
             http_client=http_client,
+            db=self.db
         )
 
         result = await node_executor.execute_node(

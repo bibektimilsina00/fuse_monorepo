@@ -5,15 +5,15 @@ Revises: 5f26da795d90
 Create Date: 2026-05-15 12:33:25.234177
 
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'f6435ffc980d'
-down_revision: Union[str, None] = '5f26da795d90'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '5f26da795d90'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

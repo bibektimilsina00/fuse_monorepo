@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, List, RefreshCw, Type } from 'lucide-react'
 import Editor from 'react-simple-code-editor'
 import Prism from 'prismjs'
 
@@ -11,8 +11,10 @@ import { ConnectionsPanel } from '@/features/workflow-editor/panels/inspector/co
 import { ConditionListField } from '@/features/workflow-editor/panels/inspector/components/condition-list-field'
 import { SchemaEditorField } from '@/features/workflow-editor/panels/inspector/components/schema-editor-field'
 import { CredentialPicker } from '@/features/workflow-editor/panels/inspector/components/credential-picker'
+import { FileListField } from '@/features/workflow-editor/panels/inspector/components/file-list-field'
 import { useNodeAncestors } from '@/features/workflow-editor/hooks/use-node-ancestors'
 import { InterpolationPicker } from '@/features/workflow-editor/panels/inspector/components/interpolation-picker'
+import { shouldShowProperty } from '@/features/workflow-editor/nodes/utils'
 
 // Add custom Prism rules for interpolation
 if (Prism.languages.json) {
@@ -47,7 +49,40 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
   onFirstClickUsed,
   definition
 }) => {
+  const [mode, setMode] = useState<'manual' | 'dynamic'>(prop.loadOptions ? 'dynamic' : 'manual')
+  const [dynamicOptions, setDynamicOptions] = useState<any[]>([])
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false)
+
   const propsData = selectedNode.data?.properties || {}
+  const dependencies = prop.loadOptionsDependsOn || []
+  const dependencyValues = dependencies.map((d: string) => propsData[d]).join('|')
+
+  React.useEffect(() => {
+    if (mode === 'dynamic' && prop.loadOptions) {
+      fetchOptions()
+    }
+  }, [mode, prop.loadOptions, dependencyValues])
+
+  const fetchOptions = async () => {
+    setIsLoadingOptions(true)
+    try {
+      const params = new URLSearchParams()
+      dependencies.forEach((d: string) => {
+        if (propsData[d]) params.append(d, propsData[d])
+      })
+      const url = `${prop.loadOptions}?${params.toString()}`
+      const response = await fetch(url)
+      const data = await response.json()
+      if (data.ok) {
+        setDynamicOptions(data.data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch options:', err)
+    } finally {
+      setIsLoadingOptions(false)
+    }
+  }
+
   const currentValue = propsData[prop.name] ?? prop.default ?? ''
 
   const handleInputInteraction = (e: React.MouseEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) => {
@@ -96,6 +131,15 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
           {prop.label}
           {prop.required && <span className="text-red-500 ml-1.5">*</span>}
         </label>
+        {prop.loadOptions && (
+          <button 
+            onClick={() => setMode(mode === 'manual' ? 'dynamic' : 'manual')}
+            className="p-1 rounded hover:bg-[#333] text-[#555] hover:text-white transition-all active:scale-95"
+            title={mode === 'manual' ? 'Switch to List' : 'Switch to Manual ID'}
+          >
+            {mode === 'manual' ? <Type size={12} /> : <List size={12} />}
+          </button>
+        )}
         {prop.type === 'json' && (
           <button className="h-[22px] px-2.5 rounded bg-[#333] hover:bg-[#444] text-[11px] font-medium text-white transition-colors">
             Generate
@@ -103,7 +147,23 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
         )}
       </div>
 
-      {prop.type === 'string' && (
+      {prop.type === 'string' && mode === 'dynamic' && prop.loadOptions && (
+        <div className="relative">
+          <CustomSelect
+            value={currentValue}
+            options={dynamicOptions}
+            onChange={(val: any) => handlePropertyChange(prop.name, val)}
+            placeholder={isLoadingOptions ? 'Loading...' : `Select ${prop.name === 'channel' ? 'channel' : 'user'}`}
+          />
+          {isLoadingOptions && (
+            <div className="absolute right-9 top-1/2 -translate-y-1/2">
+              <RefreshCw size={12} className="text-[#555] animate-spin" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {prop.type === 'string' && (mode === 'manual' || !prop.loadOptions) && (
         <input
           type="text"
           value={currentValue}
@@ -111,7 +171,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
           onClick={handleInputInteraction}
           onKeyDown={handleKeyDown}
           onChange={(e) => handlePropertyChange(prop.name, e.target.value)}
-          placeholder={prop.placeholder || `Enter ${prop.label}`}
+          placeholder={prop.name === 'channel' ? 'Enter channel ID (e.g., C12345)' : prop.name === 'user' ? 'Enter user ID (e.g., U12345)' : prop.placeholder || `Enter ${prop.label}`}
           className="w-full bg-[#222] border border-[#333] rounded-md px-3 h-[36px] text-[13px] text-white placeholder:text-[#555] focus:outline-none"
         />
       )}
@@ -188,6 +248,13 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
           onChange={(val: string) => handlePropertyChange(prop.name, val)}
           credentialType={definition?.credentialType}
           placeholder={prop.placeholder}
+        />
+      )}
+
+      {prop.type === 'file-list' && (
+        <FileListField
+          value={propsData[prop.name] || []}
+          onChange={(val: string[]) => handlePropertyChange(prop.name, val)}
         />
       )}
 
@@ -298,25 +365,15 @@ export const EditorTab: React.FC = () => {
     })
   }
 
-  const mainProps = definition.properties.filter(p => p.visibility !== 'hidden')
-  const hiddenProps = definition.properties.filter(p => p.visibility === 'hidden')
+  const properties = selectedNode.data?.properties || {}
+  
+  const visibleMainProps = definition.properties
+    .filter((p: any) => p.visibility !== 'hidden')
+    .filter((p: any) => shouldShowProperty(p, properties, definition))
 
-  const isPropVisible = (prop: any) => {
-    if (!prop.condition) return true
-    const conditionPropDef = definition.properties.find(p => p.name === prop.condition!.field)
-    const propsData = selectedNode.data?.properties || {}
-
-    const conditionValue = propsData[prop.condition.field] ?? conditionPropDef?.default
-    const expectedValue = prop.condition.value
-
-    if (Array.isArray(expectedValue)) {
-      return expectedValue.some(v => String(v).toUpperCase() === String(conditionValue).toUpperCase())
-    }
-    return String(expectedValue).toUpperCase() === String(conditionValue).toUpperCase()
-  }
-
-  const visibleMainProps = mainProps.filter(isPropVisible)
-  const visibleHiddenProps = hiddenProps.filter(isPropVisible)
+  const visibleHiddenProps = definition.properties
+    .filter((p: any) => p.visibility === 'hidden')
+    .filter((p: any) => shouldShowProperty(p, properties, definition))
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg)] relative">

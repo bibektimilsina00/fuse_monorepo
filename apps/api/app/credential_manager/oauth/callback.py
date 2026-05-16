@@ -1,8 +1,9 @@
-from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.app.credential_manager.oauth.flow import get_oauth_provider
 from apps.api.app.models.user import User
 from apps.api.app.services.credential_service import CredentialService
-from apps.api.app.credential_manager.oauth.flow import get_oauth_provider
 
 
 async def handle_oauth_callback(
@@ -10,9 +11,9 @@ async def handle_oauth_callback(
     code: str, 
     user: User, 
     db: AsyncSession, 
-    custom_name: Optional[str] = None, 
-    custom_description: Optional[str] = None,
-    code_verifier: Optional[str] = None
+    custom_name: str | None = None, 
+    custom_description: str | None = None,
+    code_verifier: str | None = None
 ):
     provider = get_oauth_provider(service_name)
     if not provider:

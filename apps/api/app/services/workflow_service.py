@@ -8,7 +8,7 @@ from apps.api.app.core.logger import logger
 from apps.api.app.models.user import User
 from apps.api.app.models.workflow import Workflow
 from apps.api.app.repositories.workflow_repository import WorkflowRepository
-from apps.api.app.schemas.workflow import WorkflowCreate, WorkflowUpdate, WorkflowBatchUpdate
+from apps.api.app.schemas.workflow import WorkflowBatchUpdate, WorkflowCreate, WorkflowUpdate
 
 
 class WorkflowService:

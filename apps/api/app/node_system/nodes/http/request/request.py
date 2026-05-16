@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -16,11 +16,11 @@ logger = get_logger(__name__)
 class HttpRequestProperties(BaseModel):
     url: str
     method: str = "GET"
-    headers: Optional[dict[str, Any]] = Field(default_factory=dict)
-    params: Optional[dict[str, Any]] = Field(default_factory=dict)
-    pathParams: Optional[dict[str, Any]] = Field(default_factory=dict)
-    body: Optional[Any] = None
-    formData: Optional[dict[str, Any]] = Field(default_factory=dict)
+    headers: dict[str, Any] | None = Field(default_factory=dict)
+    params: dict[str, Any] | None = Field(default_factory=dict)
+    pathParams: dict[str, Any] | None = Field(default_factory=dict)
+    body: Any | None = None
+    formData: dict[str, Any] | None = Field(default_factory=dict)
     timeout: int = 30000
 
 

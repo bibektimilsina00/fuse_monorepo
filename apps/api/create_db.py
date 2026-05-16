@@ -1,6 +1,9 @@
 import asyncio
+
 import asyncpg
+
 from apps.api.app.core.config import settings
+
 
 async def create_db():
     # Connect to the default 'postgres' database to create the new one

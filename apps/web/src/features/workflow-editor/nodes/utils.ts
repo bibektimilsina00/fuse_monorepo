@@ -9,3 +9,20 @@ export const getPropValuePreview = (val: any, propType: string) => {
   if (typeof val === 'string' && val.length > 10) return `${val.substring(0, 10)}...`
   return String(val)
 }
+
+/**
+ * Checks if a property should be visible based on its conditions and the current node data.
+ */
+export const shouldShowProperty = (prop: any, properties: any, definition: any) => {
+  if (prop.visibility === 'hidden') return false
+  if (!prop.condition) return true
+
+  const { field, value: expectedValue } = prop.condition
+  const conditionPropDef = definition.properties.find((p: any) => p.name === field)
+  const conditionValue = properties?.[field] ?? conditionPropDef?.default
+
+  if (Array.isArray(expectedValue)) {
+    return expectedValue.some(v => String(v).toUpperCase() === String(conditionValue).toUpperCase())
+  }
+  return String(expectedValue).toUpperCase() === String(conditionValue).toUpperCase()
+}

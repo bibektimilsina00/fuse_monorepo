@@ -1,4 +1,3 @@
-from typing import Optional
 from apps.api.app.core.config import settings
 from apps.api.app.core.logger import get_logger
 
@@ -15,15 +14,17 @@ class SlackOAuthProvider:
     icon_url = "https://cdn.brandfetch.io/slack.com/icon"
     scopes = [
         "Send messages to channels",
-        "View basic profile information",
-        "Read messages from public channels"
+        "Read public and private channels",
+        "View users and email addresses",
+        "Manage reactions",
+        "Read and upload files"
     ]
 
     def get_authorization_url(self, state, code_challenge = None):
         from urllib.parse import urlencode
         params = {
             "client_id": settings.SLACK_CLIENT_ID,
-            "scope": "chat:write,channels:read",
+            "scope": "chat:write,channels:read,groups:read,im:read,mpim:read,users:read,users:read.email,reactions:read,reactions:write,files:read,files:write",
             "redirect_uri": REDIRECT_URI.format(service="slack"),
             "state": state,
         }

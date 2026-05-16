@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel
 
 from apps.api.app.node_system.base.base_node import BaseNode
@@ -8,8 +9,10 @@ from apps.api.app.node_system.base.node_result import NodeResult
 
 
 class SlackTriggerProperties(BaseModel):
+    authentication: str = "fuse_bot"
+    bot_token: str | None = None
     event_type: str = "message"
-    channel: Optional[str] = None
+    channel: str | None = None
 
 
 class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
@@ -20,16 +23,36 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
             type="trigger.slack",
             name="Slack Trigger",
             category="trigger",
-            description="Trigger workflow when an event happens in Slack (e.g., new message, reaction).",
+            description="Listen for any Slack event: messages, reactions, channel changes, app interactions, and more.",
             icon="Zap",
             color="#4a154b",
             properties=[
+                {
+                    "name": "authentication",
+                    "label": "Authentication",
+                    "type": "options",
+                    "default": "fuse_bot",
+                    "options": [
+                        {"label": "Fuse Bot (OAuth)", "value": "fuse_bot"},
+                        {"label": "Custom Bot (Token)", "value": "custom_bot"},
+                    ],
+                },
                 {
                     "name": "credential",
                     "label": "Slack Account",
                     "type": "credential",
                     "credentialType": "slack_oauth",
-                    "required": True
+                    "required": True,
+                    "condition": {"field": "authentication", "value": "fuse_bot"}
+                },
+                {
+                    "name": "bot_token",
+                    "label": "Bot Token",
+                    "type": "string",
+                    "required": True,
+                    "secret": True,
+                    "placeholder": "xoxb-...",
+                    "condition": {"field": "authentication", "value": "custom_bot"}
                 },
                 {
                     "name": "event_type",
@@ -39,20 +62,38 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
                     "options": [
                         {"label": "New Message", "value": "message"},
                         {"label": "New Reaction", "value": "reaction_added"},
+                        {"label": "Reaction Removed", "value": "reaction_removed"},
                         {"label": "Channel Created", "value": "channel_created"},
-                        {"label": "Member Joined", "value": "member_joined_channel"},
+                        {"label": "Channel Archived", "value": "channel_archive"},
+                        {"label": "Member Joined Channel", "value": "member_joined_channel"},
+                        {"label": "Member Left Channel", "value": "member_left_channel"},
+                        {"label": "User Profile Changed", "value": "user_change"},
+                        {"label": "App Home Opened", "value": "app_home_opened"},
+                        {"label": "Slash Command", "value": "slash_command"},
+                        {"label": "Interactive Button/Menu", "value": "block_actions"},
+                        {"label": "Modal Submitted", "value": "view_submission"},
+                        {"label": "Modal Closed", "value": "view_closed"},
                     ],
                 },
                 {
                     "name": "channel",
-                    "label": "Channel ID (Optional)",
+                    "label": "Channel Filter (Optional)",
                     "type": "string",
                     "placeholder": "C1234567890",
-                    "condition": {"field": "event_type", "value": ["message", "reaction_added"]}
+                    "condition": {"field": "event_type", "value": ["message", "reaction_added", "reaction_removed", "member_joined_channel", "member_left_channel"]}
                 }
             ],
             inputs=0,
             outputs=1,
+            outputs_schema=[
+                {"label": "event_type", "type": "string"},
+                {"label": "user", "type": "string"},
+                {"label": "channel", "type": "string"},
+                {"label": "text", "type": "string"},
+                {"label": "ts", "type": "string"},
+                {"label": "trigger_id", "type": "string"},
+                {"label": "payload", "type": "object"},
+            ],
             credential_type="slack_oauth",
         )
 
@@ -61,5 +102,4 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
         return SlackTriggerProperties
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
-        # Trigger nodes simply pass the incoming event payload to the next node
         return NodeResult(success=True, output_data=input_data)

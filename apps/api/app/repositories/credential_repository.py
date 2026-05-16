@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +20,7 @@ class CredentialRepository:
 
     async def get_by_id_and_user(
         self, credential_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Optional[Credential]:
+    ) -> Credential | None:
         result = await self.db.execute(
             select(Credential).where(
                 Credential.id == credential_id,
@@ -32,7 +31,7 @@ class CredentialRepository:
 
     async def get_by_type_and_user(
         self, credential_type: str, user_id: uuid.UUID
-    ) -> Optional[Credential]:
+    ) -> Credential | None:
         result = await self.db.execute(
             select(Credential).where(
                 Credential.type == credential_type,

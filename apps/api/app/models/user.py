@@ -1,10 +1,11 @@
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from apps.api.app.models.workflow import Workflow
-    from apps.api.app.models.folder import Folder
     from apps.api.app.models.credential import Credential
+    from apps.api.app.models.folder import Folder
+    from apps.api.app.models.workflow import Workflow
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID

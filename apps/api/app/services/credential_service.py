@@ -1,6 +1,5 @@
 import json
 import uuid
-from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +23,7 @@ class CredentialService:
         type: str,
         data: dict,
         user: User,
-        meta: Optional[dict] = None,
+        meta: dict | None = None,
     ) -> Credential:
         encrypted_data = encryption_service.encrypt(json.dumps(data))
         credential = Credential(
@@ -46,7 +45,7 @@ class CredentialService:
         decrypted_json = encryption_service.decrypt(credential.encrypted_data)
         return json.loads(decrypted_json)
 
-    async def get_decrypted_by_type(self, credential_type: str, user_id: uuid.UUID) -> Optional[dict]:
+    async def get_decrypted_by_type(self, credential_type: str, user_id: uuid.UUID) -> dict | None:
         """Used by execution engine to inject credentials into NodeContext."""
         # For execution engine, we might need a fresh session or use the one provided
         # Here we assume the service is initialized with a session

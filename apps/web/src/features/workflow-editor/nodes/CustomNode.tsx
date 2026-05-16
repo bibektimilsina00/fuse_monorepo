@@ -6,7 +6,7 @@ import { NodeToolbar } from '@/features/workflow-editor/nodes/components/node-to
 import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-header'
 import { NodeProperty } from '@/features/workflow-editor/nodes/components/node-property'
 import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-handles'
-import { getPropValuePreview } from '@/features/workflow-editor/nodes/utils'
+import { getPropValuePreview, shouldShowProperty } from '@/features/workflow-editor/nodes/utils'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
@@ -22,8 +22,9 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
   }, [id, handleDirection, updateNodeInternals])
   
   if (!definition) return null
+  const properties = data.properties || {}
 
-  const mainProps = definition.properties.filter(p => p.visibility !== 'hidden')
+  const visibleProps = definition.properties.filter(p => shouldShowProperty(p, properties, definition))
   const hasErrorHandle = !!definition.allowError
 
   return (
@@ -48,7 +49,7 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
 
         {/* Properties list */}
         <div className="flex flex-col gap-1.5 py-2">
-          {mainProps.map((prop) => (
+          {visibleProps.map((prop) => (
             <NodeProperty 
               key={prop.name} 
               label={prop.label} 

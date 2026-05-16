@@ -1,9 +1,8 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from apps.api.app.models.folder import Folder
 from apps.api.app.models.workflow import Workflow

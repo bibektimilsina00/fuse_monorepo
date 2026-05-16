@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ class BaseNode(ABC, Generic[TProps]):
         # Typed properties (populated during validation)
         self.props: TProps = self.validate_properties(properties)
         # Injected credential (Step 3)
-        self.credential: Optional[dict[str, Any]] = None
+        self.credential: dict[str, Any] | None = None
 
     @classmethod
     @abstractmethod

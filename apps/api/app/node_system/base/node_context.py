@@ -1,15 +1,16 @@
+from dataclasses import dataclass
 from typing import Any, Optional
+
 import httpx
-from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class NodeContext(BaseModel):
+@dataclass
+class NodeContext:
     execution_id: str
     workflow_id: str
     node_id: str
-    variables: dict[str, Any] = Field(default_factory=dict)
-    credentials: dict[str, Any] = Field(default_factory=dict)
-    http_client: Optional[httpx.AsyncClient] = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    variables: dict[str, Any]
+    credentials: list[dict[str, Any]]
+    http_client: httpx.AsyncClient
+    db: Optional[AsyncSession] = None

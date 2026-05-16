@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from apps.api.app.node_system.base.base_node import BaseNode

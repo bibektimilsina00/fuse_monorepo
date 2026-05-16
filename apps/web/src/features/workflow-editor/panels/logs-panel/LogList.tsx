@@ -19,7 +19,7 @@ function resolveNodeInfo(log: ExecutionLog, nodes: Node[], nodeDefinitions: any[
   if (!node) {
     return { iconName: null, color: null, label: log.message, isSystem: false }
   }
-  const def = NODE_REGISTRY.find((d) => d.type === node.type)
+  const def = nodeDefinitions.find((d) => d.type === node.type)
   return {
     iconName: def?.icon ?? null,
     color: def?.color ?? '#4b5563',
@@ -28,14 +28,15 @@ function resolveNodeInfo(log: ExecutionLog, nodes: Node[], nodeDefinitions: any[
   }
 }
 
-const LogRow = React.memo(({ log, duration, isSelected, onClick, nodes }: {
+const LogRow = React.memo(({ log, duration, isSelected, onClick, nodes, nodeDefinitions }: {
   log: ExecutionLog
   duration: number | null
   isSelected: boolean
   onClick: () => void
   nodes: Node[]
+  nodeDefinitions: any[]
 }) => {
-  const { iconName, color, label, isSystem } = resolveNodeInfo(log, nodes)
+  const { iconName, color, label, isSystem } = resolveNodeInfo(log, nodes, nodeDefinitions)
   const isError = log.level === 'error'
   const durationLabel = formatDuration(duration)
 
@@ -88,6 +89,7 @@ const LogRow = React.memo(({ log, duration, isSelected, onClick, nodes }: {
 
 export const LogList = React.memo(({ isCollapsed }: LogListProps) => {
   const nodes = useWorkflowStore((s) => s.nodes)
+  const nodeDefinitions = useWorkflowStore((s) => s.nodeDefinitions)
   const { runs, selectedLogId, setSelectedLogId } = useExecutionStore()
 
   const lastRun = runs[runs.length - 1]
@@ -137,6 +139,7 @@ export const LogList = React.memo(({ isCollapsed }: LogListProps) => {
                     isSelected={selectedLogId === log.id}
                     onClick={() => setSelectedLogId(log.id)}
                     nodes={nodes}
+                    nodeDefinitions={nodeDefinitions}
                   />
                 ))
               )}

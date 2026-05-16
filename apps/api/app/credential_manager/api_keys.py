@@ -1,5 +1,5 @@
-from typing import List, Optional
 from pydantic import BaseModel
+
 
 class CredentialField(BaseModel):
     id: str
@@ -15,7 +15,7 @@ class APIKeyProvider:
         description: str, 
         icon_url: str, 
         hint: str,
-        fields: List[CredentialField]
+        fields: list[CredentialField]
     ):
         self.id = id
         self.name = name

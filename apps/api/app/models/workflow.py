@@ -1,11 +1,12 @@
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
-if TYPE_CHECKING:
-    from apps.api.app.models.user import User
-    from apps.api.app.models.folder import Folder
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Integer
+if TYPE_CHECKING:
+    from apps.api.app.models.folder import Folder
+    from apps.api.app.models.user import User
+
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

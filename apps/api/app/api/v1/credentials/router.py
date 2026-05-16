@@ -1,6 +1,5 @@
 import secrets
 import uuid
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -8,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.api.v1.auth.dependencies import get_current_user
 from apps.api.app.core.database import get_db
-from apps.api.app.models.user import User
-from apps.api.app.credential_manager.oauth.flow import PROVIDERS as OAUTH_PROVIDERS
 from apps.api.app.credential_manager.api_keys import PROVIDERS as API_KEY_PROVIDERS
+from apps.api.app.credential_manager.oauth.flow import PROVIDERS as OAUTH_PROVIDERS
+from apps.api.app.models.user import User
 from apps.api.app.schemas.credential import (
     CredentialCreate,
     CredentialOut,
@@ -55,7 +54,7 @@ async def list_providers():
     return providers
 
 
-@router.get("/", response_model=List[CredentialOut])
+@router.get("/", response_model=list[CredentialOut])
 async def list_credentials(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -92,8 +91,8 @@ async def delete_credential(
 @router.get("/oauth/{service_name}/url", response_model=OAuthUrlResponse)
 async def get_oauth_url(
     service_name: str,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
+    name: str | None = None,
+    description: str | None = None,
     current_user: User = Depends(get_current_user),
 ):
     try:
@@ -106,9 +105,9 @@ async def get_oauth_url(
             )
 
         # Include metadata in state to retrieve on callback
-        import json
         import base64
         import hashlib
+        import json
         
         state_data = {
             "nonce": secrets.token_urlsafe(16),
@@ -150,8 +149,8 @@ async def oauth_callback(
 ):
     try:
         # Decode metadata from state
-        import json
         import base64
+        import json
         try:
             state_data = json.loads(base64.urlsafe_b64decode(state).decode())
             custom_name = state_data.get("name")
@@ -167,8 +166,9 @@ async def oauth_callback(
         if not user_id:
             raise HTTPException(status_code=400, detail="Invalid state: user_id missing")
 
-        from apps.api.app.models.user import User
         from sqlalchemy import select
+
+        from apps.api.app.models.user import User
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:

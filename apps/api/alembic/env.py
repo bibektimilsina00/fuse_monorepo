@@ -7,9 +7,9 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import apps.api.app.models.credential  # noqa: F401
+import apps.api.app.models.folder  # noqa: F401 — register models
 import apps.api.app.models.user  # noqa: F401
 import apps.api.app.models.workflow  # noqa: F401
-import apps.api.app.models.folder  # noqa: F401 — register models
 from apps.api.app.core.config import settings
 from apps.api.app.models.base import Base  # noqa: F401
 

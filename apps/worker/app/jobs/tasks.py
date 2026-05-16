@@ -19,16 +19,17 @@ def execute_workflow(self, execution_id: str, workflow_id: str, graph: dict, tri
 
 
 async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigger_data: dict):
-    from apps.api.app.core.database import AsyncSessionLocal
-    from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
-    from apps.api.app.repositories.execution_repository import ExecutionRepository
-    from apps.api.app.repositories.workflow_repository import WorkflowRepository
-    from apps.api.app.repositories.credential_repository import CredentialRepository
-    from apps.api.app.credential_manager.encryption.aes import encryption_service
     import json
 
+    from apps.api.app.core.database import AsyncSessionLocal
+    from apps.api.app.credential_manager.encryption.aes import encryption_service
+    from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
+    from apps.api.app.repositories.credential_repository import CredentialRepository
+    from apps.api.app.repositories.execution_repository import ExecutionRepository
+    from apps.api.app.repositories.workflow_repository import WorkflowRepository
+
     # 1. Setup Phase: Mark running and Load Context
-    credentials_dict = {}
+    credentials_list = []
     async with AsyncSessionLocal() as db:
         exec_repo = ExecutionRepository(db)
         wf_repo = WorkflowRepository(db)
@@ -40,17 +41,26 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
         # Fetch user_id from workflow
         workflow = await wf_repo.get_by_id(uuid.UUID(workflow_id))
         if workflow:
+            logger.info(f"Fetching credentials for user {workflow.user_id} (workflow {workflow_id})")
             # Fetch and decrypt all credentials for this user
             user_credentials = await cred_repo.list_by_user(workflow.user_id)
+            logger.info(f"Found {len(user_credentials)} credentials for user {workflow.user_id}")
+            
             for cred in user_credentials:
                 try:
                     decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
-                    # Use credential type as key (e.g., 'slack_oauth', 'openai_api_key')
-                    credentials_dict[cred.type] = decrypted_data
+                    logger.info(f"Loaded credential: ID={cred.id}, Type={cred.type}, Name={cred.name}")
+                    credentials_list.append({
+                        "id": str(cred.id),
+                        "type": cred.type,
+                        "data": decrypted_data
+                    })
                 except Exception as e:
-                    logger.error(f"Failed to decrypt credential {cred.id}: {e}")
+                    logger.error(f"Failed to decrypt credential {cred.id}: {str(e)}", exc_info=True)
+        else:
+            logger.error(f"Workflow {workflow_id} not found when fetching credentials")
 
-    # 2. Execution Phase: Run the runner (No DB session held here)
+    # 2. Execution Phase: Run the runner
     try:
         async def on_log(message: str, level: str = "info", node_id: str | None = None, payload: Any = None):
             async with AsyncSessionLocal() as db:
@@ -63,14 +73,16 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
                     payload=payload
                 )
 
-        runner = WorkflowRunner(
-            workflow_id=workflow_id,
-            execution_id=execution_id,
-            graph=graph,
-            on_log=on_log,
-            credentials=credentials_dict
-        )
-        output = await runner.run(trigger_data)
+        async with AsyncSessionLocal() as db:
+            runner = WorkflowRunner(
+                workflow_id=workflow_id,
+                execution_id=execution_id,
+                graph=graph,
+                db=db,
+                on_log=on_log,
+                credentials=credentials_list
+            )
+            output = await runner.run(trigger_data)
 
         # 3. Finish Phase: Mark completed
         async with AsyncSessionLocal() as db:

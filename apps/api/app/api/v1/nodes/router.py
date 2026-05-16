@@ -1,5 +1,7 @@
 from typing import Any
+
 from fastapi import APIRouter
+
 from apps.api.app.node_system.registry.registry import node_registry
 
 router = APIRouter()

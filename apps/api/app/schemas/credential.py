@@ -1,7 +1,7 @@
-from datetime import datetime
-from typing import Any, Optional
-
 import uuid
+from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -12,18 +12,18 @@ class CredentialBase(BaseModel):
 
 class CredentialCreate(CredentialBase):
     data: dict[str, Any]  # Raw sensitive data, will be encrypted
-    meta: Optional[dict[str, Any]] = None
+    meta: dict[str, Any] | None = None
 
 
 class CredentialUpdate(BaseModel):
-    name: Optional[str] = None
-    data: Optional[dict[str, Any]] = None
-    meta: Optional[dict[str, Any]] = None
+    name: str | None = None
+    data: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
 
 
 class CredentialOut(CredentialBase):
     id: uuid.UUID
-    meta: Optional[dict[str, Any]] = None
+    meta: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -47,7 +47,7 @@ class ProviderOut(BaseModel):
     name: str
     type: str
     description: str
-    icon_url: Optional[str] = None
-    fields: Optional[list[ProviderField]] = None
-    hint: Optional[str] = None
-    scopes: Optional[list[str]] = None
+    icon_url: str | None = None
+    fields: list[ProviderField] | None = None
+    hint: str | None = None
+    scopes: list[str] | None = None

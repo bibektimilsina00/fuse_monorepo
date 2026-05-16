@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel
 
 from apps.api.app.node_system.base.base_node import BaseNode
 from apps.api.app.node_system.base.node_context import NodeContext
