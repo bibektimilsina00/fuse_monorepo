@@ -160,3 +160,44 @@ body {
 .custom-scrollbar:hover::-webkit-scrollbar-thumb {
   background: var(--surface-5);
 }
+
+/* Node execution state */
+@keyframes node-border-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Running: green light sweeps around a gray border */
+.node-running-wrapper {
+  isolation: isolate;
+}
+
+.node-running-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 9px;
+  background: conic-gradient(
+    from 0deg,
+    transparent      0deg,
+    transparent      45deg,
+    rgba(51,196,130,0.12) 65deg,
+    rgba(51,196,130,0.9)  90deg,
+    rgba(51,196,130,0.12) 115deg,
+    transparent      135deg,
+    transparent      360deg
+  );
+  animation: node-border-spin 1.6s linear infinite;
+  z-index: 0;
+}
+
+/* Success: just a thin brand-color border + barely-there glow */
+.node-status-completed {
+  border-color: #33c482 !important;
+  box-shadow: 0 0 5px rgba(51, 196, 130, 0.18);
+}
+
+/* Failed: thin red border + barely-there glow */
+.node-status-failed {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.18);
+}

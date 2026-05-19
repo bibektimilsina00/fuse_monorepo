@@ -5,7 +5,7 @@ import { useExecutionStore } from '@/stores/execution-store'
 
 export function useExecutionStream(executionId: string | null) {
   const token = useAuthStore((s) => s.token)
-  const { addLog, updateRunStatus, appendStreamChunk, clearStreamingContent } = useExecutionStore()
+  const { addLog, updateRunStatus, appendStreamChunk, clearStreamingContent, setNodeStatus, clearNodeStatuses } = useExecutionStore()
   const [isRunning, setIsRunning] = useState(false)
 
   useEffect(() => {
@@ -13,6 +13,7 @@ export function useExecutionStream(executionId: string | null) {
 
     setIsRunning(true)
     updateRunStatus(executionId, 'running')
+    clearNodeStatuses(executionId)
 
     const ws = connectExecutionWebSocket(
       executionId,
@@ -46,6 +47,7 @@ export function useExecutionStream(executionId: string | null) {
           const timestamp = event.timestamp || new Date().toISOString()
 
           if (event.type === 'node_started') {
+            if (event.node_id) setNodeStatus(executionId, event.node_id, 'running')
             addLog(executionId, {
               id: logId,
               node_id: event.node_id,
@@ -55,6 +57,7 @@ export function useExecutionStream(executionId: string | null) {
               payload: { node_type: event.node_type }
             })
           } else if (event.type === 'node_completed') {
+            if (event.node_id) setNodeStatus(executionId, event.node_id, 'completed')
             addLog(executionId, {
               id: logId,
               node_id: event.node_id,
@@ -68,6 +71,7 @@ export function useExecutionStream(executionId: string | null) {
               clearStreamingContent(executionId, event.node_id)
             }
           } else if (event.type === 'node_failed') {
+            if (event.node_id) setNodeStatus(executionId, event.node_id, 'failed')
             addLog(executionId, {
               id: logId,
               node_id: event.node_id,
@@ -89,7 +93,7 @@ export function useExecutionStream(executionId: string | null) {
     return () => {
       ws.close()
     }
-  }, [executionId, token, addLog, updateRunStatus, appendStreamChunk, clearStreamingContent])
+  }, [executionId, token, addLog, updateRunStatus, appendStreamChunk, clearStreamingContent, setNodeStatus, clearNodeStatuses])
 
   return { isRunning }
 }

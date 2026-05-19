@@ -6,6 +6,7 @@ import { NodeToolbar } from '@/features/workflow-editor/nodes/components/node-to
 import { NodeHeader } from '@/features/workflow-editor/nodes/components/node-header'
 import { NodeProperty } from '@/features/workflow-editor/nodes/components/node-property'
 import { NodeHandles } from '@/features/workflow-editor/nodes/components/node-handles'
+import { useNodeExecutionStatus } from '@/features/workflow-editor/hooks/use-node-execution-status'
 
 export function ConditionNode({ id, type, data, selected }: NodeProps) {
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
@@ -13,6 +14,7 @@ export function ConditionNode({ id, type, data, selected }: NodeProps) {
   const updateNodeInternals = useUpdateNodeInternals()
   const isLocked = data?.locked ?? false
   const handleDirection = data?.handleDirection ?? 'horizontal'
+  const executionStatus = useNodeExecutionStatus(id)
 
   useEffect(() => {
     updateNodeInternals(id)
@@ -29,14 +31,18 @@ export function ConditionNode({ id, type, data, selected }: NodeProps) {
   const totalOutputHandles = conditions.length + 1 + (hasErrorHandle ? 1 : 0)
 
   return (
-    <div className="group relative">
-      <div 
-        role="button" 
-        tabIndex={0} 
+    <div className={cn("group relative", executionStatus === 'running' && "node-running-wrapper")}>
+      <div
+        role="button"
+        tabIndex={0}
         className={cn(
-          "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-all",
+          "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-colors",
           !isLocked ? "cursor-grab [&:active]:cursor-grabbing" : "cursor-default",
-          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-border"
+          executionStatus === 'completed' && "node-status-completed",
+          executionStatus === 'failed'    && "node-status-failed",
+          executionStatus === 'running' && "border-border",
+          !executionStatus && selected && !isLocked && "border-[#555]",
+          !executionStatus && (!selected || isLocked) && "border-border",
         )}
       >
         <NodeToolbar id={id} />

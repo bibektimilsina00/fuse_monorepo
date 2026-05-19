@@ -326,6 +326,7 @@ class AgentNode(BaseNode[AgentProperties]):
             messages = await self._apply_memory_async(messages, context)
             if not messages:
                 return NodeResult(success=False, error="At least one agent message is required.")
+            messages = self._ensure_agent_system_prompt(messages)
 
             # Resolve skills — fetch metadata + pre-load content map
             skill_map: dict[str, str] = {}
@@ -360,6 +361,8 @@ class AgentNode(BaseNode[AgentProperties]):
             # Track forced-tool state across iterations
             remaining_forced = list(forced_tool_ids)
             used_forced: set[str] = set()
+            seen_tool_calls: set[tuple[str, str]] = set()
+            max_iterations_reached = False
 
             try:
                 for _iteration in range(max(self.props.maxIterations, 1)):
@@ -479,7 +482,6 @@ class AgentNode(BaseNode[AgentProperties]):
                     final_tokens = tokens
 
                     if not tool_calls:
-                        # No more tool calls — we are done
                         break
 
                     # Track which forced tools were used this iteration
@@ -496,6 +498,7 @@ class AgentNode(BaseNode[AgentProperties]):
                     )
 
                     # Execute each tool call and append results
+                    from apps.api.app.node_system.tools.base import ToolResult as _TR
                     for tc in tool_calls:
                         tool_id = tc["name"]
                         llm_args = tc.get("arguments") or {}
@@ -504,17 +507,29 @@ class AgentNode(BaseNode[AgentProperties]):
                         # Merge: user_params provide defaults; llm_args override for user-or-llm params
                         merged_params = {**user_params, **llm_args}
 
+                        # Duplicate call detection — block same (tool, args) from re-executing
+                        call_sig = (tool_id, json.dumps(llm_args, sort_keys=True, default=str))
+                        if call_sig in seen_tool_calls:
+                            result = _TR(
+                                success=False,
+                                error=(
+                                    f"Duplicate call blocked: '{tool_id}' was already called with "
+                                    "these exact arguments and the result was provided. "
+                                    "Do not repeat this call — proceed with your remaining tasks."
+                                ),
+                            )
                         # Handle load_skill — return full skill markdown content to LLM
-                        if tool_id == "load_skill":
+                        elif tool_id == "load_skill":
+                            seen_tool_calls.add(call_sig)
                             skill_name = llm_args.get("skill_name", "")
-                            content = skill_map.get(skill_name)
-                            from apps.api.app.node_system.tools.base import ToolResult as _TR
-                            if content:
-                                result = _TR(success=True, output={"content": content})
+                            skill_content = skill_map.get(skill_name)
+                            if skill_content:
+                                result = _TR(success=True, output={"content": skill_content})
                             else:
                                 result = _TR(success=False, error=f"Skill '{skill_name}' not found")
                         # Route MCP tools to the appropriate MCP client
                         elif tool_id.startswith("mcp:") and mcp_clients:
+                            seen_tool_calls.add(call_sig)
                             parts = tool_id.split(":", 2)
                             server_name = parts[1] if len(parts) > 1 else ""
                             mcp_tool_name = parts[2] if len(parts) > 2 else ""
@@ -522,9 +537,9 @@ class AgentNode(BaseNode[AgentProperties]):
                             if mcp_client:
                                 result = await mcp_client.call_tool(mcp_tool_name, llm_args)
                             else:
-                                from apps.api.app.node_system.tools.base import ToolResult as _TR
                                 result = _TR(success=False, error=f"MCP server '{server_name}' not found")
                         else:
+                            seen_tool_calls.add(call_sig)
                             result = await tool_registry.execute(tool_id, merged_params, context)
 
                         all_tool_calls.append({
@@ -536,6 +551,61 @@ class AgentNode(BaseNode[AgentProperties]):
 
                         messages.append(
                             self._build_tool_result_message(tc, result, ai_provider.ai_api_type)
+                        )
+                else:
+                    max_iterations_reached = True
+
+                # Final summarization — if loop produced tool calls but no text response,
+                # make one more LLM call (no tools) so the agent always returns content.
+                # Must run inside try so the HTTP client is still open.
+                if not final_content and all_tool_calls:
+                    summary_note = (
+                        "You have reached the maximum number of iterations. "
+                        if max_iterations_reached else ""
+                    )
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            summary_note
+                            + "Please provide your final response based on the tool results above."
+                        ),
+                    })
+                    try:
+                        if ai_provider.ai_api_type == "openai_compatible":
+                            summary_raw = await self._call_llm_openai_compatible(
+                                client=client,
+                                url=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=[],
+                            )
+                            final_content, _ = self._extract_openai_content_and_tools(summary_raw)
+                        elif ai_provider.ai_api_type == "anthropic":
+                            summary_raw = await self._call_llm_anthropic(
+                                client=client,
+                                url=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=[],
+                            )
+                            final_content, _ = self._extract_anthropic_content_and_tools(summary_raw)
+                        elif ai_provider.ai_api_type == "google":
+                            summary_raw = await self._call_llm_google(
+                                client=client,
+                                url_template=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=[],
+                            )
+                            final_content, _ = self._extract_google_content_and_tools(summary_raw)
+                    except Exception as _e:
+                        logger.warning(f"Final summarization call failed: {_e}")
+                        final_content = (
+                            f"Agent completed {len(all_tool_calls)} tool call(s) "
+                            "but could not generate a final summary."
                         )
 
             finally:
@@ -638,6 +708,27 @@ class AgentNode(BaseNode[AgentProperties]):
 
         # No system message — prepend one
         return [{"role": "system", "content": skills_section}, *messages]
+
+    def _ensure_agent_system_prompt(
+        self, messages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Prepend a default system prompt if the user provided none.
+
+        Guides the LLM on failure handling and dedup — critical for weaker models.
+        """
+        if any(m.get("role") == "system" for m in messages):
+            return messages
+        system_content = (
+            "You are a helpful AI agent with access to tools.\n\n"
+            "Guidelines:\n"
+            "- Use tools to gather information and complete tasks step by step.\n"
+            "- If a tool returns an error or a non-success status (e.g. HTTP 4xx/5xx), "
+            "acknowledge the result and continue with remaining tasks — do not retry the same call.\n"
+            "- Never call the same tool with the same arguments more than once.\n"
+            "- After gathering information, produce a clear, concise final response.\n"
+            "- If a task cannot be completed, explain what you attempted and what failed."
+        )
+        return [{"role": "system", "content": system_content}, *messages]
 
     def _build_load_skill_tool(
         self, skill_meta: list[dict[str, str]]

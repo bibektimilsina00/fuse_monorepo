@@ -11,6 +11,7 @@ import {
   buildCanonicalIndex,
   isSubBlockVisibleForMode,
 } from '@/features/workflow-editor/panels/inspector/visibility'
+import { useNodeExecutionStatus } from '@/features/workflow-editor/hooks/use-node-execution-status'
 
 export function CustomNode({ id, type, data, selected }: NodeProps) {
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
@@ -18,6 +19,7 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
   const updateNodeInternals = useUpdateNodeInternals()
   const isLocked = data?.locked ?? false
   const handleDirection = data?.handleDirection ?? 'horizontal'
+  const executionStatus = useNodeExecutionStatus(id)
 
   const canonicalIndex = useMemo(
     () => definition ? buildCanonicalIndex(definition.properties) : { groupsById: {}, canonicalIdByPropName: {} },
@@ -42,14 +44,19 @@ export function CustomNode({ id, type, data, selected }: NodeProps) {
   const hasErrorHandle = !!definition.allowError
 
   return (
-    <div className="group relative">
-      <div 
-        role="button" 
-        tabIndex={0} 
+    <div className={cn("group relative", executionStatus === 'running' && "node-running-wrapper")}>
+      <div
+        role="button"
+        tabIndex={0}
         className={cn(
-          "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-all",
+          "workflow-drag-handle relative z-[20] w-[200px] select-none rounded-lg border bg-[var(--surface-2)] transition-colors",
           !isLocked ? "cursor-grab [&:active]:cursor-grabbing" : "cursor-default",
-          selected && !isLocked ? "border-[var(--brand-accent)] shadow-[0_0_10px_rgba(34,197,94,0.1)]" : "border-border"
+          executionStatus === 'completed' && "node-status-completed",
+          executionStatus === 'failed'    && "node-status-failed",
+          // running: keep normal gray border so the spinning glow wraps around it
+          executionStatus === 'running' && "border-border",
+          !executionStatus && selected && !isLocked && "border-[#555]",
+          !executionStatus && (!selected || isLocked) && "border-border",
         )}
       >
         <NodeToolbar id={id} />

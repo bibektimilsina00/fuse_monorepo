@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { ExecutionLog } from '@/lib/api/contracts'
 
+export type NodeExecutionStatus = 'running' | 'completed' | 'failed'
+
 export interface ExecutionRun {
   id: string
   status: string
@@ -21,6 +23,10 @@ interface ExecutionState {
   addLog: (id: string, log: ExecutionLog) => void
   updateRunStatus: (id: string, status: string) => void
   clearRuns: () => void
+  // Per-node execution status: executionId → nodeId → status
+  nodeStatuses: Record<string, Record<string, NodeExecutionStatus>>
+  setNodeStatus: (executionId: string, nodeId: string, status: NodeExecutionStatus) => void
+  clearNodeStatuses: (executionId: string) => void
   // Streaming state: executionId → nodeId → accumulated content
   streamingContent: Record<string, Record<string, string>>
   appendStreamChunk: (executionId: string, nodeId: string, delta: string) => void
@@ -65,6 +71,20 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
       runs: state.runs.map((r) => (r.id === id ? { ...r, status } : r)),
     })),
   clearRuns: () => set({ runs: [], selectedLogId: null }),
+  nodeStatuses: {},
+  setNodeStatus: (executionId, nodeId, status) =>
+    set((state) => ({
+      nodeStatuses: {
+        ...state.nodeStatuses,
+        [executionId]: { ...(state.nodeStatuses[executionId] ?? {}), [nodeId]: status },
+      },
+    })),
+  clearNodeStatuses: (executionId) =>
+    set((state) => {
+      const next = { ...state.nodeStatuses }
+      delete next[executionId]
+      return { nodeStatuses: next }
+    }),
   streamingContent: {},
   appendStreamChunk: (executionId, nodeId, delta) =>
     set((state) => {
