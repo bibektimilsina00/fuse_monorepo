@@ -8,7 +8,9 @@ export type KnownNodePropertyType =
   | 'key-value'
   | 'list'
   | 'schema'
-  | 'file-list';
+  | 'file-list'
+  | 'tool-selector'
+  | 'skill-selector';
 
 export type NodePropertyType = KnownNodePropertyType | (string & {});
 
@@ -53,5 +55,8 @@ export interface NodeDefinition {
   outputs: number;
   outputsSchema?: { label: string; type: string }[];
   allowError?: boolean;
-  credentialType?: string; // e.g. 'slack_oauth'
+  credentialType?: string;
+  allowError?: boolean;
+  tools?: string[];
+  operationToolMap?: Record<string, string>;
 }

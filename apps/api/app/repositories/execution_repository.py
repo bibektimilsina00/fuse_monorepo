@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,3 +72,31 @@ class ExecutionRepository:
         )
         self.db.add(log)
         await self.db.commit()
+
+    async def save_pause(
+        self,
+        execution_id: uuid.UUID,
+        node_id: str,
+        resume_token: str,
+        resume_schema: dict[str, Any],
+        snapshot: dict[str, Any],
+    ) -> None:
+        result = await self.db.execute(select(Execution).where(Execution.id == execution_id))
+        execution = result.scalar_one_or_none()
+        if execution:
+            execution.status = "paused"
+            execution.paused_node_id = node_id
+            execution.resume_token = resume_token
+            execution.resume_schema = resume_schema
+            execution.snapshot = snapshot
+            await self.db.commit()
+
+    async def get_paused(self, execution_id: uuid.UUID, resume_token: str) -> Execution | None:
+        result = await self.db.execute(
+            select(Execution).where(
+                Execution.id == execution_id,
+                Execution.status == "paused",
+                Execution.resume_token == resume_token,
+            )
+        )
+        return result.scalar_one_or_none()

@@ -97,6 +97,7 @@ function EditorContent() {
 
   const { data: nodeRegistry = [] } = useNodes()
   const setNodeDefinitions = useWorkflowStore(s => s.setNodeDefinitions)
+  const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
 
   React.useEffect(() => {
     if (nodeRegistry.length > 0) {
@@ -104,18 +105,17 @@ function EditorContent() {
     }
   }, [nodeRegistry, setNodeDefinitions])
 
-  // Generate nodeTypes from dynamic registry
-  const dynamicNodeTypes = React.useMemo(() => {
-    const types: Record<string, any> = {}
-    nodeRegistry.forEach(node => {
-      if (node.type === 'logic.condition') {
-        types[node.type] = ConditionNode
-      } else {
-        types[node.type] = CustomNode
-      }
-    })
+  // Build nodeTypes from API response — all non-condition types use CustomNode.
+  // Memoized: only rebuilds when nodeDefinitions change (rare after first load).
+  const nodeTypes = React.useMemo(() => {
+    const types: Record<string, React.ComponentType<any>> = {
+      'logic.condition': ConditionNode,
+    }
+    for (const def of nodeDefinitions) {
+      if (!types[def.type]) types[def.type] = CustomNode
+    }
     return types
-  }, [nodeRegistry])
+  }, [nodeDefinitions])
 
   const [connectionColor, setConnectionColor] = React.useState('var(--workflow-edge, #555)')
 
@@ -131,13 +131,23 @@ function EditorContent() {
     setConnectionColor('var(--workflow-edge)')
   }, [])
 
+  // Wait for node definitions from API before rendering ReactFlow.
+  // Without them nodeTypes is empty and ReactFlow logs #003 for every node type.
+  if (nodeDefinitions.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-[var(--bg)]">
+        <div className="size-8 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-[var(--text-primary)]" />
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex flex-col min-w-0 bg-[var(--bg)] relative overflow-hidden">
       <div className="flex-1 relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          nodeTypes={dynamicNodeTypes}
+          nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}

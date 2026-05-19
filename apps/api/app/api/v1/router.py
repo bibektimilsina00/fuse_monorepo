@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
+from apps.api.app.api.v1.a2a.router import router as a2a_router
 from apps.api.app.api.v1.ai.router import router as ai_router
+from apps.api.app.api.v1.skills.router import router as skills_router
 from apps.api.app.api.v1.assets.router import router as assets_router
 from apps.api.app.api.v1.auth.router import router as auth_router
 from apps.api.app.api.v1.credentials.router import router as credentials_router
@@ -24,4 +26,6 @@ router.include_router(websocket_router, prefix="/ws", tags=["realtime"])
 router.include_router(ai_router, prefix="/ai", tags=["ai"])
 router.include_router(nodes_router, prefix="/nodes", tags=["nodes"])
 router.include_router(assets_router, prefix="/assets", tags=["assets"])
+router.include_router(skills_router, prefix="/skills", tags=["skills"])
+router.include_router(a2a_router, prefix="/a2a", tags=["a2a"])
 router.include_router(webhooks_router)

@@ -16,6 +16,8 @@ import { KeyValueField } from '../key-value-field'
 import { SchemaEditorField } from '../schema-editor-field'
 import { CredentialPicker } from '../credential-picker'
 import { FileListField } from '../file-list-field'
+import { ToolSelectorField } from '../tool-selector-field/ToolSelectorField'
+import { SkillSelectorField } from '../skill-selector-field/SkillSelectorField'
 
 export interface PropertyFieldProps {
   prop: NodeProperty
@@ -116,6 +118,22 @@ export const PropertyField: React.FC<PropertyFieldProps> = (props) => {
           <FileListField
             value={properties[prop.name] || []}
             onChange={onChange}
+          />
+        )
+      case 'tool-selector':
+        return (
+          <ToolSelectorField
+            value={properties[prop.name] || []}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        )
+      case 'skill-selector':
+        return (
+          <SkillSelectorField
+            value={properties[prop.name] || []}
+            onChange={onChange}
+            disabled={disabled}
           />
         )
       case 'json':

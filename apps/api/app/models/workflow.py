@@ -63,6 +63,7 @@ class Workflow(Base):
     )
     position: Mapped[int] = mapped_column(Integer, default=0)
     color: Mapped[str | None] = mapped_column(String, nullable=True)
+    env: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False
@@ -85,12 +86,17 @@ class Execution(Base):
     )
     status: Mapped[str] = mapped_column(
         String, default="pending"
-    )  # pending, running, completed, failed
+    )  # pending, running, completed, failed, paused
     trigger_type: Mapped[str] = mapped_column(String, nullable=False)  # manual, webhook, cron
     input_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     output_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # Pause/Resume fields
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    resume_token: Mapped[str | None] = mapped_column(String, nullable=True)
+    resume_schema: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    paused_node_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="executions")
     logs: Mapped[list["ExecutionLog"]] = relationship(

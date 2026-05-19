@@ -11,6 +11,7 @@ class WorkflowCreate(BaseModel):
     position: int = 0
     color: str | None = None
     graph: dict = Field(default_factory=lambda: {"nodes": [], "edges": []})
+    env: dict[str, str] | None = None
 
 
 class WorkflowUpdate(BaseModel):
@@ -21,6 +22,7 @@ class WorkflowUpdate(BaseModel):
     graph: dict | None = None
     is_active: bool | None = None
     color: str | None = None
+    env: dict[str, str] | None = None
 
 
 class WorkflowBatchItem(BaseModel):
@@ -45,6 +47,7 @@ class WorkflowOut(BaseModel):
     is_active: bool
     position: int
     color: str | None = None
+    env: dict[str, str] | None = None
     created_at: datetime
     updated_at: datetime
 

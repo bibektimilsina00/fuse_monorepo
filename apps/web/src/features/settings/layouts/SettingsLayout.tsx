@@ -8,7 +8,7 @@ export const SettingsLayout: React.FC = () => {
           The Sidebar is now managed by the MainLayout (via route-based detection).
           This layout purely handles the main content scrolling area for settings.
       */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar">
+      <main className="flex-1 overflow-hidden h-full">
         <Outlet />
       </main>
     </div>

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import uuid
 from typing import Any
@@ -9,27 +11,49 @@ logger = get_logger(__name__)
 
 
 @celery_app.task(name="execute_workflow")
-def execute_workflow(execution_id: str, workflow_id: str, graph: dict, trigger_data: dict):
-    """Main workflow execution task. Runs async WorkflowRunner in sync Celery context."""
+def execute_workflow(
+    execution_id: str,
+    workflow_id: str,
+    graph: dict,
+    trigger_data: dict,
+    resume_from: str | None = None,
+    resume_input: dict | None = None,
+    snapshot: dict | None = None,
+):
+    """Main workflow execution task. Handles both fresh runs and resumes."""
     try:
-        asyncio.run(_run_workflow(execution_id, workflow_id, graph, trigger_data))
+        asyncio.run(_run_workflow(
+            execution_id, workflow_id, graph, trigger_data,
+            resume_from=resume_from,
+            resume_input=resume_input,
+            snapshot=snapshot,
+        ))
     except Exception as e:
         logger.error(f"execute_workflow task failed: {e}", exc_info=True)
 
 
-async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigger_data: dict):
+async def _run_workflow(
+    execution_id: str,
+    workflow_id: str,
+    graph: dict,
+    trigger_data: dict,
+    resume_from: str | None = None,
+    resume_input: dict | None = None,
+    snapshot: dict | None = None,
+):
     import json
 
     from apps.api.app.core.database import AsyncSessionLocal
     from apps.api.app.credential_manager.encryption.aes import encryption_service
     from apps.api.app.execution_engine.engine.event_emitter import RedisEventEmitter
-    from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
+    from apps.api.app.execution_engine.engine.workflow_runner import PauseSignal, WorkflowRunner
     from apps.api.app.repositories.credential_repository import CredentialRepository
     from apps.api.app.repositories.execution_repository import ExecutionRepository
     from apps.api.app.repositories.workflow_repository import WorkflowRepository
 
     emitter = RedisEventEmitter(execution_id)
-    credentials_list = []
+    credentials_list: list[dict[str, Any]] = []
+
     async with AsyncSessionLocal() as db:
         exec_repo = ExecutionRepository(db)
         wf_repo = WorkflowRepository(db)
@@ -37,50 +61,31 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
 
         await exec_repo.update_status(uuid.UUID(execution_id), "running")
         await exec_repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
-
         await emitter.emit("execution_started", {})
 
-        # Fetch user_id from workflow
         workflow = await wf_repo.get_by_id(uuid.UUID(workflow_id))
         if workflow:
-            logger.info(
-                f"Fetching credentials for user {workflow.user_id} (workflow {workflow_id})"
-            )
-            # Fetch and decrypt all credentials for this user
-            user_credentials = await cred_repo.list_by_user(workflow.user_id)
-            logger.info(f"Found {len(user_credentials)} credentials for user {workflow.user_id}")
-
-            for cred in user_credentials:
+            for cred in await cred_repo.list_by_user(workflow.user_id):
                 try:
                     decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
-                    logger.info(
-                        f"Loaded credential: ID={cred.id}, Type={cred.type}, Name={cred.name}"
-                    )
                     credentials_list.append(
                         {"id": str(cred.id), "type": cred.type, "data": decrypted_data}
                     )
                 except Exception as e:
-                    logger.error(
-                        f"Failed to decrypt credential {cred.id} ({cred.type}). "
-                        "This usually means the ENCRYPTION_KEY has changed. "
-                        "Please delete and re-add this Slack account in the settings. "
-                        f"Error: {str(e)}"
-                    )
+                    logger.error(f"Failed to decrypt credential {cred.id}: {e}")
         else:
             logger.error(f"Workflow {workflow_id} not found when fetching credentials")
 
-    # 2. Execution Phase: Run the runner
+    async def on_log(
+        message: str, level: str = "info", node_id: str | None = None, payload: Any = None
+    ) -> None:
+        async with AsyncSessionLocal() as db:
+            repo = ExecutionRepository(db)
+            await repo.add_log(
+                uuid.UUID(execution_id), message, level=level, node_id=node_id, payload=payload
+            )
+
     try:
-
-        async def on_log(
-            message: str, level: str = "info", node_id: str | None = None, payload: Any = None
-        ):
-            async with AsyncSessionLocal() as db:
-                repo = ExecutionRepository(db)
-                await repo.add_log(
-                    uuid.UUID(execution_id), message, level=level, node_id=node_id, payload=payload
-                )
-
         async with AsyncSessionLocal() as db:
             runner = WorkflowRunner(
                 workflow_id=workflow_id,
@@ -91,16 +96,49 @@ async def _run_workflow(execution_id: str, workflow_id: str, graph: dict, trigge
                 credentials=credentials_list,
                 emitter=emitter,
             )
-            output = await runner.run(trigger_data)
+            if workflow:
+                runner.env = workflow.env or {}
 
-        # 3. Finish Phase: Mark completed
+            # If resuming, restore snapshot state so already-run nodes are skipped
+            if resume_from and snapshot:
+                runner._executed = {nid: True for nid in snapshot.get("executed_nodes", [])}
+                runner._outputs = snapshot.get("node_outputs", {})
+                runner.variables = snapshot.get("variables", {})
+                # Resume from the paused node with human input
+                output = await runner._resume_from(resume_from, resume_input or {})
+            else:
+                output = await runner.run(trigger_data)
+
         async with AsyncSessionLocal() as db:
             repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "completed", output_data=output)
-            await repo.add_log(
-                uuid.UUID(execution_id), "Workflow execution completed", level="info"
-            )
+            await repo.add_log(uuid.UUID(execution_id), "Workflow execution completed", level="info")
             await emitter.emit("execution_completed", {"status": "completed", "output": output})
+
+    except PauseSignal as pause:
+        import secrets
+        token = secrets.token_urlsafe(32)
+        snap = {
+            "executed_nodes": list(runner._executed.keys()),
+            "node_outputs": runner._outputs,
+            "variables": runner.variables,
+            "graph": graph,  # store so resume endpoint can re-enqueue
+        }
+        async with AsyncSessionLocal() as db:
+            repo = ExecutionRepository(db)
+            await repo.save_pause(
+                uuid.UUID(execution_id),
+                node_id=pause.node_id,
+                resume_token=token,
+                resume_schema=pause.resume_schema,
+                snapshot=snap,
+            )
+        await emitter.emit("execution_paused", {
+            "node_id": pause.node_id,
+            "resume_token": token,
+            "resume_schema": pause.resume_schema,
+        })
+        logger.info(f"Execution {execution_id} paused at node {pause.node_id}")
 
     except Exception as e:
         error_msg = str(e)

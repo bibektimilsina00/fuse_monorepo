@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from typing import Any, Literal
 
@@ -34,15 +36,28 @@ class AgentProperties(BaseModel):
     googleModel: str | None = None
     groqModel: str | None = None
     messages: list[AgentMessage] | str | None = Field(default_factory=list)
-    tools: list[dict[str, Any]] | str | None = Field(default_factory=list)
+    tools: list[dict[str, Any]] | list[str] | str | None = Field(default_factory=list)
     toolChoice: str = "auto"
     memoryType: MemoryType = "none"
     memoryKey: str | None = None
     memoryLimit: int = 10
+    memoryBackend: str = "workflow"  # workflow | redis | pinecone | qdrant | mem0
+    memoryTTL: int = 86400
+    # Vector backend config
+    pineconeApiKey: str | None = None
+    pineconeIndex: str | None = None
+    qdrantUrl: str | None = None
+    qdrantCollection: str | None = None
+    mem0ApiKey: str | None = None
     temperature: float | None = 0.3
     maxTokens: int | None = 4096
     responseFormat: dict[str, Any] | str | None = None
     timeout: int = 60000
+    maxIterations: int = 10
+    streaming: bool = False
+    mcpServers: list[dict[str, Any]] | str | None = Field(default_factory=list)
+    skills: list[str] | str | None = Field(default_factory=list)  # list of skill IDs
+    reasoningEffort: str = "auto"  # auto | low | medium | high
 
 
 class AgentNode(BaseNode[AgentProperties]):
@@ -111,9 +126,9 @@ class AgentNode(BaseNode[AgentProperties]):
                 {
                     "name": "tools",
                     "label": "Tools",
-                    "type": "json",
+                    "type": "tool-selector",
                     "default": [],
-                    "description": "Function tools: [{ name, description, parameters }].",
+                    "description": "Tools the agent can use. Select from built-in nodes or integration tools.",
                 },
                 {
                     "name": "toolChoice",
@@ -125,6 +140,13 @@ class AgentNode(BaseNode[AgentProperties]):
                         {"label": "Required", "value": "required"},
                         {"label": "None", "value": "none"},
                     ],
+                },
+                {
+                    "name": "maxIterations",
+                    "label": "Max Iterations",
+                    "type": "number",
+                    "default": 10,
+                    "description": "Maximum number of agentic loop iterations.",
                 },
                 {
                     "name": "memoryType",
@@ -174,6 +196,34 @@ class AgentNode(BaseNode[AgentProperties]):
                     "label": "Timeout (ms)",
                     "type": "number",
                     "default": 60000,
+                },
+                {
+                    "name": "reasoningEffort",
+                    "label": "Reasoning Effort",
+                    "type": "options",
+                    "default": "auto",
+                    "options": [
+                        {"label": "Auto", "value": "auto"},
+                        {"label": "Low", "value": "low"},
+                        {"label": "Medium", "value": "medium"},
+                        {"label": "High", "value": "high"},
+                    ],
+                    "description": "For o1/o3 (OpenAI) and extended thinking (Anthropic).",
+                },
+                {
+                    "name": "streaming",
+                    "label": "Stream Response",
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Stream LLM tokens in real-time via WebSocket.",
+                },
+                {
+                    "name": "skills",
+                    "label": "Skills",
+                    "type": "skill-selector",
+                    "required": False,
+                    "default": [],
+                    "description": "Markdown skill files the agent can load on demand.",
                 },
             ],
             inputs=1,
@@ -247,67 +297,246 @@ class AgentNode(BaseNode[AgentProperties]):
             if provider.ai_provider_id
         }
 
+    # ------------------------------------------------------------------
+    # execute — full agentic loop
+    # ------------------------------------------------------------------
+
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:
         try:
+            # Ensure tool modules are registered
+            import apps.api.app.node_system.tools.loader  # noqa: F401
+            from apps.api.app.node_system.tools.registry import tool_registry
+
             api_key = self._get_api_key(context)
             if not api_key:
                 provider_name = self._provider_name()
                 return NodeResult(success=False, error=f"{provider_name} API key credential is required.")
 
             messages = self._normalize_messages(input_data)
-            messages = self._apply_memory(messages, context)
+            messages = await self._apply_memory_async(messages, context)
             if not messages:
                 return NodeResult(success=False, error="At least one agent message is required.")
 
-            tools = self._normalize_tools()
+            # Resolve skills — fetch metadata + pre-load content map
+            skill_map: dict[str, str] = {}
+            skill_meta: list[dict[str, str]] = []
+            if context.db:
+                skill_meta, skill_map = await self._resolve_skills(context)
+
+            # Inject skills into system prompt
+            if skill_meta:
+                messages = self._inject_skills_system_prompt(messages, skill_meta)
+
+            # Resolve tools — includes MCP tools fetched asynchronously
+            tool_specs, tool_user_params, forced_tool_ids, mcp_clients = await self._resolve_tools_async()
+
+            # Inject load_skill tool if skills are available
+            if skill_meta:
+                tool_specs = [*tool_specs, self._build_load_skill_tool(skill_meta)]
+
             model = self._selected_model()
             timeout_seconds = self.props.timeout / 1000.0
             client = context.http_client or httpx.AsyncClient(timeout=timeout_seconds)
 
-            try:
-                ai_provider = get_ai_provider(self.props.provider)
-                if not ai_provider:
-                    return NodeResult(success=False, error=f"Unsupported AI provider: {self.props.provider}")
+            ai_provider = get_ai_provider(self.props.provider)
+            if not ai_provider:
+                return NodeResult(success=False, error=f"Unsupported AI provider: {self.props.provider}")
 
-                if ai_provider.ai_api_type == "openai_compatible":
-                    data = await self._execute_openai_compatible(
-                        client=client,
-                        url=ai_provider.chat_completions_url or "",
-                        api_key=api_key,
-                        model=model,
-                        messages=messages,
-                        tools=tools,
+            all_tool_calls: list[dict[str, Any]] = []
+            final_content: str = ""
+            final_raw: dict[str, Any] = {}
+            final_tokens: dict[str, Any] = {}
+
+            # Track forced-tool state across iterations
+            remaining_forced = list(forced_tool_ids)
+            used_forced: set[str] = set()
+
+            try:
+                for _iteration in range(max(self.props.maxIterations, 1)):
+                    # Determine tool_choice for this iteration
+                    if remaining_forced:
+                        next_forced = next(
+                            (t for t in remaining_forced if t not in used_forced), None
+                        )
+                        if next_forced:
+                            tool_choice_override: Any = {
+                                "type": "function",
+                                "function": {"name": next_forced},
+                            }
+                        else:
+                            tool_choice_override = "auto"
+                    else:
+                        tool_choice_override = None  # use global setting
+
+                    # Call LLM — streaming or full response
+                    emitter = context.emitter
+                    if self.props.streaming and emitter:
+                        if ai_provider.ai_api_type == "openai_compatible":
+                            content, tool_calls, tokens = await self._stream_llm_openai_compatible(
+                                client=client,
+                                url=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=tool_specs,
+                                tool_choice_override=tool_choice_override,
+                                emitter=emitter,
+                                node_id=context.node_id,
+                                iteration=_iteration,
+                            )
+                            raw_data = {}
+                        elif ai_provider.ai_api_type == "anthropic":
+                            content, tool_calls, tokens = await self._stream_llm_anthropic(
+                                client=client,
+                                url=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=tool_specs,
+                                tool_choice_override=tool_choice_override,
+                                emitter=emitter,
+                                node_id=context.node_id,
+                                iteration=_iteration,
+                            )
+                            raw_data = {}
+                        elif ai_provider.ai_api_type == "google":
+                            content, tool_calls, tokens = await self._stream_llm_google(
+                                client=client,
+                                url_template=ai_provider.chat_completions_url or "",
+                                api_key=api_key,
+                                model=model,
+                                messages=messages,
+                                tool_specs=tool_specs,
+                                tool_choice_override=tool_choice_override,
+                                emitter=emitter,
+                                node_id=context.node_id,
+                                iteration=_iteration,
+                            )
+                            raw_data = {}
+                        else:
+                            return NodeResult(success=False, error=f"Unsupported AI provider: {self.props.provider}")
+                    elif ai_provider.ai_api_type == "openai_compatible":
+                        raw_data = await self._call_llm_openai_compatible(
+                            client=client,
+                            url=ai_provider.chat_completions_url or "",
+                            api_key=api_key,
+                            model=model,
+                            messages=messages,
+                            tool_specs=tool_specs,
+                            tool_choice_override=tool_choice_override,
+                        )
+                        content, tool_calls = self._extract_openai_content_and_tools(raw_data)
+                        tokens = raw_data.get("usage") or {}
+                    elif ai_provider.ai_api_type == "anthropic":
+                        raw_data = await self._call_llm_anthropic(
+                            client=client,
+                            url=ai_provider.chat_completions_url or "",
+                            api_key=api_key,
+                            model=model,
+                            messages=messages,
+                            tool_specs=tool_specs,
+                            tool_choice_override=tool_choice_override,
+                        )
+                        content, tool_calls = self._extract_anthropic_content_and_tools(raw_data)
+                        usage = raw_data.get("usage") or {}
+                        tokens = {
+                            "prompt_tokens": usage.get("input_tokens"),
+                            "completion_tokens": usage.get("output_tokens"),
+                            "total_tokens": (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0),
+                        }
+                    elif ai_provider.ai_api_type == "google":
+                        raw_data = await self._call_llm_google(
+                            client=client,
+                            url_template=ai_provider.chat_completions_url or "",
+                            api_key=api_key,
+                            model=model,
+                            messages=messages,
+                            tool_specs=tool_specs,
+                            tool_choice_override=tool_choice_override,
+                        )
+                        content, tool_calls = self._extract_google_content_and_tools(raw_data)
+                        usage = raw_data.get("usageMetadata") or {}
+                        tokens = {
+                            "prompt_tokens": usage.get("promptTokenCount"),
+                            "completion_tokens": usage.get("candidatesTokenCount"),
+                            "total_tokens": usage.get("totalTokenCount"),
+                        }
+                    else:
+                        return NodeResult(success=False, error=f"Unsupported AI provider: {self.props.provider}")
+
+                    final_content = content
+                    final_raw = raw_data
+                    final_tokens = tokens
+
+                    if not tool_calls:
+                        # No more tool calls — we are done
+                        break
+
+                    # Track which forced tools were used this iteration
+                    for tc in tool_calls:
+                        tc_name = tc["name"]
+                        if tc_name in forced_tool_ids:
+                            used_forced.add(tc_name)
+                            if tc_name in remaining_forced:
+                                remaining_forced.remove(tc_name)
+
+                    # Append assistant message with tool calls (provider-specific)
+                    messages.append(
+                        self._build_assistant_message(content, tool_calls, ai_provider.ai_api_type)
                     )
-                    output = self._build_openai_compatible_output(data, model)
-                elif ai_provider.ai_api_type == "anthropic":
-                    data = await self._execute_anthropic(
-                        client=client,
-                        url=ai_provider.chat_completions_url or "",
-                        api_key=api_key,
-                        model=model,
-                        messages=messages,
-                        tools=tools,
-                    )
-                    output = self._build_anthropic_output(data, model)
-                elif ai_provider.ai_api_type == "google":
-                    data = await self._execute_google(
-                        client=client,
-                        url_template=ai_provider.chat_completions_url or "",
-                        api_key=api_key,
-                        model=model,
-                        messages=messages,
-                        tools=tools,
-                    )
-                    output = self._build_google_output(data, model)
-                else:
-                    return NodeResult(success=False, error=f"Unsupported AI provider: {self.props.provider}")
+
+                    # Execute each tool call and append results
+                    for tc in tool_calls:
+                        tool_id = tc["name"]
+                        llm_args = tc.get("arguments") or {}
+                        user_params = tool_user_params.get(tool_id, {})
+
+                        # Merge: user_params provide defaults; llm_args override for user-or-llm params
+                        merged_params = {**user_params, **llm_args}
+
+                        # Handle load_skill — return full skill markdown content to LLM
+                        if tool_id == "load_skill":
+                            skill_name = llm_args.get("skill_name", "")
+                            content = skill_map.get(skill_name)
+                            from apps.api.app.node_system.tools.base import ToolResult as _TR
+                            if content:
+                                result = _TR(success=True, output={"content": content})
+                            else:
+                                result = _TR(success=False, error=f"Skill '{skill_name}' not found")
+                        # Route MCP tools to the appropriate MCP client
+                        elif tool_id.startswith("mcp:") and mcp_clients:
+                            parts = tool_id.split(":", 2)
+                            server_name = parts[1] if len(parts) > 1 else ""
+                            mcp_tool_name = parts[2] if len(parts) > 2 else ""
+                            mcp_client = mcp_clients.get(server_name)
+                            if mcp_client:
+                                result = await mcp_client.call_tool(mcp_tool_name, llm_args)
+                            else:
+                                from apps.api.app.node_system.tools.base import ToolResult as _TR
+                                result = _TR(success=False, error=f"MCP server '{server_name}' not found")
+                        else:
+                            result = await tool_registry.execute(tool_id, merged_params, context)
+
+                        all_tool_calls.append({
+                            "name": tool_id,
+                            "arguments": llm_args,
+                            "result": result.output if result.success else {"error": result.error},
+                            "success": result.success,
+                        })
+
+                        messages.append(
+                            self._build_tool_result_message(tc, result, ai_provider.ai_api_type)
+                        )
+
             finally:
                 if not context.http_client:
                     await client.aclose()
 
+            output = self._build_output(final_content, model, final_tokens, all_tool_calls, final_raw)
             output["provider"] = self.props.provider
-            output["memory"] = self._persist_memory(messages, output.get("content", ""), context)
+            output["memory"] = await self._persist_memory_async(messages, final_content, context)
             return NodeResult(success=True, output_data=output)
+
         except httpx.HTTPStatusError as e:
             return NodeResult(success=False, error=self._extract_provider_error(e.response))
         except httpx.TimeoutException:
@@ -316,20 +545,321 @@ class AgentNode(BaseNode[AgentProperties]):
             logger.error(f"AgentNode failed: {e}", exc_info=True)
             return NodeResult(success=False, error=str(e))
 
-    async def _execute_openai_compatible(
+    # ------------------------------------------------------------------
+    # _resolve_tools — new format + legacy fallback
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Skill helpers
+    # ------------------------------------------------------------------
+
+    async def _resolve_skills(
+        self, context: Any
+    ) -> tuple[list[dict[str, str]], dict[str, str]]:
+        """Fetch skill metadata + content for selected skill IDs.
+
+        Returns:
+        - skill_meta: [{name, description}, ...] — for system prompt injection
+        - skill_map: {name: content} — for load_skill tool execution
+        """
+        import uuid as _uuid
+
+        from apps.api.app.repositories.skill_repository import SkillRepository
+
+        raw_skills = self.props.skills
+        if not raw_skills:
+            return [], {}
+
+        if isinstance(raw_skills, str):
+            try:
+                raw_skills = json.loads(raw_skills)
+            except json.JSONDecodeError:
+                return [], {}
+
+        if not isinstance(raw_skills, list):
+            return [], {}
+
+        # Accept both plain UUID strings and {skillId: "..."} dicts
+        skill_ids: list[_uuid.UUID] = []
+        for item in raw_skills:
+            try:
+                if isinstance(item, str):
+                    skill_ids.append(_uuid.UUID(item))
+                elif isinstance(item, dict) and item.get("skillId"):
+                    skill_ids.append(_uuid.UUID(item["skillId"]))
+            except (ValueError, AttributeError):
+                continue
+
+        if not skill_ids:
+            return [], {}
+
+        repo = SkillRepository(context.db)
+
+        # Fetch user_id from credentials context — skills are owned by the workflow user
+        # We use workflow_id to look up the user via WorkflowRepository
+        from apps.api.app.repositories.workflow_repository import WorkflowRepository
+
+        wf_repo = WorkflowRepository(context.db)
+        workflow = await wf_repo.get_by_id(_uuid.UUID(context.workflow_id))
+        if not workflow:
+            return [], {}
+
+        skills = await repo.get_by_ids_and_user(skill_ids, workflow.user_id)
+
+        skill_meta = [{"name": s.name, "description": s.description} for s in skills]
+        skill_map = {s.name: s.content for s in skills}
+        return skill_meta, skill_map
+
+    def _inject_skills_system_prompt(
+        self, messages: list[dict[str, Any]], skill_meta: list[dict[str, str]]
+    ) -> list[dict[str, Any]]:
+        skills_xml_parts = ["You have access to the following skills. Use the load_skill tool to activate a skill when relevant.\n\n<available_skills>"]
+        for s in skill_meta:
+            desc = s["description"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            skills_xml_parts.append(f'  <skill name="{s["name"]}">\n    <description>{desc}</description>\n  </skill>')
+        skills_xml_parts.append("</available_skills>")
+        skills_section = "\n".join(skills_xml_parts)
+
+        messages = list(messages)
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "system":
+                messages[i] = {**msg, "content": msg["content"] + "\n\n" + skills_section}
+                return messages
+
+        # No system message — prepend one
+        return [{"role": "system", "content": skills_section}, *messages]
+
+    def _build_load_skill_tool(
+        self, skill_meta: list[dict[str, str]]
+    ) -> dict[str, Any]:
+        skill_names = [s["name"] for s in skill_meta]
+        return {
+            "type": "function",
+            "function": {
+                "name": "load_skill",
+                "description": f"Load a skill to get specialized instructions. Available skills: {', '.join(skill_names)}",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "skill_name": {
+                            "type": "string",
+                            "description": "Name of the skill to load.",
+                            "enum": skill_names,
+                        }
+                    },
+                    "required": ["skill_name"],
+                },
+            },
+        }
+
+    def _parse_mcp_servers(self) -> list[dict[str, Any]]:
+        """Collect MCP server configs from two sources (in priority order):
+        1. kind='mcp' entries in the unified `tools` array (new UI format)
+        2. The standalone `mcpServers` JSON prop (legacy / raw JSON editing)
+        """
+        servers: list[dict[str, Any]] = []
+        seen_names: set[str] = set()
+
+        # 1. Read from unified tools array
+        raw_tools = self.props.tools
+        if isinstance(raw_tools, str):
+            try:
+                raw_tools = json.loads(raw_tools)
+            except json.JSONDecodeError:
+                raw_tools = []
+        if isinstance(raw_tools, list):
+            for item in raw_tools:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("kind") == "mcp":
+                    name = item.get("mcpName") or item.get("title", "")
+                    url = item.get("mcpUrl", "")
+                    if name and url and name not in seen_names:
+                        servers.append({"name": str(name), "url": str(url), "apiKey": item.get("mcpApiKey")})
+                        seen_names.add(name)
+
+        # 2. Fallback: legacy mcpServers prop
+        raw = self.props.mcpServers
+        if raw:
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except json.JSONDecodeError:
+                    raw = []
+            if isinstance(raw, list):
+                for item in raw:
+                    if not isinstance(item, dict):
+                        continue
+                    name = item.get("name")
+                    url = item.get("url")
+                    if name and url and name not in seen_names:
+                        servers.append({"name": str(name), "url": str(url), "apiKey": item.get("apiKey")})
+                        seen_names.add(name)
+
+        return servers
+
+    def _resolve_tools(
+        self,
+    ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], list[str]]:
+        """Parse tools props and return:
+        - tool_specs: list of OpenAI function-call schema objects for the LLM
+          (tools with usageControl='none' are excluded)
+        - tool_user_params: mapping of tool_id → user-provided params dict
+        - forced_tool_ids: tool IDs where usageControl='force'
+
+        Handles three formats:
+        1. New format: [{"toolId": "slack_send_message", "params": {...}, "usageControl": "auto"}, ...]
+        2. Old schema format: [{"type": "node"|"custom", "schema": {...}, ...}]
+        3. Legacy format: [{"name": "...", ...}] or [{"type": "function", "function": {...}}]
+        """
+        from apps.api.app.node_system.tools.registry import tool_registry
+
+        raw_tools = self.props.tools
+        if raw_tools in (None, ""):
+            return [], {}, []
+
+        if isinstance(raw_tools, str):
+            try:
+                raw_tools = json.loads(raw_tools)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Tools must be valid JSON: {e.msg}") from e
+
+        if not isinstance(raw_tools, list) or not raw_tools:
+            return [], {}, []
+
+        first = raw_tools[0]
+        if not isinstance(first, dict):
+            return [], {}, []
+
+        # ----- New format: items have a "toolId" key OR kind='mcp' (skip mcp here) -----
+        if "toolId" in first or first.get("kind") in ("tool", "mcp"):
+            tool_specs: list[dict[str, Any]] = []
+            tool_user_params: dict[str, dict[str, Any]] = {}
+            forced_tool_ids: list[str] = []
+
+            for item in raw_tools:
+                if not isinstance(item, dict):
+                    continue
+                # MCP entries are handled by _parse_mcp_servers, not here
+                if item.get("kind") == "mcp":
+                    continue
+                tool_id = item.get("toolId")
+                if not isinstance(tool_id, str) or not tool_id:
+                    continue
+
+                # Resolve versioned tool IDs
+                tool_id = tool_registry.resolve_tool_id(tool_id)
+
+                usage_control = item.get("usageControl") or "auto"
+
+                # Skip tools the user explicitly disabled
+                if usage_control == "none":
+                    continue
+
+                schema = tool_registry.to_openai_schema(tool_id)
+                if schema is None:
+                    logger.warning(f"Tool '{tool_id}' not found in registry, skipping")
+                    continue
+                tool_specs.append(schema)
+                params = item.get("params")
+                tool_user_params[tool_id] = params if isinstance(params, dict) else {}
+
+                if usage_control == "force":
+                    forced_tool_ids.append(tool_id)
+
+            return tool_specs, tool_user_params, forced_tool_ids
+
+        # ----- Old schema format: items have a "schema" key -----
+        if "schema" in first:
+            tool_specs = []
+            for item in raw_tools:
+                if not isinstance(item, dict):
+                    continue
+                schema = item.get("schema")
+                if isinstance(schema, dict):
+                    tool_specs.append({"type": "function", "function": schema})
+            return tool_specs, {}, []
+
+        # ----- Legacy format: raw function spec objects -----
+        tool_specs = []
+        for tool in raw_tools:
+            if not isinstance(tool, dict):
+                continue
+            name = tool.get("name") or (tool.get("function") or {}).get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            tool_specs.append(self._to_openai_tool(tool))
+        return tool_specs, {}, []
+
+    async def _resolve_tools_async(
+        self,
+    ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], list[str], dict[str, Any]]:
+        """Extend _resolve_tools() with async MCP tool fetching.
+
+        Returns: (tool_specs, tool_user_params, forced_tool_ids, mcp_clients)
+        mcp_clients is a dict of server_name → MCPClient for routing tool calls.
+        """
+        from apps.api.app.node_system.tools.mcp.client import MCPClient
+
+        tool_specs, tool_user_params, forced_tool_ids = self._resolve_tools()
+        mcp_clients: dict[str, Any] = {}
+
+        mcp_server_configs = self._parse_mcp_servers()
+        for server in mcp_server_configs:
+            name = server["name"]
+            url = server["url"]
+            api_key = server.get("apiKey")
+            try:
+                mcp_client = MCPClient(name, url, api_key)
+                mcp_tools = await mcp_client.list_tools()
+                for tool_def in mcp_tools:
+                    # Build OpenAI-compatible function schema from ToolDefinition
+                    params_schema: dict[str, Any] = {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                    }
+                    for p_name, p in tool_def.params.items():
+                        if p.visibility in ("hidden", "user-only"):
+                            continue
+                        params_schema["properties"][p_name] = {
+                            "type": p.type if p.type != "json" else "object",
+                            "description": p.description,
+                        }
+                        if p.required:
+                            params_schema["required"].append(p_name)
+                    tool_specs.append({
+                        "type": "function",
+                        "function": {
+                            "name": tool_def.id,
+                            "description": tool_def.description,
+                            "parameters": params_schema,
+                        },
+                    })
+                mcp_clients[name] = mcp_client
+            except Exception as e:
+                logger.warning(f"Failed to fetch tools from MCP server '{name}' ({url}): {e}")
+
+        return tool_specs, tool_user_params, forced_tool_ids, mcp_clients
+
+    # ------------------------------------------------------------------
+    # LLM call helpers (return raw response data)
+    # ------------------------------------------------------------------
+
+    async def _call_llm_openai_compatible(
         self,
         client: httpx.AsyncClient,
         url: str,
         api_key: str,
         model: str,
-        messages: list[dict[str, str]],
-        tools: list[dict[str, Any]],
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
         }
-
         if self.props.temperature is not None:
             payload["temperature"] = self.props.temperature
         if self.props.maxTokens is not None:
@@ -339,14 +869,20 @@ class AgentNode(BaseNode[AgentProperties]):
         if response_format is not None:
             payload["response_format"] = response_format
 
-        if tools:
-            payload["tools"] = [self._to_openai_tool(tool) for tool in tools]
-            if self.props.toolChoice == "required":
+        if tool_specs:
+            payload["tools"] = tool_specs
+            if tool_choice_override is not None:
+                payload["tool_choice"] = tool_choice_override
+            elif self.props.toolChoice == "required":
                 payload["tool_choice"] = "required"
             elif self.props.toolChoice == "none":
                 payload["tool_choice"] = "none"
             else:
                 payload["tool_choice"] = "auto"
+
+        # Reasoning effort for o1/o3 models
+        if self.props.reasoningEffort and self.props.reasoningEffort != "auto":
+            payload["reasoning_effort"] = self.props.reasoningEffort
 
         response = await client.post(
             url,
@@ -360,14 +896,15 @@ class AgentNode(BaseNode[AgentProperties]):
         response.raise_for_status()
         return response.json()
 
-    async def _execute_anthropic(
+    async def _call_llm_anthropic(
         self,
         client: httpx.AsyncClient,
         url: str,
         api_key: str,
         model: str,
-        messages: list[dict[str, str]],
-        tools: list[dict[str, Any]],
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any = None,
     ) -> dict[str, Any]:
         system_prompt, anthropic_messages = self._to_anthropic_messages(messages)
         payload: dict[str, Any] = {
@@ -375,17 +912,32 @@ class AgentNode(BaseNode[AgentProperties]):
             "max_tokens": self.props.maxTokens or 4096,
             "messages": anthropic_messages,
         }
-
         if system_prompt:
             payload["system"] = system_prompt
         if self.props.temperature is not None:
             payload["temperature"] = self.props.temperature
-        if tools:
-            payload["tools"] = [self._to_anthropic_tool(tool) for tool in tools]
-            if self.props.toolChoice == "required":
+
+        if tool_specs:
+            payload["tools"] = [self._to_anthropic_tool(spec) for spec in tool_specs]
+            if tool_choice_override is not None:
+                if isinstance(tool_choice_override, dict) and tool_choice_override.get("type") == "function":
+                    fn_name = (tool_choice_override.get("function") or {}).get("name", "")
+                    payload["tool_choice"] = {"type": "tool", "name": fn_name}
+                else:
+                    payload["tool_choice"] = {"type": "auto"}
+            elif self.props.toolChoice == "required":
                 payload["tool_choice"] = {"type": "any"}
             elif self.props.toolChoice == "auto":
                 payload["tool_choice"] = {"type": "auto"}
+
+        # Extended thinking for Anthropic
+        _THINKING_BUDGETS = {"low": 1024, "medium": 8192, "high": 32768}
+        if self.props.reasoningEffort and self.props.reasoningEffort in _THINKING_BUDGETS:
+            payload["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": _THINKING_BUDGETS[self.props.reasoningEffort],
+            }
+            payload["temperature"] = 1  # required when thinking enabled
 
         response = await client.post(
             url,
@@ -400,18 +952,18 @@ class AgentNode(BaseNode[AgentProperties]):
         response.raise_for_status()
         return response.json()
 
-    async def _execute_google(
+    async def _call_llm_google(
         self,
         client: httpx.AsyncClient,
         url_template: str,
         api_key: str,
         model: str,
-        messages: list[dict[str, str]],
-        tools: list[dict[str, Any]],
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any = None,
     ) -> dict[str, Any]:
         system_prompt, contents = self._to_google_contents(messages)
         generation_config: dict[str, Any] = {}
-
         if self.props.temperature is not None:
             generation_config["temperature"] = self.props.temperature
         if self.props.maxTokens is not None:
@@ -422,15 +974,25 @@ class AgentNode(BaseNode[AgentProperties]):
             generation_config["responseMimeType"] = "application/json"
             generation_config["responseSchema"] = response_schema
 
-        payload: dict[str, Any] = {
-            "contents": contents,
-        }
+        payload: dict[str, Any] = {"contents": contents}
         if generation_config:
             payload["generationConfig"] = generation_config
         if system_prompt:
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
-        if tools:
-            payload["tools"] = [{"functionDeclarations": [self._to_google_tool(tool) for tool in tools]}]
+        if tool_specs:
+            payload["tools"] = [
+                {"functionDeclarations": [self._to_google_tool(spec) for spec in tool_specs]}
+            ]
+            # Google tool_config for forced tool call
+            if tool_choice_override is not None and isinstance(tool_choice_override, dict):
+                fn_name = (tool_choice_override.get("function") or {}).get("name", "")
+                if fn_name:
+                    payload["toolConfig"] = {
+                        "functionCallingConfig": {
+                            "mode": "ANY",
+                            "allowedFunctionNames": [fn_name],
+                        }
+                    }
 
         response = await client.post(
             url_template.format(model=self._google_model_path(model)),
@@ -441,6 +1003,448 @@ class AgentNode(BaseNode[AgentProperties]):
         )
         response.raise_for_status()
         return response.json()
+
+    # ------------------------------------------------------------------
+    # Streaming LLM callers — emit agent_chunk events, return (content, tool_calls, tokens)
+    # ------------------------------------------------------------------
+
+    async def _stream_llm_openai_compatible(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        api_key: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any,
+        emitter: Any,
+        node_id: str,
+        iteration: int,
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        payload: dict[str, Any] = {"model": model, "messages": messages, "stream": True}
+        if self.props.temperature is not None:
+            payload["temperature"] = self.props.temperature
+        if self.props.maxTokens is not None:
+            payload["max_tokens"] = self.props.maxTokens
+        response_format = self._normalize_response_format("openai")
+        if response_format is not None:
+            payload["response_format"] = response_format
+        if tool_specs:
+            payload["tools"] = tool_specs
+            if tool_choice_override is not None:
+                payload["tool_choice"] = tool_choice_override
+            elif self.props.toolChoice == "required":
+                payload["tool_choice"] = "required"
+            elif self.props.toolChoice == "none":
+                payload["tool_choice"] = "none"
+            else:
+                payload["tool_choice"] = "auto"
+
+        accumulated_content = ""
+        tool_calls_buffer: dict[int, dict[str, Any]] = {}
+        tokens: dict[str, Any] = {}
+
+        async with client.stream(
+            "POST",
+            url,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=None,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                raw = line[6:]
+                if raw == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if chunk.get("usage"):
+                    tokens = chunk["usage"]
+                choice = (chunk.get("choices") or [{}])[0]
+                delta = choice.get("delta") or {}
+                text = delta.get("content") or ""
+                if text:
+                    accumulated_content += text
+                    await emitter.emit("agent_chunk", {"node_id": node_id, "delta": text, "iteration": iteration})
+                for tc in delta.get("tool_calls") or []:
+                    idx = tc.get("index", 0)
+                    if idx not in tool_calls_buffer:
+                        tool_calls_buffer[idx] = {"id": "", "name": "", "arguments": ""}
+                    tool_calls_buffer[idx]["id"] += tc.get("id") or ""
+                    fn = tc.get("function") or {}
+                    tool_calls_buffer[idx]["name"] += fn.get("name") or ""
+                    tool_calls_buffer[idx]["arguments"] += fn.get("arguments") or ""
+
+        tool_calls: list[dict[str, Any]] = []
+        for tc in tool_calls_buffer.values():
+            try:
+                args = json.loads(tc["arguments"]) if tc["arguments"] else {}
+            except json.JSONDecodeError:
+                args = {}
+            tool_calls.append({"id": tc["id"], "name": tc["name"], "arguments": args})
+        return accumulated_content, tool_calls, tokens
+
+    async def _stream_llm_anthropic(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        api_key: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any,
+        emitter: Any,
+        node_id: str,
+        iteration: int,
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        system_prompt, anthropic_messages = self._to_anthropic_messages(messages)
+        payload: dict[str, Any] = {
+            "model": model,
+            "max_tokens": self.props.maxTokens or 4096,
+            "messages": anthropic_messages,
+            "stream": True,
+        }
+        if system_prompt:
+            payload["system"] = system_prompt
+        if self.props.temperature is not None:
+            payload["temperature"] = self.props.temperature
+        if tool_specs:
+            payload["tools"] = [self._to_anthropic_tool(spec) for spec in tool_specs]
+            if tool_choice_override is not None:
+                if isinstance(tool_choice_override, dict) and tool_choice_override.get("type") == "function":
+                    fn_name = (tool_choice_override.get("function") or {}).get("name", "")
+                    payload["tool_choice"] = {"type": "tool", "name": fn_name}
+                else:
+                    payload["tool_choice"] = {"type": "auto"}
+            elif self.props.toolChoice == "required":
+                payload["tool_choice"] = {"type": "any"}
+            elif self.props.toolChoice == "auto":
+                payload["tool_choice"] = {"type": "auto"}
+
+        accumulated_text = ""
+        tool_use_blocks: dict[int, dict[str, Any]] = {}
+        tokens: dict[str, Any] = {}
+
+        async with client.stream(
+            "POST",
+            url,
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=None,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                try:
+                    data = json.loads(line[6:])
+                except json.JSONDecodeError:
+                    continue
+                event_type = data.get("type")
+                if event_type == "message_delta":
+                    usage = data.get("usage") or {}
+                    tokens = {
+                        "prompt_tokens": None,
+                        "completion_tokens": usage.get("output_tokens"),
+                        "total_tokens": usage.get("output_tokens"),
+                    }
+                elif event_type == "message_start":
+                    usage = (data.get("message") or {}).get("usage") or {}
+                    tokens["prompt_tokens"] = usage.get("input_tokens")
+                    if tokens.get("total_tokens") and tokens.get("prompt_tokens"):
+                        tokens["total_tokens"] = (tokens.get("prompt_tokens") or 0) + (tokens.get("completion_tokens") or 0)
+                elif event_type == "content_block_start":
+                    block = data.get("content_block") or {}
+                    if block.get("type") == "tool_use":
+                        idx = data.get("index", 0)
+                        tool_use_blocks[idx] = {
+                            "id": block.get("id", ""),
+                            "name": block.get("name", ""),
+                            "partial_json": "",
+                        }
+                elif event_type == "content_block_delta":
+                    delta = data.get("delta") or {}
+                    idx = data.get("index", 0)
+                    if delta.get("type") == "text_delta":
+                        text = delta.get("text") or ""
+                        accumulated_text += text
+                        await emitter.emit("agent_chunk", {"node_id": node_id, "delta": text, "iteration": iteration})
+                    elif delta.get("type") == "input_json_delta" and idx in tool_use_blocks:
+                        tool_use_blocks[idx]["partial_json"] += delta.get("partial_json") or ""
+
+        tool_calls: list[dict[str, Any]] = []
+        for block in tool_use_blocks.values():
+            try:
+                args = json.loads(block["partial_json"]) if block["partial_json"] else {}
+            except json.JSONDecodeError:
+                args = {}
+            tool_calls.append({"id": block["id"], "name": block["name"], "arguments": args})
+        return accumulated_text, tool_calls, tokens
+
+    async def _stream_llm_google(
+        self,
+        client: httpx.AsyncClient,
+        url_template: str,
+        api_key: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        tool_specs: list[dict[str, Any]],
+        tool_choice_override: Any,
+        emitter: Any,
+        node_id: str,
+        iteration: int,
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        system_prompt, contents = self._to_google_contents(messages)
+        generation_config: dict[str, Any] = {}
+        if self.props.temperature is not None:
+            generation_config["temperature"] = self.props.temperature
+        if self.props.maxTokens is not None:
+            generation_config["maxOutputTokens"] = self.props.maxTokens
+        response_schema = self._normalize_response_format("google")
+        if response_schema is not None:
+            generation_config["responseMimeType"] = "application/json"
+            generation_config["responseSchema"] = response_schema
+
+        payload: dict[str, Any] = {"contents": contents}
+        if generation_config:
+            payload["generationConfig"] = generation_config
+        if system_prompt:
+            payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+        if tool_specs:
+            payload["tools"] = [
+                {"functionDeclarations": [self._to_google_tool(spec) for spec in tool_specs]}
+            ]
+            if tool_choice_override is not None and isinstance(tool_choice_override, dict):
+                fn_name = (tool_choice_override.get("function") or {}).get("name", "")
+                if fn_name:
+                    payload["toolConfig"] = {
+                        "functionCallingConfig": {"mode": "ANY", "allowedFunctionNames": [fn_name]}
+                    }
+
+        stream_url = (url_template.format(model=self._google_model_path(model))
+                      .replace(":generateContent", ":streamGenerateContent"))
+
+        accumulated_text = ""
+        tool_calls: list[dict[str, Any]] = []
+        tokens: dict[str, Any] = {}
+
+        async with client.stream(
+            "POST",
+            stream_url,
+            params={"key": api_key, "alt": "sse"},
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=None,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                try:
+                    chunk = json.loads(line[6:])
+                except json.JSONDecodeError:
+                    continue
+                usage = chunk.get("usageMetadata") or {}
+                if usage:
+                    tokens = {
+                        "prompt_tokens": usage.get("promptTokenCount"),
+                        "completion_tokens": usage.get("candidatesTokenCount"),
+                        "total_tokens": usage.get("totalTokenCount"),
+                    }
+                candidates = chunk.get("candidates") or []
+                for candidate in candidates:
+                    parts = candidate.get("content", {}).get("parts") or []
+                    for part in parts:
+                        if "text" in part:
+                            text = part["text"]
+                            accumulated_text += text
+                            await emitter.emit("agent_chunk", {"node_id": node_id, "delta": text, "iteration": iteration})
+                        if "functionCall" in part:
+                            call = part["functionCall"]
+                            tool_calls.append({
+                                "id": call.get("name", ""),
+                                "name": call.get("name", ""),
+                                "arguments": call.get("args") or {},
+                            })
+
+        return accumulated_text, tool_calls, tokens
+
+    # ------------------------------------------------------------------
+    # Content + tool call extraction (per provider → unified format)
+    # ------------------------------------------------------------------
+
+    def _extract_openai_content_and_tools(
+        self, data: dict[str, Any]
+    ) -> tuple[str, list[dict[str, Any]]]:
+        choices = data.get("choices") or []
+        first_choice = choices[0] if choices else {}
+        message = first_choice.get("message") or {}
+        content = message.get("content") or ""
+        raw_tool_calls = message.get("tool_calls") or []
+
+        tool_calls: list[dict[str, Any]] = []
+        for tc in raw_tool_calls:
+            if not isinstance(tc, dict):
+                continue
+            fn = tc.get("function") or {}
+            args = fn.get("arguments", "{}")
+            try:
+                parsed_args = json.loads(args) if isinstance(args, str) else args
+            except json.JSONDecodeError:
+                parsed_args = {}
+            tool_calls.append({
+                "id": tc.get("id", ""),
+                "name": fn.get("name", ""),
+                "arguments": parsed_args,
+            })
+        return str(content), tool_calls
+
+    def _extract_anthropic_content_and_tools(
+        self, data: dict[str, Any]
+    ) -> tuple[str, list[dict[str, Any]]]:
+        content_blocks = data.get("content") or []
+        text_parts: list[str] = []
+        tool_calls: list[dict[str, Any]] = []
+        for block in content_blocks:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text":
+                text_parts.append(block.get("text", ""))
+            elif block.get("type") == "tool_use":
+                tool_calls.append({
+                    "id": block.get("id", ""),
+                    "name": block.get("name", ""),
+                    "arguments": block.get("input") or {},
+                })
+        return "".join(text_parts), tool_calls
+
+    def _extract_google_content_and_tools(
+        self, data: dict[str, Any]
+    ) -> tuple[str, list[dict[str, Any]]]:
+        candidates = data.get("candidates") or []
+        first_candidate = candidates[0] if candidates else {}
+        parts = first_candidate.get("content", {}).get("parts", [])
+        text_parts: list[str] = []
+        tool_calls: list[dict[str, Any]] = []
+        for part in parts:
+            if not isinstance(part, dict):
+                continue
+            if "text" in part:
+                text_parts.append(part["text"])
+            if "functionCall" in part:
+                call = part["functionCall"]
+                tool_calls.append({
+                    "id": call.get("name", ""),  # Google uses name as ID
+                    "name": call.get("name", ""),
+                    "arguments": call.get("args") or {},
+                })
+        return "".join(text_parts), tool_calls
+
+    # ------------------------------------------------------------------
+    # Message builders (per provider)
+    # ------------------------------------------------------------------
+
+    def _build_assistant_message(
+        self,
+        content: str,
+        tool_calls: list[dict[str, Any]],
+        api_type: str,
+    ) -> dict[str, Any]:
+        if api_type == "anthropic":
+            content_blocks: list[dict[str, Any]] = []
+            if content:
+                content_blocks.append({"type": "text", "text": content})
+            for tc in tool_calls:
+                content_blocks.append({
+                    "type": "tool_use",
+                    "id": tc["id"],
+                    "name": tc["name"],
+                    "input": tc.get("arguments") or {},
+                })
+            return {"role": "assistant", "content": content_blocks}
+
+        if api_type == "google":
+            parts: list[dict[str, Any]] = []
+            if content:
+                parts.append({"text": content})
+            for tc in tool_calls:
+                parts.append({
+                    "functionCall": {
+                        "name": tc["name"],
+                        "args": tc.get("arguments") or {},
+                    }
+                })
+            return {"role": "model", "parts": parts}
+
+        # OpenAI-compatible
+        openai_tool_calls = [
+            {
+                "id": tc["id"],
+                "type": "function",
+                "function": {
+                    "name": tc["name"],
+                    "arguments": json.dumps(tc.get("arguments") or {}),
+                },
+            }
+            for tc in tool_calls
+        ]
+        return {
+            "role": "assistant",
+            "content": content or None,
+            "tool_calls": openai_tool_calls,
+        }
+
+    def _build_tool_result_message(
+        self,
+        tc: dict[str, Any],
+        result: Any,  # ToolResult
+        api_type: str,
+    ) -> dict[str, Any]:
+        result_text = json.dumps(result.output) if result.success else json.dumps({"error": result.error})
+
+        if api_type == "anthropic":
+            return {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tc["id"],
+                        "content": result_text,
+                    }
+                ],
+            }
+
+        if api_type == "google":
+            return {
+                "role": "user",
+                "parts": [
+                    {
+                        "functionResponse": {
+                            "name": tc["name"],
+                            "response": result.output if result.success else {"error": result.error},
+                        }
+                    }
+                ],
+            }
+
+        # OpenAI-compatible
+        return {
+            "role": "tool",
+            "tool_call_id": tc["id"],
+            "content": result_text,
+        }
+
+    # ------------------------------------------------------------------
+    # Credentials + model helpers (unchanged from original)
+    # ------------------------------------------------------------------
 
     def _get_api_key(self, context: NodeContext) -> str | None:
         ai_provider = get_ai_provider(self.props.provider)
@@ -484,7 +1488,7 @@ class AgentNode(BaseNode[AgentProperties]):
         if self.props.model:
             return self.props.model
         field_name = f"{self.props.provider}Model"
-        model = getattr(self.props, field_name)
+        model = getattr(self.props, field_name, None)
         if model:
             return model
         ai_provider = get_ai_provider(self.props.provider)
@@ -497,7 +1501,11 @@ class AgentNode(BaseNode[AgentProperties]):
     def _google_model_path(self, model: str) -> str:
         return model.removeprefix("models/")
 
-    def _normalize_messages(self, input_data: dict[str, Any]) -> list[dict[str, str]]:
+    # ------------------------------------------------------------------
+    # Message normalization
+    # ------------------------------------------------------------------
+
+    def _normalize_messages(self, input_data: dict[str, Any]) -> list[dict[str, Any]]:
         raw_messages = self.props.messages
 
         if isinstance(raw_messages, str):
@@ -515,7 +1523,7 @@ class AgentNode(BaseNode[AgentProperties]):
         if not parsed_messages:
             parsed_messages = [{"role": "user", "content": self._stringify_content(input_data)}]
 
-        messages: list[dict[str, str]] = []
+        messages: list[dict[str, Any]] = []
         for message in parsed_messages:
             if isinstance(message, AgentMessage):
                 role = message.role
@@ -530,30 +1538,6 @@ class AgentNode(BaseNode[AgentProperties]):
             messages.append({"role": self._normalize_role(role), "content": self._stringify_content(content)})
 
         return messages
-
-    def _normalize_tools(self) -> list[dict[str, Any]]:
-        raw_tools = self.props.tools
-        if raw_tools in (None, ""):
-            return []
-
-        if isinstance(raw_tools, str):
-            try:
-                raw_tools = json.loads(raw_tools)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Tools must be valid JSON: {e.msg}") from e
-
-        if not isinstance(raw_tools, list):
-            raise ValueError("Tools must be a JSON array.")
-
-        tools = []
-        for tool in raw_tools:
-            if not isinstance(tool, dict):
-                raise ValueError("Each tool must be an object.")
-            name = tool.get("name") or tool.get("function", {}).get("name")
-            if not isinstance(name, str) or not name:
-                raise ValueError("Each tool must have a name.")
-            tools.append(tool)
-        return tools
 
     def _normalize_response_format(self, provider: str) -> dict[str, Any] | None:
         raw_format = self.props.responseFormat
@@ -589,48 +1573,102 @@ class AgentNode(BaseNode[AgentProperties]):
             },
         }
 
+    def _memory_key(self) -> str:
+        return self.props.memoryKey or self.node_id
+
+    def _get_provider(self, context: NodeContext) -> Any:
+        from apps.api.app.node_system.nodes.ai.agent.memory.providers import get_memory_provider
+        # Extract OpenAI API key for embedding (used by Pinecone/Qdrant)
+        openai_key = ""
+        for cred in (context.credentials or []):
+            if cred.get("type") == "openai_api_key":
+                openai_key = (cred.get("data") or {}).get("api_key", "")
+                break
+        return get_memory_provider(
+            self.props.memoryBackend,
+            context,
+            ttl_seconds=self.props.memoryTTL,
+            pinecone_api_key=self.props.pineconeApiKey or "",
+            pinecone_index=self.props.pineconeIndex or "",
+            qdrant_url=self.props.qdrantUrl or "",
+            qdrant_collection=self.props.qdrantCollection or "",
+            openai_api_key=openai_key,
+            mem0_api_key=self.props.mem0ApiKey or "",
+        )
+
     def _apply_memory(
-        self, messages: list[dict[str, str]], context: NodeContext
-    ) -> list[dict[str, str]]:
+        self, messages: list[dict[str, Any]], context: NodeContext
+    ) -> list[dict[str, Any]]:
         if self.props.memoryType == "none":
             return messages
-        memory = self._get_memory(context)
-        return [*memory, *messages]
+        # Sync wrapper — memory providers are async; run in event loop
+        import asyncio
+        provider = self._get_provider(context)
+        try:
+            loop = asyncio.get_event_loop()
+            memory = loop.run_until_complete(provider.get(self._memory_key(), self.props.memoryLimit))
+        except RuntimeError:
+            # Already inside event loop (normal case)
+            memory = []
+        return [*self._normalize_memory(memory), *messages]
 
     def _persist_memory(
-        self, messages: list[dict[str, str]], assistant_content: str, context: NodeContext
-    ) -> list[dict[str, str]]:
+        self, messages: list[dict[str, Any]], assistant_content: str, context: NodeContext
+    ) -> list[dict[str, Any]]:
         if self.props.memoryType == "none":
             return []
-
-        memory = self._get_memory(context)
-        new_items = [message for message in messages if message["role"] in {"user", "assistant"}]
+        # Caller is async — schedule provider.append as a task (called from async context)
+        # Return the new messages list for the output
+        new_items = [
+            message for message in messages
+            if isinstance(message, dict) and message.get("role") in {"user", "assistant"}
+        ]
         if assistant_content:
             new_items.append({"role": "assistant", "content": assistant_content})
+        return new_items
 
-        memory = [*memory, *new_items][-max(self.props.memoryLimit, 1) :]
-        context.variables[self._memory_variable_key()] = memory
-        return memory
+    async def _apply_memory_async(
+        self, messages: list[dict[str, Any]], context: NodeContext
+    ) -> list[dict[str, Any]]:
+        if self.props.memoryType == "none":
+            return messages
+        provider = self._get_provider(context)
+        # Use latest user message as semantic query for vector backends
+        query = next(
+            (str(m.get("content", "")) for m in reversed(messages) if m.get("role") == "user"),
+            None,
+        )
+        raw_memory = await provider.get(self._memory_key(), self.props.memoryLimit, query=query)
+        return [*self._normalize_memory(raw_memory), *messages]
 
-    def _get_memory(self, context: NodeContext) -> list[dict[str, str]]:
-        memory = context.variables.get(self._memory_variable_key(), [])
-        if not isinstance(memory, list):
+    async def _persist_memory_async(
+        self, messages: list[dict[str, Any]], assistant_content: str, context: NodeContext
+    ) -> list[dict[str, Any]]:
+        if self.props.memoryType == "none":
             return []
+        new_items = [
+            m for m in messages
+            if isinstance(m, dict) and m.get("role") in {"user", "assistant"}
+        ]
+        if assistant_content:
+            new_items.append({"role": "assistant", "content": assistant_content})
+        provider = self._get_provider(context)
+        await provider.append(self._memory_key(), new_items, self.props.memoryLimit)
+        return new_items
 
-        normalized_memory = []
+    def _normalize_memory(self, memory: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result = []
         for message in memory:
             if isinstance(message, dict) and {"role", "content"} <= set(message):
-                normalized_memory.append(
-                    {
-                        "role": self._normalize_role(message["role"]),
-                        "content": self._stringify_content(message["content"]),
-                    }
-                )
-        return normalized_memory[-max(self.props.memoryLimit, 1) :]
+                result.append({
+                    "role": self._normalize_role(message["role"]),
+                    "content": self._stringify_content(message["content"]),
+                })
+        return result[-max(self.props.memoryLimit, 1):]
 
-    def _memory_variable_key(self) -> str:
-        memory_key = self.props.memoryKey or self.node_id
-        return f"agent_memory:{memory_key}"
+    # ------------------------------------------------------------------
+    # Tool format converters (for legacy format + provider-specific)
+    # ------------------------------------------------------------------
 
     def _to_openai_tool(self, tool: dict[str, Any]) -> dict[str, Any]:
         if tool.get("type") == "function" and isinstance(tool.get("function"), dict):
@@ -644,104 +1682,57 @@ class AgentNode(BaseNode[AgentProperties]):
             },
         }
 
-    def _to_anthropic_tool(self, tool: dict[str, Any]) -> dict[str, Any]:
-        function = tool.get("function") if isinstance(tool.get("function"), dict) else tool
+    def _to_anthropic_tool(self, openai_spec: dict[str, Any]) -> dict[str, Any]:
+        """Convert an OpenAI-format tool spec to Anthropic format."""
+        fn = openai_spec.get("function") if isinstance(openai_spec.get("function"), dict) else openai_spec
         return {
-            "name": function["name"],
-            "description": function.get("description", ""),
-            "input_schema": function.get("parameters") or {"type": "object", "properties": {}},
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "input_schema": fn.get("parameters") or {"type": "object", "properties": {}},
         }
 
-    def _to_google_tool(self, tool: dict[str, Any]) -> dict[str, Any]:
-        function = tool.get("function") if isinstance(tool.get("function"), dict) else tool
+    def _to_google_tool(self, openai_spec: dict[str, Any]) -> dict[str, Any]:
+        """Convert an OpenAI-format tool spec to Google format."""
+        fn = openai_spec.get("function") if isinstance(openai_spec.get("function"), dict) else openai_spec
         return {
-            "name": function["name"],
-            "description": function.get("description", ""),
-            "parameters": function.get("parameters") or {"type": "object", "properties": {}},
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "parameters": fn.get("parameters") or {"type": "object", "properties": {}},
         }
 
     def _to_anthropic_messages(
-        self, messages: list[dict[str, str]]
-    ) -> tuple[str | None, list[dict[str, str]]]:
-        system_messages = [message["content"] for message in messages if message["role"] == "system"]
+        self, messages: list[dict[str, Any]]
+    ) -> tuple[str | None, list[dict[str, Any]]]:
+        system_messages = [
+            message["content"] for message in messages if message.get("role") == "system"
+        ]
         chat_messages = [
             {
-                "role": "assistant" if message["role"] == "assistant" else "user",
-                "content": message["content"],
+                "role": "assistant" if message.get("role") == "assistant" else "user",
+                "content": message.get("content", ""),
             }
             for message in messages
-            if message["role"] != "system"
+            if message.get("role") != "system"
         ]
         return ("\n\n".join(system_messages) or None, chat_messages)
 
     def _to_google_contents(
-        self, messages: list[dict[str, str]]
+        self, messages: list[dict[str, Any]]
     ) -> tuple[str | None, list[dict[str, Any]]]:
-        system_messages = [message["content"] for message in messages if message["role"] == "system"]
-        contents = []
+        system_messages = [
+            message["content"] for message in messages if message.get("role") == "system"
+        ]
+        contents: list[dict[str, Any]] = []
         for message in messages:
-            if message["role"] == "system":
+            if message.get("role") == "system":
                 continue
-            role = "model" if message["role"] == "assistant" else "user"
-            contents.append({"role": role, "parts": [{"text": message["content"]}]})
+            role = "model" if message.get("role") == "assistant" else "user"
+            contents.append({"role": role, "parts": [{"text": message.get("content", "")}]})
         return ("\n\n".join(system_messages) or None, contents)
 
-    def _build_openai_compatible_output(self, data: dict[str, Any], model: str) -> dict[str, Any]:
-        choices = data.get("choices") or []
-        first_choice = choices[0] if choices else {}
-        message = first_choice.get("message") or {}
-        content = message.get("content") or ""
-        tool_calls = message.get("tool_calls") or []
-        return self._build_output(content, data.get("model", model), data.get("usage") or {}, tool_calls, data)
-
-    def _build_anthropic_output(self, data: dict[str, Any], model: str) -> dict[str, Any]:
-        content_blocks = data.get("content") or []
-        text_parts = []
-        tool_calls = []
-        for block in content_blocks:
-            if not isinstance(block, dict):
-                continue
-            if block.get("type") == "text":
-                text_parts.append(block.get("text", ""))
-            elif block.get("type") == "tool_use":
-                tool_calls.append(
-                    {
-                        "id": block.get("id"),
-                        "name": block.get("name"),
-                        "arguments": block.get("input") or {},
-                    }
-                )
-
-        usage = data.get("usage") or {}
-        tokens = {
-            "prompt_tokens": usage.get("input_tokens"),
-            "completion_tokens": usage.get("output_tokens"),
-            "total_tokens": (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0),
-        }
-        return self._build_output("".join(text_parts), data.get("model", model), tokens, tool_calls, data)
-
-    def _build_google_output(self, data: dict[str, Any], model: str) -> dict[str, Any]:
-        candidates = data.get("candidates") or []
-        first_candidate = candidates[0] if candidates else {}
-        parts = first_candidate.get("content", {}).get("parts", [])
-        text_parts = []
-        tool_calls = []
-        for part in parts:
-            if not isinstance(part, dict):
-                continue
-            if "text" in part:
-                text_parts.append(part["text"])
-            if "functionCall" in part:
-                call = part["functionCall"]
-                tool_calls.append({"name": call.get("name"), "arguments": call.get("args") or {}})
-
-        usage = data.get("usageMetadata") or {}
-        tokens = {
-            "prompt_tokens": usage.get("promptTokenCount"),
-            "completion_tokens": usage.get("candidatesTokenCount"),
-            "total_tokens": usage.get("totalTokenCount"),
-        }
-        return self._build_output("".join(text_parts), model, tokens, tool_calls, data)
+    # ------------------------------------------------------------------
+    # Output builders
+    # ------------------------------------------------------------------
 
     def _build_output(
         self,

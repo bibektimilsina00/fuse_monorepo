@@ -147,6 +147,8 @@ export const ApiNodeDefinitionSchema = z.object({
   }).passthrough()).optional(),
   allow_error: z.boolean().optional(),
   credential_type: z.string().nullable().optional(),
+  tools: z.array(z.string()).nullable().optional(),
+  operation_tool_map: z.record(z.string()).nullable().optional(),
 })
 
 export const ApiNodeDefinitionListSchema = z.array(ApiNodeDefinitionSchema)

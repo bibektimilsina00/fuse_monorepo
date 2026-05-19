@@ -48,6 +48,7 @@ class WorkflowService:
             folder_id=data.folder_id,
             position=data.position,
             color=data.color,
+            env=data.env,
         )
         return await self.repository.create(workflow)
 

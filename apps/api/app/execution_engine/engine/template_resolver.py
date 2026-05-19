@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import re
 from typing import Any
@@ -9,21 +11,81 @@ logger = get_logger(__name__)
 # Matches {{node_id.output.field}} or {{node_id.output.nested.field}}
 TEMPLATE_PATTERN = re.compile(r"\{\{([^}]+)\}\}")
 
+# Comparison pattern: {{path}} OP value  e.g. {{variables.count}} < 10
+_CMP_PATTERN = re.compile(
+    r"^\s*\{\{([^}]+)\}\}\s*(==|!=|<=|>=|<|>)\s*(.+?)\s*$"
+)
+
 
 class TemplateResolver:
-    """Resolves {{node_id.output.field}} templates against execution context."""
+    """Resolves {{node_id.output.field}} and {{env.KEY}} templates against execution context."""
 
-    def __init__(self, node_outputs: dict[str, dict[str, Any]], trigger_data: dict[str, Any], variables: dict[str, Any]):
+    def __init__(
+        self,
+        node_outputs: dict[str, dict[str, Any]],
+        trigger_data: dict[str, Any],
+        variables: dict[str, Any],
+        env: dict[str, str] | None = None,
+    ):
         # context: { "trigger": {"output": {...}}, "node_1": {"output": {...}}, "variables": {...} }
         self._context = {
             "trigger": {"output": trigger_data},
             "variables": variables,
+            "env": env or {},
             **{node_id: {"output": output} for node_id, output in node_outputs.items()},
         }
 
     def resolve_properties(self, properties: dict[str, Any]) -> dict[str, Any]:
         """Resolve all template strings in a node's properties dict recursively."""
         return self._resolve_recursive(properties)
+
+    def evaluate_condition(self, condition: str) -> bool:
+        """Evaluate a condition expression. Supports:
+        - {{path}} < / > / == / != / <= / >= value
+        - {{path}} alone (truthy check)
+        - Literal 'true'/'false'
+        """
+        condition = condition.strip()
+        if condition.lower() == "true":
+            return True
+        if condition.lower() == "false":
+            return False
+
+        # Try comparison pattern first: {{path}} OP literal
+        m = _CMP_PATTERN.match(condition)
+        if m:
+            path, op, raw_rhs = m.group(1).strip(), m.group(2), m.group(3).strip()
+            lhs = self._resolve_path(path)
+            # Parse RHS as JSON value (handles numbers, booleans, strings)
+            try:
+                rhs = json.loads(raw_rhs)
+            except json.JSONDecodeError:
+                rhs = raw_rhs.strip("\"'")  # treat as bare string
+            try:
+                if op == "==":
+                    return lhs == rhs
+                if op == "!=":
+                    return lhs != rhs
+                if op == "<":
+                    return float(lhs) < float(rhs)  # type: ignore[arg-type]
+                if op == ">":
+                    return float(lhs) > float(rhs)  # type: ignore[arg-type]
+                if op == "<=":
+                    return float(lhs) <= float(rhs)  # type: ignore[arg-type]
+                if op == ">=":
+                    return float(lhs) >= float(rhs)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                return False
+
+        # Fallback: resolve as template and check truthiness
+        resolved = self._resolve_string(condition)
+        if isinstance(resolved, bool):
+            return resolved
+        if isinstance(resolved, (int, float)):
+            return resolved != 0
+        if isinstance(resolved, str):
+            return resolved.lower() not in ("", "false", "0", "null", "none")
+        return bool(resolved)
 
     def _resolve_recursive(self, value: Any) -> Any:
         if isinstance(value, str):

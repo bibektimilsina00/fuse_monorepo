@@ -8,3 +8,5 @@ class NodeResult(BaseModel):
     output_data: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
     logs: list[str] = Field(default_factory=list)
+    # When True the node already dispatched its downstream graph; runner skips edge follow
+    handled_successors: bool = False

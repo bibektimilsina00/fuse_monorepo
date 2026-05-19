@@ -13,8 +13,10 @@ export const SettingsPageContainer: React.FC<SettingsPageContainerProps> = ({
   className 
 }) => {
   return (
-    <div className={cn(maxWidth, "mx-auto pt-10 pb-20 px-8", className)}>
-      {children}
+    <div className="h-full overflow-y-auto custom-scrollbar">
+      <div className={cn(maxWidth, "mx-auto pt-10 pb-20 px-8", className)}>
+        {children}
+      </div>
     </div>
   )
 }

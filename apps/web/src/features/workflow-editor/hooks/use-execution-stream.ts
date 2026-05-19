@@ -5,7 +5,7 @@ import { useExecutionStore } from '@/stores/execution-store'
 
 export function useExecutionStream(executionId: string | null) {
   const token = useAuthStore((s) => s.token)
-  const { addLog, updateRunStatus } = useExecutionStore()
+  const { addLog, updateRunStatus, appendStreamChunk, clearStreamingContent } = useExecutionStore()
   const [isRunning, setIsRunning] = useState(false)
 
   useEffect(() => {
@@ -63,6 +63,10 @@ export function useExecutionStream(executionId: string | null) {
               timestamp,
               payload: event.output
             })
+            // Clear streaming buffer so final output shows instead
+            if (event.node_id) {
+              clearStreamingContent(executionId, event.node_id)
+            }
           } else if (event.type === 'node_failed') {
             addLog(executionId, {
               id: logId,
@@ -72,6 +76,10 @@ export function useExecutionStream(executionId: string | null) {
               timestamp,
               payload: { error: event.error }
             })
+          } else if (event.type === 'agent_chunk') {
+            if (event.node_id && event.delta) {
+              appendStreamChunk(executionId, event.node_id, event.delta)
+            }
           }
         },
         onClose: () => setIsRunning(false),
@@ -81,7 +89,7 @@ export function useExecutionStream(executionId: string | null) {
     return () => {
       ws.close()
     }
-  }, [executionId, token, addLog, updateRunStatus])
+  }, [executionId, token, addLog, updateRunStatus, appendStreamChunk, clearStreamingContent])
 
   return { isRunning }
 }

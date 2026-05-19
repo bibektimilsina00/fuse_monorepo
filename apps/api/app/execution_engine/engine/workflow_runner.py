@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import asyncio
+import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +13,15 @@ from apps.api.app.node_system.base.node_context import NodeContext
 logger = get_logger(__name__)
 
 
+class PauseSignal(Exception):
+    """Raised by a node to pause execution at this point."""
+
+    def __init__(self, node_id: str, resume_schema: dict[str, Any]):
+        self.node_id = node_id
+        self.resume_schema = resume_schema
+        super().__init__(f"Execution paused at node {node_id}")
+
+
 class WorkflowRunner:
     def __init__(
         self,
@@ -18,189 +31,253 @@ class WorkflowRunner:
         db: AsyncSession | None = None,
         on_log: Any = None,
         credentials: list[dict[str, Any]] | None = None,
-        emitter: Any = None,  # Avoid circular import by using Any or string ref
+        emitter: Any = None,
     ):
         self.workflow_id = workflow_id
         self.execution_id = execution_id
         self.graph = graph
         self.nodes = {node["id"]: node for node in graph.get("nodes", [])}
         self.edges = graph.get("edges", [])
-        self.executed_nodes: dict[str, Any] = {}
-        self.node_outputs: dict[str, dict[str, Any]] = {}
-        self.trigger_data: dict[str, Any] = {}
         self.credentials = credentials or []
         self.db = db
         self.on_log = on_log
         self.emitter = emitter
         self.variables: dict[str, Any] = {}
-        self.failed = False
-        self.error_message = None
+        self.env: dict[str, str] = {}
 
-    async def _emit(self, event_type: str, data: dict[str, Any]) -> None:
-        """Helper to emit execution events via the injected emitter."""
-        if self.emitter:
-            await self.emitter.emit(event_type, data)
+        # Parallel-safe shared state
+        self._lock = asyncio.Lock()
+        self._executed: dict[str, Any] = {}   # node_id → NodeResult
+        self._outputs: dict[str, dict[str, Any]] = {}  # node_id → output_data
+        self._failed = asyncio.Event()
+        self._error_message: str | None = None
 
-    async def _log(
-        self, message: str, level: str = "info", node_id: str | None = None, payload: Any = None
-    ):
-        if self.on_log:
-            await self.on_log(message, level=level, node_id=node_id, payload=payload)
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
 
-    async def run(self, trigger_data: dict[str, Any]) -> dict:
-        self.trigger_data = trigger_data
+    async def run(self, trigger_data: dict[str, Any]) -> dict[str, Any]:
+        self._trigger_data = trigger_data
         logger.info(f"Starting workflow execution {self.execution_id}")
 
-        # 1. Find start nodes (nodes with no incoming edges)
         start_nodes = self._get_start_nodes()
-
         if not start_nodes:
             logger.info(f"Workflow {self.workflow_id} has no nodes — completing immediately")
             return {}
 
-        for node_id in start_nodes:
-            await self._execute_node_recursive(node_id, trigger_data)
-            if self.failed:
-                break
+        try:
+            await asyncio.gather(
+                *[self._execute_node(n, trigger_data) for n in start_nodes]
+            )
+        except PauseSignal:
+            raise  # propagate to Celery task
+        except Exception as e:
+            self._failed.set()
+            self._error_message = str(e)
 
-        if self.failed:
-            raise Exception(self.error_message or "Execution failed")
+        if self._failed.is_set():
+            raise Exception(self._error_message or "Execution failed")
 
-        # Return output of last executed nodes
-        if self.node_outputs:
-            last_node_id = list(self.node_outputs.keys())[-1]
-            return self.node_outputs[last_node_id]
+        if self._outputs:
+            last_node_id = list(self._outputs.keys())[-1]
+            return self._outputs[last_node_id]
         return {}
 
-    def _get_start_nodes(self) -> list[str]:
-        target_nodes = {edge["target"] for edge in self.edges}
-        return [node_id for node_id in self.nodes if node_id not in target_nodes]
+    # ------------------------------------------------------------------
+    # Internal: run a single node then dispatch its successors
+    # ------------------------------------------------------------------
 
-    async def _execute_node_recursive(self, node_id: str, input_data: dict[str, Any]):
-        if node_id in self.executed_nodes or self.failed:
+    async def _execute_node(self, node_id: str, input_data: dict[str, Any]) -> None:
+        if self._failed.is_set():
             return
 
-        node_data = self.nodes[node_id]
-        label = node_data.get("data", {}).get("label") or node_data["type"]
+        # Dedup: only one coroutine may execute a given node
+        async with self._lock:
+            if node_id in self._executed:
+                return
+            self._executed[node_id] = None  # placeholder while running
 
+        node_data = self.nodes.get(node_id)
+        if not node_data:
+            logger.warning(f"Node {node_id} not found in graph, skipping")
+            return
+
+        label = node_data.get("data", {}).get("label") or node_data["type"]
         await self._log(label, node_id=node_id)
 
-        # Resolve templates in properties BEFORE executing
         from apps.api.app.execution_engine.engine.template_resolver import TemplateResolver
-
         resolver = TemplateResolver(
-            node_outputs=self.node_outputs,
-            trigger_data=self.trigger_data,
+            node_outputs=self._outputs,
+            trigger_data=self._trigger_data,
             variables=self.variables,
+            env=self.env,
         )
-        raw_properties = node_data.get("data", {}).get("properties", {})
-        resolved_properties = resolver.resolve_properties(raw_properties)
+        resolved_properties = resolver.resolve_properties(
+            node_data.get("data", {}).get("properties", {})
+        )
 
         from apps.api.app.core.http import get_http_client
-
         http_client = await get_http_client()
+
+        # Build run_downstream callback for nodes that handle their own successors (e.g. ForEach).
+        # Pre-bind the successor node IDs for this specific node.
+        _successor_ids = [
+            e["target"] for e in self.edges
+            if e["source"] == node_id and e.get("sourceHandle") != "error"
+        ]
+
+        async def run_downstream(item_input: dict[str, Any]) -> list[dict[str, Any]]:
+            results: list[dict[str, Any]] = []
+            for start_id in _successor_ids:
+                sub_runner = WorkflowRunner(
+                    workflow_id=self.workflow_id,
+                    execution_id=self.execution_id,
+                    graph=self.graph,
+                    db=self.db,
+                    on_log=self.on_log,
+                    credentials=self.credentials,
+                    emitter=self.emitter,
+                )
+                sub_runner.variables = self.variables
+                sub_runner.env = self.env
+                sub_runner._outputs = dict(self._outputs)
+                result = await sub_runner._execute_subgraph(start_id, item_input)
+                results.append(result)
+                async with self._lock:
+                    self._outputs.update(sub_runner._outputs)
+            return results
+
+        # Build pause callback
+        async def pause_execution(resume_schema: dict[str, Any]) -> None:
+            raise PauseSignal(node_id, resume_schema)
 
         context = NodeContext(
             execution_id=self.execution_id,
             workflow_id=self.workflow_id,
             node_id=node_id,
-            variables=self.variables,  # Use persistent state
+            variables=self.variables,
             credentials=self.credentials,
             http_client=http_client,
             db=self.db,
+            emitter=self.emitter,
+            run_downstream=run_downstream,
+            pause=pause_execution,
         )
 
-        # Emit NODE_STARTED
-        await self._emit(
-            "node_started", {"node_id": node_id, "node_type": node_data.get("type"), "label": label}
-        )
+        await self._emit("node_started", {
+            "node_id": node_id,
+            "node_type": node_data.get("type"),
+            "label": label,
+        })
 
         result = await node_executor.execute_node(
             node_type=node_data["type"],
             node_id=node_id,
-            properties=resolved_properties,  # Pass resolved properties
+            properties=resolved_properties,
             input_data=input_data,
             context=context,
         )
 
-        self.executed_nodes[node_id] = result
+        async with self._lock:
+            self._executed[node_id] = result
 
-        # Log individual node logs if any
         for log_msg in result.logs:
             await self._log(log_msg, level="info" if result.success else "error", node_id=node_id)
 
-        next_edges = [edge for edge in self.edges if edge["source"] == node_id]
+        next_edges = [e for e in self.edges if e["source"] == node_id]
 
         if result.success:
-            # Store output for future interpolation
-            self.node_outputs[node_id] = result.output_data
+            async with self._lock:
+                self._outputs[node_id] = result.output_data
 
-            # Emit NODE_COMPLETED
-            await self._emit(
-                "node_completed",
-                {
-                    "node_id": node_id,
-                    "output": result.output_data,
-                },
-            )
+            await self._emit("node_completed", {"node_id": node_id, "output": result.output_data})
+            await self._log(label, node_id=node_id, payload={
+                "input": resolved_properties,
+                "data_in": input_data,
+                "output": result.output_data,
+            })
 
-            await self._log(
-                label,
-                node_id=node_id,
-                payload={
-                    "input": resolved_properties,
-                    "data_in": input_data,
-                    "output": result.output_data,
-                },
-            )
+            # If node handled its own successors, don't dispatch edges
+            if result.handled_successors:
+                return
 
             branch = result.output_data.get("branch")
-            for edge in next_edges:
-                edge_handle = edge.get("sourceHandle")
+            active_edges = [
+                e for e in next_edges
+                if e.get("sourceHandle") != "error"
+                and not (branch and e.get("sourceHandle") and e.get("sourceHandle") != branch)
+            ]
 
-                # SKIP error branches on success
-                if edge_handle == "error":
-                    continue
+            if active_edges:
+                await asyncio.gather(*[
+                    self._execute_node(e["target"], result.output_data)
+                    for e in active_edges
+                ])
 
-                # Handle specific logical branches (e.g. from Condition node)
-                if branch and edge_handle and edge_handle != branch:
-                    continue
-
-                await self._execute_node_recursive(edge["target"], result.output_data)
         else:
-            # Handle Failure
-            error_payload = {
+            await self._emit("node_failed", {"node_id": node_id, "error": result.error})
+            await self._log(label, level="error", node_id=node_id, payload={
                 "input": resolved_properties,
                 "data_in": input_data,
                 "error": result.error,
-            }
+            })
 
-            # Emit NODE_FAILED
-            await self._emit(
-                "node_failed",
-                {
-                    "node_id": node_id,
-                    "error": result.error,
-                },
-            )
-
-            await self._log(
-                label,
-                level="error",
-                node_id=node_id,
-                payload=error_payload,
-            )
-
-            # Check if we have an error handler branch
             error_edges = [e for e in next_edges if e.get("sourceHandle") == "error"]
-
             if error_edges:
-                logger.info(f"Node {node_id} failed, following {len(error_edges)} error branch(es)")
-                for edge in error_edges:
-                    await self._execute_node_recursive(edge["target"], error_payload)
+                error_payload = {"input": resolved_properties, "data_in": input_data, "error": result.error}
+                await asyncio.gather(*[
+                    self._execute_node(e["target"], error_payload)
+                    for e in error_edges
+                ])
             else:
-                # No error handler -> workflow fails
-                self.failed = True
+                self._failed.set()
                 error = result.error or "Unknown error"
-                self.error_message = error if "Node" in error else f"Node {label} failed: {error}"
+                self._error_message = error if "Node" in error else f"Node {label} failed: {error}"
                 logger.error(f"Execution failed at node {node_id}: {result.error}")
+
+    async def _resume_from(self, paused_node_id: str, resume_input: dict[str, Any]) -> dict[str, Any]:
+        """Resume execution after a pause, injecting resume_input as the paused node's output."""
+        # Treat paused node as completed with resume_input as its output
+        async with self._lock:
+            self._executed[paused_node_id] = True
+            self._outputs[paused_node_id] = resume_input
+
+        # Follow outgoing edges from the paused node
+        next_edges = [e for e in self.edges if e["source"] == paused_node_id]
+        if next_edges:
+            await asyncio.gather(*[
+                self._execute_node(e["target"], resume_input)
+                for e in next_edges
+            ])
+
+        if self._failed.is_set():
+            raise Exception(self._error_message or "Execution failed")
+
+        if self._outputs:
+            return self._outputs[list(self._outputs.keys())[-1]]
+        return {}
+
+    async def _execute_subgraph(self, start_node_id: str, input_data: dict[str, Any]) -> dict[str, Any]:
+        """Execute a sub-graph starting from start_node_id. Used by ForEach."""
+        await self._execute_node(start_node_id, input_data)
+        if start_node_id in self._outputs:
+            return self._outputs[start_node_id]
+        return {}
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _get_start_nodes(self) -> list[str]:
+        target_nodes = {e["target"] for e in self.edges}
+        return [n for n in self.nodes if n not in target_nodes]
+
+    async def _emit(self, event_type: str, data: dict[str, Any]) -> None:
+        if self.emitter:
+            await self.emitter.emit(event_type, data)
+
+    async def _log(
+        self, message: str, level: str = "info", node_id: str | None = None, payload: Any = None
+    ) -> None:
+        if self.on_log:
+            await self.on_log(message, level=level, node_id=node_id, payload=payload)

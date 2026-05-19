@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 interface BYOKModalProps {
   isOpen: boolean
   onClose: () => void
+  mode?: 'connect' | 'update'
   provider: {
     id: string
     name: string
@@ -16,7 +17,7 @@ interface BYOKModalProps {
   onSave: (key: string) => Promise<void>
 }
 
-export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider, onSave }) => {
+export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, mode = 'connect', provider, onSave }) => {
   const [key, setKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -71,13 +72,13 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
             )}
           </div>
           <h2 className="text-[14px] font-semibold text-white tracking-tight">
-            Enter your {provider.name} API key
+            {mode === 'update' ? 'Update' : 'Enter'} your {provider.name} API key
           </h2>
         </div>
 
         <form onSubmit={handleSave} className="p-6">
           <p className="text-[13px] text-white/40 mb-5 leading-relaxed">
-            This key will be used for all {provider.name} requests in this workspace. 
+            This key will be used for all {provider.name} requests in this workspace.
             Your key is encrypted and stored securely.
           </p>
 
@@ -117,7 +118,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({ isOpen, onClose, provider,
               size="sm"
               disabled={isSaving || !key.trim()}
             >
-              {isSaving ? <><Spinner size="xs" color="current" /> Saving...</> : 'Save'}
+              {isSaving ? <><Spinner size="xs" color="current" /> Saving...</> : mode === 'update' ? 'Update' : 'Save'}
             </SettingsButton>
           </div>
         </form>

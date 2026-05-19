@@ -1,13 +1,14 @@
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
-export type ExecutionEventType = 
-  | 'execution_started' 
-  | 'execution_completed' 
-  | 'execution_failed' 
-  | 'node_started' 
-  | 'node_completed' 
+export type ExecutionEventType =
+  | 'execution_started'
+  | 'execution_completed'
+  | 'execution_failed'
+  | 'node_started'
+  | 'node_completed'
   | 'node_failed'
-  | 'log_synced';
+  | 'log_synced'
+  | 'agent_chunk';
 
 export interface ExecutionEvent {
   type: ExecutionEventType;
@@ -23,6 +24,8 @@ export interface ExecutionEvent {
   payload?: any;
   error?: string;
   status?: string;
+  delta?: string;
+  iteration?: number;
 }
 
 export interface NodeExecutionState {

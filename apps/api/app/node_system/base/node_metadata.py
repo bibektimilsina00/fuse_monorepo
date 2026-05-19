@@ -16,3 +16,5 @@ class NodeMetadata(BaseModel):
     outputs_schema: list[dict[str, Any]] = []
     allow_error: bool = False
     credential_type: str | None = None
+    tools: list[str] | None = None
+    operation_tool_map: dict[str, str] | None = None

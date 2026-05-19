@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from apps.api.app.models.credential import Credential
     from apps.api.app.models.folder import Folder
+    from apps.api.app.models.skill import Skill
     from apps.api.app.models.workflow import Workflow
 
 from sqlalchemy import Boolean, DateTime, String
@@ -31,4 +32,7 @@ class User(Base):
     )
     credentials: Mapped[list["Credential"]] = relationship(
         "Credential", back_populates="user", cascade="all, delete-orphan"
+    )
+    skills: Mapped[list["Skill"]] = relationship(
+        "Skill", back_populates="user", cascade="all, delete-orphan"
     )

@@ -10,6 +10,8 @@ function normalizeNodeDefinition(node: ApiNodeDefinition): NodeDefinition {
     allowError: node.allow_error,
     credentialType: node.credential_type ?? undefined,
     outputsSchema: node.outputs_schema,
+    tools: node.tools ?? undefined,
+    operationToolMap: node.operation_tool_map ?? undefined,
   }
 }
 

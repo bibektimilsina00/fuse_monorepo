@@ -66,9 +66,7 @@ export const SETTINGS_NAV: NavSection[] = [
     id: "tools",
     label: "Tools",
     items: [
-      { id: "custom-tools", label: "Custom Tools", href: "/settings/custom-tools", icon: Wrench },
-      { id: "skills", label: "Skills", href: "/settings/skills", icon: Lightbulb },
-      { id: "mcp-tools", label: "MCP Tools", href: "/settings/mcp-tools", icon: Layers },
+      { id: "skills", label: "Tools", href: "/settings/skills", icon: Lightbulb },
     ]
   },
   {

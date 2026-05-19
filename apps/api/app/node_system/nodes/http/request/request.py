@@ -84,6 +84,7 @@ class HttpRequestNode(BaseNode[HttpRequestProperties]):
                 {"label": "ok", "type": "boolean"},
             ],
             allow_error=True,
+            tools=["http_request"],
         )
 
     async def execute(self, input_data: dict[str, Any], context: NodeContext) -> NodeResult:

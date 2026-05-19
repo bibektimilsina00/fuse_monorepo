@@ -21,6 +21,10 @@ interface ExecutionState {
   addLog: (id: string, log: ExecutionLog) => void
   updateRunStatus: (id: string, status: string) => void
   clearRuns: () => void
+  // Streaming state: executionId → nodeId → accumulated content
+  streamingContent: Record<string, Record<string, string>>
+  appendStreamChunk: (executionId: string, nodeId: string, delta: string) => void
+  clearStreamingContent: (executionId: string, nodeId: string) => void
 }
 
 export const useExecutionStore = create<ExecutionState>((set) => ({
@@ -61,4 +65,22 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
       runs: state.runs.map((r) => (r.id === id ? { ...r, status } : r)),
     })),
   clearRuns: () => set({ runs: [], selectedLogId: null }),
-}))
+  streamingContent: {},
+  appendStreamChunk: (executionId, nodeId, delta) =>
+    set((state) => {
+      const execContent = state.streamingContent[executionId] ?? {}
+      return {
+        streamingContent: {
+          ...state.streamingContent,
+          [executionId]: { ...execContent, [nodeId]: (execContent[nodeId] ?? '') + delta },
+        },
+      }
+    }),
+  clearStreamingContent: (executionId, nodeId) =>
+    set((state) => {
+      const execContent = { ...(state.streamingContent[executionId] ?? {}) }
+      delete execContent[nodeId]
+      return { streamingContent: { ...state.streamingContent, [executionId]: execContent } }
+    }),
+})
+)
