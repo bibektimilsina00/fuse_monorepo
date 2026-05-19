@@ -64,38 +64,45 @@ const EntryAppearanceIcon: React.FC<{ appearance: { icon: string; color: string 
 
 type UsageControl = 'auto' | 'force' | 'none'
 
-const USAGE_OPTIONS: { label: string; value: UsageControl }[] = [
-  { label: 'Auto', value: 'auto' },
-  { label: 'Force', value: 'force' },
-  { label: 'None', value: 'none' },
-]
+const USAGE_CONTROL_LABELS: Record<UsageControl, string> = {
+  auto: 'Auto',
+  force: 'Force',
+  none: 'None',
+}
+
+const NEXT_USAGE_CONTROL: Record<UsageControl, UsageControl> = {
+  auto: 'force',
+  force: 'none',
+  none: 'auto',
+}
 
 const UsageControlToggle: React.FC<{ value: UsageControl; onChange: (v: UsageControl) => void }> = ({
   value,
   onChange,
-}) => (
-  <div
-    className="flex items-center rounded overflow-hidden border border-border text-[10px] font-semibold shrink-0"
-    onClick={(e) => e.stopPropagation()}
-  >
-    {USAGE_OPTIONS.map((opt) => (
-      <button
-        key={opt.value}
-        onClick={() => onChange(opt.value)}
-        className={cn(
-          'px-1.5 h-5 transition-colors',
-          value === opt.value
-            ? opt.value === 'force'
-              ? 'bg-orange-500/20 text-orange-300'
-              : 'bg-surface-5 text-white'
-            : 'bg-transparent text-text-muted hover:text-white',
-        )}
-      >
-        {opt.label}
-      </button>
-    ))}
-  </div>
-)
+}) => {
+  const nextValue = NEXT_USAGE_CONTROL[value]
+
+  return (
+    <button
+      type="button"
+      title={`Tool usage: ${USAGE_CONTROL_LABELS[value]}. Click for ${USAGE_CONTROL_LABELS[nextValue]}.`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onChange(nextValue)
+      }}
+      className={cn(
+        'h-5 min-w-[42px] rounded border border-border px-1.5 text-[10px] font-semibold transition-colors',
+        value === 'force'
+          ? 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30'
+          : value === 'none'
+            ? 'bg-surface-5 text-text-muted hover:text-white'
+            : 'bg-surface-5 text-white hover:bg-surface-6',
+      )}
+    >
+      {USAGE_CONTROL_LABELS[value]}
+    </button>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // ToolCard — registry tool (kind='tool')

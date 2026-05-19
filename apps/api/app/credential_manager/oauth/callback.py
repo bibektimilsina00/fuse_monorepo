@@ -34,5 +34,7 @@ async def handle_oauth_callback(
             "description": custom_description,
             "team_name": token_data.get("team_name"),
             "team_id": token_data.get("team_id"),
+            "expires_at": token_data.get("expires_at"),
+            "refresh_token_expires_at": token_data.get("refresh_token_expires_at"),
         },
     )

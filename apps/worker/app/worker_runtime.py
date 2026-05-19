@@ -5,6 +5,7 @@ from sqlalchemy import select
 from apps.api.app.core.database import AsyncSessionLocal
 from apps.api.app.execution_engine.engine.workflow_runner import WorkflowRunner
 from apps.api.app.models.workflow import Execution, Workflow
+from apps.api.app.services.credential_service import CredentialService
 
 logger = logging.getLogger("fuse.worker.runtime")
 
@@ -34,8 +35,14 @@ class WorkerRuntime:
             await db.commit()
 
             # 3. Initialize and run workflow runner
+            credential_service = CredentialService(db)
+            credentials = await credential_service.list_decrypted_for_user(workflow.user_id)
             runner = WorkflowRunner(
-                workflow_id=str(workflow.id), execution_id=execution_id, graph=workflow.graph
+                workflow_id=str(workflow.id),
+                execution_id=execution_id,
+                graph=workflow.graph,
+                db=db,
+                credentials=credentials,
             )
 
             try:

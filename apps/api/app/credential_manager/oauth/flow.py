@@ -1,9 +1,26 @@
+from datetime import UTC, datetime, timedelta
+
 from apps.api.app.core.config import settings
 from apps.api.app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
 REDIRECT_URI = f"{settings.BASE_URL}/api/v1/credentials/oauth/{{service}}/callback"
+
+
+def with_expiry_metadata(token_data: dict) -> dict:
+    """Attach absolute expiry timestamps when OAuth responses include lifetimes."""
+    now = datetime.now(UTC)
+    enriched = dict(token_data)
+    expires_in = enriched.get("expires_in")
+    if isinstance(expires_in, int):
+        enriched["expires_at"] = (now + timedelta(seconds=expires_in)).isoformat()
+    refresh_expires_in = enriched.get("refresh_token_expires_in")
+    if isinstance(refresh_expires_in, int):
+        enriched["refresh_token_expires_at"] = (
+            now + timedelta(seconds=refresh_expires_in)
+        ).isoformat()
+    return enriched
 
 
 class SlackOAuthProvider:
@@ -62,11 +79,31 @@ class SlackOAuthProvider:
         if not access_token:
             raise ValueError("Slack response missing access_token")
 
-        return {
+        return with_expiry_metadata({
             "access_token": access_token,
+            "refresh_token": data.get("refresh_token"),
+            "expires_in": data.get("expires_in"),
             "team_id": data.get("team", {}).get("id"),
             "team_name": data.get("team", {}).get("name"),
-        }
+        })
+
+    async def refresh_access_token(self, refresh_token: str):
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://slack.com/api/oauth.v2.access",
+                data={
+                    "client_id": settings.SLACK_CLIENT_ID,
+                    "client_secret": settings.SLACK_CLIENT_SECRET,
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_token,
+                },
+            )
+        data = response.json()
+        if not data.get("ok"):
+            raise ValueError(f"Slack token refresh failed: {data.get('error')}")
+        return with_expiry_metadata(data)
 
 
 class GitHubOAuthProvider:
@@ -119,11 +156,33 @@ class GitHubOAuthProvider:
         if "error" in data:
             raise ValueError(f"GitHub OAuth failed: {data.get('error_description')}")
 
-        return {
+        return with_expiry_metadata({
             "access_token": data["access_token"],
+            "refresh_token": data.get("refresh_token"),
+            "expires_in": data.get("expires_in"),
+            "refresh_token_expires_in": data.get("refresh_token_expires_in"),
             "token_type": data["token_type"],
             "scope": data["scope"],
-        }
+        })
+
+    async def refresh_access_token(self, refresh_token: str):
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://github.com/login/oauth/access_token",
+                headers={"Accept": "application/json"},
+                data={
+                    "client_id": settings.GITHUB_CLIENT_ID,
+                    "client_secret": settings.GITHUB_CLIENT_SECRET,
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_token,
+                },
+            )
+        data = response.json()
+        if "error" in data:
+            raise ValueError(f"GitHub token refresh failed: {data.get('error_description')}")
+        return with_expiry_metadata(data)
 
 
 PROVIDERS = {

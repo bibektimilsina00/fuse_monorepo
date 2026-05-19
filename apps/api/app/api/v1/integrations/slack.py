@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.api.v1.auth.dependencies import get_current_user
 from apps.api.app.core.database import get_db
 from apps.api.app.core.logger import get_logger
-from apps.api.app.credential_manager.encryption.aes import AESEncryptionService
 from apps.api.app.integrations.slack.service import SlackService
 from apps.api.app.models.user import User
 from apps.api.app.repositories.credential_repository import CredentialRepository
+from apps.api.app.services.credential_service import CredentialService
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -30,10 +30,8 @@ async def get_slack_service(
         if not cred or cred.type != "slack_oauth":
             raise HTTPException(status_code=404, detail="Slack credential not found")
 
-        encryption_service = AESEncryptionService()
-        import json
-
-        decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
+        credential_service = CredentialService(db)
+        decrypted_data = await credential_service.get_decrypted_credential(cred)
         token = decrypted_data.get("access_token")
         if not token:
             raise HTTPException(status_code=400, detail="Access token missing in credential")

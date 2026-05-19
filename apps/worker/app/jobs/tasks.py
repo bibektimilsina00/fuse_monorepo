@@ -41,15 +41,12 @@ async def _run_workflow(
     resume_input: dict | None = None,
     snapshot: dict | None = None,
 ):
-    import json
-
     from apps.api.app.core.database import AsyncSessionLocal
-    from apps.api.app.credential_manager.encryption.aes import encryption_service
     from apps.api.app.execution_engine.engine.event_emitter import RedisEventEmitter
     from apps.api.app.execution_engine.engine.workflow_runner import PauseSignal, WorkflowRunner
-    from apps.api.app.repositories.credential_repository import CredentialRepository
     from apps.api.app.repositories.execution_repository import ExecutionRepository
     from apps.api.app.repositories.workflow_repository import WorkflowRepository
+    from apps.api.app.services.credential_service import CredentialService
 
     emitter = RedisEventEmitter(execution_id)
     credentials_list: list[dict[str, Any]] = []
@@ -57,7 +54,6 @@ async def _run_workflow(
     async with AsyncSessionLocal() as db:
         exec_repo = ExecutionRepository(db)
         wf_repo = WorkflowRepository(db)
-        cred_repo = CredentialRepository(db)
 
         await exec_repo.update_status(uuid.UUID(execution_id), "running")
         await exec_repo.add_log(uuid.UUID(execution_id), "Workflow execution started", level="info")
@@ -65,14 +61,8 @@ async def _run_workflow(
 
         workflow = await wf_repo.get_by_id(uuid.UUID(workflow_id))
         if workflow:
-            for cred in await cred_repo.list_by_user(workflow.user_id):
-                try:
-                    decrypted_data = json.loads(encryption_service.decrypt(cred.encrypted_data))
-                    credentials_list.append(
-                        {"id": str(cred.id), "type": cred.type, "data": decrypted_data}
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to decrypt credential {cred.id}: {e}")
+            credential_service = CredentialService(db)
+            credentials_list = await credential_service.list_decrypted_for_user(workflow.user_id)
         else:
             logger.error(f"Workflow {workflow_id} not found when fetching credentials")
 
