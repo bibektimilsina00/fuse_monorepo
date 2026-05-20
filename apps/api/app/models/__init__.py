@@ -9,6 +9,7 @@ from apps.api.app.models.user import User
 from apps.api.app.models.workflow import Execution, ExecutionLog, Workflow
 from apps.api.app.models.workflow_version import WorkflowVersion
 from apps.api.app.models.workspace import Workspace, WorkspaceInvite, WorkspaceMember
+from apps.api.app.models.table import DataTable, TableColumn, TableRow
 
 __all__ = [
     "Asset",

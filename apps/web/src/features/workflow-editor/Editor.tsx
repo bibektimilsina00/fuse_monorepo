@@ -172,10 +172,9 @@ function EditorContent() {
   useEffect(() => {
     const autoPrompt = (location.state as any)?.autoPrompt
     if (!autoPrompt) return
-    const { setInspectorTab, setCopilotAutoPrompt } = require('@/stores/ui-store').useUIStore.getState()
+    const { setInspectorTab, setCopilotAutoPrompt } = useUIStore.getState()
     setInspectorTab('Copilot')
     setCopilotAutoPrompt(autoPrompt)
-    // Clear location state so refresh doesn't re-trigger
     window.history.replaceState({}, '')
   }, [location.state])
 

@@ -59,6 +59,8 @@ class KnowledgeService:
         description: str | None = None,
         embedding_model: str = "text-embedding-3-small",
         embedding_credential_id: uuid.UUID | None = None,
+        chunk_size: int = CHUNK_SIZE,
+        chunk_overlap: int = CHUNK_OVERLAP,
     ) -> KnowledgeBase:
         kb = KnowledgeBase(
             user_id=user_id,
@@ -68,6 +70,8 @@ class KnowledgeService:
             embedding_model=embedding_model,
             embedding_provider="openai",
             embedding_credential_id=embedding_credential_id,
+            chunk_size=max(100, min(chunk_size, 8000)),
+            chunk_overlap=max(0, min(chunk_overlap, chunk_size // 2)),
         )
         return await self.repo.create_kb(kb)
 
@@ -86,7 +90,7 @@ class KnowledgeService:
         )
         doc = await self.repo.create_document(doc)
 
-        chunks_text = _split_text(text)
+        chunks_text = _split_text(text, chunk_size=kb.chunk_size, overlap=kb.chunk_overlap)
         if not chunks_text:
             return doc
 

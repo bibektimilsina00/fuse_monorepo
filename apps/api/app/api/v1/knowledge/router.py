@@ -28,6 +28,8 @@ class KBCreate(BaseModel):
     description: str | None = None
     embedding_model: str = "text-embedding-3-small"
     embedding_credential_id: uuid.UUID | None = None
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
 
 
 class KBOut(BaseModel):
@@ -123,6 +125,8 @@ async def create_kb(
         description=body.description,
         embedding_model=body.embedding_model,
         embedding_credential_id=body.embedding_credential_id,
+        chunk_size=body.chunk_size,
+        chunk_overlap=body.chunk_overlap,
     )
     return {
         "id": str(kb.id),

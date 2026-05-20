@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from apps.api.app.api.v1.a2a.router import router as a2a_router
+from apps.api.app.api.v1.tables.router import router as tables_router
 from apps.api.app.api.v1.ai.router import router as ai_router
 from apps.api.app.api.v1.assets.router import router as assets_router
 from apps.api.app.api.v1.auth.router import router as auth_router
@@ -39,3 +40,4 @@ router.include_router(webhooks_router)
 router.include_router(cron_router)
 router.include_router(knowledge_router, prefix="/kb", tags=["knowledge"])
 router.include_router(secrets_router, prefix="/secrets", tags=["secrets"])
+router.include_router(tables_router, prefix="/tables", tags=["tables"])

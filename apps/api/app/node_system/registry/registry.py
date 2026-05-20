@@ -34,13 +34,16 @@ from apps.api.app.node_system.nodes.common.cron.cron_node import CronTriggerNode
 from apps.api.app.node_system.nodes.common.trigger.manual import TriggerNode
 from apps.api.app.node_system.nodes.http.request.request import HttpRequestNode
 from apps.api.app.node_system.nodes.http.webhook.webhook import WebhookTriggerNode
+from apps.api.app.node_system.nodes.airtable.airtable_node import AirtableNode
 from apps.api.app.node_system.nodes.discord.discord_node import DiscordNode
 from apps.api.app.node_system.nodes.github.github_node import GitHubNode
 from apps.api.app.node_system.nodes.gmail.gmail_node import GmailNode
+from apps.api.app.node_system.nodes.hubspot.hubspot_node import HubSpotNode
 from apps.api.app.node_system.nodes.linear.linear_node import LinearNode
 from apps.api.app.node_system.nodes.notion.notion_node import NotionNode
 from apps.api.app.node_system.nodes.slack.slack_node import SlackNode
 from apps.api.app.node_system.nodes.slack.slack_trigger import SlackTriggerNode
+from apps.api.app.node_system.nodes.stripe.stripe_node import StripeNode
 from apps.api.app.node_system.nodes.telegram.telegram_node import TelegramNode
 
 
@@ -85,7 +88,10 @@ node_registry.register(SlackNode)
 node_registry.register(SlackTriggerNode)
 node_registry.register(GitHubNode)
 node_registry.register(NotionNode)
+node_registry.register(AirtableNode)
 node_registry.register(DiscordNode)
+node_registry.register(StripeNode)
+node_registry.register(HubSpotNode)
 node_registry.register(TelegramNode)
 node_registry.register(GmailNode)
 node_registry.register(LinearNode)

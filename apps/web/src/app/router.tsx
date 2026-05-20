@@ -23,6 +23,10 @@ import ResetPasswordPage from '@/features/auth/reset-password-page'
 import { TeamSettingsPage } from '@/features/workspaces/TeamSettingsPage'
 import { InviteAcceptPage } from '@/features/workspaces/InviteAcceptPage'
 import { RouteError } from '@/components/ErrorBoundary'
+import { LogsPage } from '@/features/logs/LogsPage'
+import { ScheduledTasksPage } from '@/features/scheduled/ScheduledTasksPage'
+import { TablesPage } from '@/features/tables/TablesPage'
+import { FilesPage } from '@/features/files/FilesPage'
 
 export const router = createBrowserRouter([
   {
@@ -88,6 +92,22 @@ export const router = createBrowserRouter([
       {
         path: 'kb',
         element: <KnowledgePage />,
+      },
+      {
+        path: 'logs',
+        element: <LogsPage />,
+      },
+      {
+        path: 'scheduled',
+        element: <ScheduledTasksPage />,
+      },
+      {
+        path: 'tables',
+        element: <TablesPage />,
+      },
+      {
+        path: 'files',
+        element: <FilesPage />,
       },
       {
         path: 'workflows/:id',

@@ -3,6 +3,7 @@ import shutil
 import uuid
 from pathlib import Path
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +55,48 @@ async def upload_asset(
         "size": asset.file_size,
         "url": f"/api/v1/assets/{asset.id}/view",
     }
+
+
+@router.get("/")
+async def list_assets(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        sa.select(Asset)
+        .where(Asset.user_id == current_user.id)
+        .order_by(Asset.created_at.desc())
+    )
+    assets = result.scalars().all()
+    return [
+        {
+            "id": str(a.id),
+            "name": a.name,
+            "type": a.file_type,
+            "size": a.file_size,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "url": f"/api/v1/assets/{a.id}/view",
+        }
+        for a in assets
+    ]
+
+
+@router.delete("/{asset_id}", status_code=204)
+async def delete_asset(
+    asset_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    asset = await db.get(Asset, asset_id)
+    if not asset or asset.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    # Remove file from disk
+    try:
+        Path(str(asset.file_path)).unlink(missing_ok=True)
+    except Exception:
+        pass
+    await db.delete(asset)
+    await db.commit()
 
 
 @router.get("/{asset_id}/view")

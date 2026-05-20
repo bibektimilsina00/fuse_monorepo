@@ -26,6 +26,8 @@ class KnowledgeBase(Base):
     embedding_model: Mapped[str] = mapped_column(String(100), default="text-embedding-3-small")
     embedding_provider: Mapped[str] = mapped_column(String(50), default="openai")
     embedding_credential_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    chunk_size: Mapped[int] = mapped_column(Integer, default=1000, nullable=False)
+    chunk_overlap: Mapped[int] = mapped_column(Integer, default=200, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
