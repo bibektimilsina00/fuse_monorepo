@@ -7,7 +7,7 @@ export class CanvasEngine {
     const isError = params.sourceHandle === 'error';
     return addEdge({
       ...params,
-      type: 'smoothstep',
+      type: 'custom',
       animated: false,
       style: isError
         ? { stroke: '#ff4d4f', strokeWidth: 2 }

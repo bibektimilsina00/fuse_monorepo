@@ -141,23 +141,24 @@ const OutputSchemaPanel: React.FC<{ outputs: { label: string; type: string }[]; 
         <ChevronDown className={cn('w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="px-4 pb-3 flex flex-col gap-1">
+        <div className="px-4 pb-3 flex flex-col gap-0.5">
           {outputs.map(o => (
-            <div key={o.label} className="flex items-center justify-between group">
+            <button
+              key={o.label}
+              onClick={() => copy(o.label)}
+              title={`Copy {{${nodeId}.${o.label}}}`}
+              className="flex items-center justify-between w-full px-2 py-1 rounded-md hover:bg-[var(--bg-surface-2)] transition-colors text-left group"
+            >
               <div className="flex items-center gap-2">
-                <span className="text-[12px] text-white font-mono">{o.label}</span>
+                <span className={cn('text-[12px] font-mono', copied === o.label ? 'text-green-400' : 'text-white')}>{o.label}</span>
                 <span className={cn('text-[10px] font-medium', TYPE_COLOR[o.type] || 'text-[var(--text-muted)]')}>{o.type}</span>
               </div>
-              <button
-                onClick={() => copy(o.label)}
-                title={`Copy {{${nodeId}.${o.label}}}`}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--text-muted)] hover:text-white"
-              >
-                {copied === o.label ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-              </button>
-            </div>
+              <span className="opacity-0 group-hover:opacity-60 transition-opacity">
+                {copied === o.label ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-[var(--text-muted)]" />}
+              </span>
+            </button>
           ))}
-          <p className="text-[10px] text-[var(--text-muted)] mt-1 italic">Click field name to copy interpolation</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1 italic px-2">Click any field to copy interpolation</p>
         </div>
       )}
     </div>
@@ -183,7 +184,7 @@ export const EditorTab: React.FC = () => {
   const canonicalModes: CanonicalModeOverrides = selectedNode?.data?.canonicalModes || {}
 
   const connectedNodes = useNodeAncestors(selectedNodeId, nodes, edges)
-  const { mainGroups, advancedProps, hasAdvanced, canonicalIndex } = useEditorLayout(
+  const { mainGroups, advancedGroups, hasAdvanced, canonicalIndex } = useEditorLayout(
     definition,
     properties,
     canonicalModes,
@@ -265,7 +266,7 @@ export const EditorTab: React.FC = () => {
             {showAdvanced && (
               <div className="flex flex-col mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <PropertyGroupList
-                  groups={[{ group: null, props: advancedProps }]}
+                  groups={advancedGroups}
                   selectedNode={selectedNode}
                   definition={definition}
                   properties={properties}

@@ -32,7 +32,7 @@ class Neo4jNode(BaseNode[Neo4jProperties]):
             name="Neo4j",
             category="integration",
             description="Run a Cypher query against a Neo4j graph database.",
-            icon="GitBranch",
+            icon="si:SiNeo4j",
             color="#008cc1",
             properties=[
                 {"name": "uri", "label": "URI", "type": "string", "default": "bolt://localhost:7687"},

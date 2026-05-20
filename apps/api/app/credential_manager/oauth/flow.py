@@ -247,10 +247,68 @@ class NotionOAuthProvider:
         raise ValueError("Notion OAuth tokens do not expire and cannot be refreshed.")
 
 
+class GoogleOAuthProvider:
+    id = "google_oauth"
+    name = "Google"
+    type = "oauth"
+    description = "Connect Google account for Gmail, Drive, and other Google services"
+    icon_url = "https://cdn.brandfetch.io/google.com/icon"
+    scopes = ["Read and send Gmail", "Access Google profile"]
+
+    def get_authorization_url(self, state, code_challenge=None):
+        from urllib.parse import urlencode
+        params = {
+            "client_id": settings.GOOGLE_CLIENT_ID if hasattr(settings, "GOOGLE_CLIENT_ID") else "",
+            "redirect_uri": REDIRECT_URI.format(service="google"),
+            "response_type": "code",
+            "scope": "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly openid email profile",
+            "access_type": "offline",
+            "state": state,
+            "prompt": "consent",
+        }
+        return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+    async def exchange_code(self, code, code_verifier=None):
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": settings.GOOGLE_CLIENT_ID if hasattr(settings, "GOOGLE_CLIENT_ID") else "",
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET if hasattr(settings, "GOOGLE_CLIENT_SECRET") else "",
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": REDIRECT_URI.format(service="google"),
+                },
+            )
+        data = response.json()
+        if "error" in data:
+            raise ValueError(f"Google OAuth failed: {data.get('error_description', data['error'])}")
+        return with_expiry_metadata(data)
+
+    async def refresh_access_token(self, refresh_token: str):
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": settings.GOOGLE_CLIENT_ID if hasattr(settings, "GOOGLE_CLIENT_ID") else "",
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET if hasattr(settings, "GOOGLE_CLIENT_SECRET") else "",
+                    "refresh_token": refresh_token,
+                    "grant_type": "refresh_token",
+                },
+            )
+        data = response.json()
+        if "error" in data:
+            raise ValueError(f"Google token refresh failed: {data.get('error_description', data['error'])}")
+        return with_expiry_metadata(data)
+
+
 PROVIDERS = {
     "slack": SlackOAuthProvider(),
     "github": GitHubOAuthProvider(),
     "notion": NotionOAuthProvider(),
+    "google": GoogleOAuthProvider(),
 }
 
 

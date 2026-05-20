@@ -13,6 +13,12 @@ import {
   LOOP_START_HANDLE_ID,
   LOOP_DIMS,
 } from '@/features/workflow-editor/utils/loop-utils';
+import {
+  findClosestSourceNode,
+  buildAutoConnectEdge,
+  findSpawnPosition,
+  computeDAGLayout,
+} from '@/features/workflow-editor/utils/node-placement';
 
 export const useWorkflow = () => {
   const {
@@ -25,11 +31,11 @@ export const useWorkflow = () => {
     setSelectedNodeId,
   } = useWorkflowStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getViewport } = useReactFlow();
   const { setInspectorTab, setSearchOpen } = useUIStore();
   const [mode, setMode] = useState<'select' | 'pan'>('select');
   const { data: nodeRegistry = [] } = useNodes();
-  const { removeNode, toggleNodeLock, duplicateNode, updateNodeData, nodes: allNodes } = useWorkflowStore();
+  const { removeNode, toggleNodeLock, duplicateNode, updateNodeData, nodes: allNodes, snapshot } = useWorkflowStore();
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -42,23 +48,45 @@ export const useWorkflow = () => {
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   const addNode = useCallback(
-    (type: string, position: { x: number; y: number }) => {
+    (type: string, positionArg?: { x: number; y: number }) => {
+      snapshot();
       const definition = nodeRegistry.find(d => d.type === type);
+
+      // Smart spawn: if no explicit position, find non-overlapping spot near viewport center
+      let position = positionArg;
+      if (!position) {
+        const vp = getViewport();
+        const wrapper = reactFlowWrapper.current?.getBoundingClientRect();
+        const centerX = wrapper ? (wrapper.width / 2 - vp.x) / vp.zoom : 400;
+        const centerY = wrapper ? (wrapper.height / 2 - vp.y) / vp.zoom : 300;
+        const rootNodes = nodes.filter(n => !n.parentNode);
+        position = findSpawnPosition(rootNodes, { x: centerX, y: centerY });
+      }
+
       const newNode = CanvasEngine.createNode(type, position, definition);
+
+      // Auto-connect: find closest node and create edge
+      const rootNodes = nodes.filter(n => !n.parentNode);
+      const closestNode = findClosestSourceNode(position, rootNodes, newNode.id);
+      const autoEdge = buildAutoConnectEdge(closestNode, newNode.id);
+
+      snapshot();
       setNodes(sortNodesParentsFirst([...nodes, newNode]));
+      if (autoEdge) setEdges(prev => [...prev, autoEdge]);
       setSelectedNodeId(newNode.id);
       setInspectorTab('Editor');
     },
-    [nodes, setNodes, setInspectorTab, setSelectedNodeId, nodeRegistry]
+    [nodes, edges, setNodes, setEdges, setInspectorTab, setSelectedNodeId, nodeRegistry, snapshot, getViewport]
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
       if (CanvasEngine.validateConnection(params)) {
+        snapshot();
         setEdges(CanvasEngine.onConnect(params, edges));
       }
     },
-    [edges, setEdges]
+    [edges, setEdges, snapshot]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -271,6 +299,7 @@ export const useWorkflow = () => {
       }
 
       if (changed) {
+        snapshot();
         // Resize all affected loop containers
         const loopIds = new Set<string>();
         if (container) loopIds.add(container.loopId);

@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { Handle, Position } from 'reactflow'
-import { Repeat2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useExecutionStore } from '@/stores/execution-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { NodeToolbar } from './components/node-toolbar'
 import { LOOP_START_HANDLE_ID, LOOP_END_HANDLE_ID, LOOP_DIMS } from '../utils/loop-utils'
+import { getIcon } from '../utils/icon-map'
 
 const LOOP_TYPE_LABEL: Record<string, string> = {
   for_each: 'For Each',
@@ -21,9 +21,10 @@ interface LoopNodeProps {
   selected: boolean
 }
 
-export const LoopNode: React.FC<LoopNodeProps> = ({ id, data, selected }) => {
+export const LoopNode: React.FC<LoopNodeProps> = ({ id, data, type, selected }) => {
   const nodeStatuses = useExecutionStore(s => s.nodeStatuses)
-  const { updateNodeData } = useWorkflowStore()
+  const { updateNodeData, nodeDefinitions } = useWorkflowStore()
+  const definition = nodeDefinitions.find(d => d.type === type)
   const allStatuses = Object.values(nodeStatuses)
   const status = allStatuses.map(s => s[id]).find(Boolean)
 
@@ -74,7 +75,7 @@ export const LoopNode: React.FC<LoopNodeProps> = ({ id, data, selected }) => {
           onDoubleClick={startEditLabel}
         >
           <div className="flex size-[24px] flex-shrink-0 items-center justify-center rounded-md bg-[#3b82f6]">
-            <Repeat2 size={13} className="text-white" strokeWidth={2.5} />
+            {React.cloneElement(getIcon(definition?.icon || 'Repeat2') as React.ReactElement, { size: 13, className: 'text-white', strokeWidth: 2.5 })}
           </div>
           {isEditingLabel ? (
             <input

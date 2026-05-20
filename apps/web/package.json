@@ -15,6 +15,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fuse/node-definitions": "workspace:*",
     "@fuse/workflow-schema": "workspace:*",
+    "@icons-pack/react-simple-icons": "^13.13.0",
     "@reactflow/background": "^11.3.14",
     "@reactflow/controls": "^11.2.14",
     "@reactflow/core": "^11.10.1",

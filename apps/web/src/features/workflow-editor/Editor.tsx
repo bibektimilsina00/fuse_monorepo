@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
+import { computeDAGLayout } from '@/features/workflow-editor/utils/node-placement'
 import { useLocation } from 'react-router-dom'
 import ReactFlow, {
   ReactFlowProvider,
@@ -22,6 +23,7 @@ import { useWorkflowStore } from '@/stores/workflow-store'
 import { useUIStore } from '@/stores/ui-store'
 
 import { CustomNode } from '@/features/workflow-editor/nodes/CustomNode'
+import { CustomEdge } from '@/features/workflow-editor/edges/CustomEdge'
 import { ConditionNode } from '@/features/workflow-editor/nodes/ConditionNode'
 import { LoopNode } from '@/features/workflow-editor/nodes/LoopNode'
 
@@ -113,10 +115,41 @@ function EditorContent() {
     setMode,
   } = useWorkflow()
 
-  const { fitView } = useReactFlow()
+  const { fitView, setNodes: rfSetNodes } = useReactFlow()
+  const setNodesStore = useWorkflowStore(s => s.setNodes)
+
+  const runAutoLayout = useCallback(() => {
+    const rootNodes = nodes.filter(n => !n.parentNode)
+    const positions = computeDAGLayout(rootNodes, edges)
+    if (positions.size === 0) { fitView({ duration: 400, padding: 0.2 }); return }
+    setNodesStore(prev => prev.map(n => {
+      const pos = positions.get(n.id)
+      return pos ? { ...n, position: pos } : n
+    }))
+    setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50)
+  }, [nodes, edges, setNodesStore, fitView])
   const { data: nodeRegistry = [] } = useNodes()
   const setNodeDefinitions = useWorkflowStore(s => s.setNodeDefinitions)
   const nodeDefinitions = useWorkflowStore(s => s.nodeDefinitions)
+  const workflowLocked = useWorkflowStore(s => s.workflowLocked)
+  const undo = useWorkflowStore(s => s.undo)
+  const redo = useWorkflowStore(s => s.redo)
+
+  // Undo / redo keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey
+      if (!meta) return
+      // Don't fire when typing in inputs
+      const tag = (e.target as HTMLElement).tagName
+      if (['INPUT', 'TEXTAREA'].includes(tag)) return
+
+      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+      if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); redo() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [undo, redo])
   const { setInspectorTab: switchTab } = useUIStore()
   const location = useLocation()
 
@@ -150,6 +183,8 @@ function EditorContent() {
     return types
   }, [nodeDefinitions])
 
+  const edgeTypes = React.useMemo(() => ({ custom: CustomEdge }), [])
+
   const [connectionColor, setConnectionColor] = React.useState('var(--workflow-edge, #555)')
 
   const onConnectStart = React.useCallback((_: any, { handleId }: any) => {
@@ -181,6 +216,7 @@ function EditorContent() {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -194,7 +230,7 @@ function EditorContent() {
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
           defaultEdgeOptions={{
-            type: 'smoothstep',
+            type: 'custom',
             style: { strokeWidth: 2 }
           }}
           connectionLineType={ConnectionLineType.SmoothStep}
@@ -203,8 +239,11 @@ function EditorContent() {
             strokeWidth: 2,
             transition: 'stroke 0.2s ease'
           }}
-          panOnDrag={mode === 'pan'}
-          selectionOnDrag={mode === 'select'}
+          nodesDraggable={!workflowLocked}
+          nodesConnectable={!workflowLocked}
+          elementsSelectable={!workflowLocked}
+          panOnDrag={workflowLocked ? true : mode === 'pan'}
+          selectionOnDrag={!workflowLocked && mode === 'select'}
           panOnScroll={mode === 'select'}
           selectionMode={mode === 'select' ? SelectionMode.Full : SelectionMode.Partial}
           fitView
@@ -257,7 +296,7 @@ function EditorContent() {
             onUndo: () => {},
             onRedo: () => {},
             onAddNode: () => setSearchOpen(true),
-            onAutoLayout: () => fitView({ duration: 400, padding: 0.2 }),
+            onAutoLayout: runAutoLayout,
             onFitView: () => fitView({ duration: 300, padding: 0.15 }),
             onOpenLogs: () => switchTab('Editor'),
             onOpenChat: () => switchTab('Copilot'),

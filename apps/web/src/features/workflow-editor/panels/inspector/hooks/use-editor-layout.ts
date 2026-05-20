@@ -18,8 +18,8 @@ export interface PropertyGroup {
 export interface EditorLayout {
   /** Visible props in the always-shown main area, grouped by section. */
   mainGroups: PropertyGroup[]
-  /** Standalone advanced props not part of any canonical pair. */
-  advancedProps: NodeProperty[]
+  /** Standalone advanced props grouped by section (for headers like "Retry"). */
+  advancedGroups: PropertyGroup[]
   /** Whether the "Show additional fields" expander should appear. */
   hasAdvanced: boolean
   /** Pre-built index for canonical pair lookups. */
@@ -35,7 +35,7 @@ export function useEditorLayout(
 ): EditorLayout {
   return useMemo(() => {
     if (!definition) {
-      return { mainGroups: [], advancedProps: [], hasAdvanced: false, canonicalIndex: EMPTY_INDEX }
+      return { mainGroups: [], advancedGroups: [], hasAdvanced: false, canonicalIndex: EMPTY_INDEX }
     }
 
     const canonicalIndex = buildCanonicalIndex(definition.properties)
@@ -64,7 +64,7 @@ export function useEditorLayout(
 
     return {
       mainGroups: groupBySection(mainProps),
-      advancedProps,
+      advancedGroups: groupBySection(advancedProps),
       hasAdvanced,
       canonicalIndex,
     }

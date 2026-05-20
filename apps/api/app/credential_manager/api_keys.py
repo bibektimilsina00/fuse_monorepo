@@ -50,6 +50,14 @@ PROVIDERS = {
         hint="bu-...",
         fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="bu-...")],
     ),
+    "linear": APIKeyProvider(
+        id="linear_api_key",
+        name="Linear",
+        description="Linear project management — create and manage issues",
+        icon_url="https://cdn.brandfetch.io/linear.app/icon",
+        hint="lin_api_...",
+        fields=[CredentialField(id="api_key", label="API Key", type="password", placeholder="lin_api_...")],
+    ),
     "perplexity": APIKeyProvider(
         id="perplexity_api_key",
         name="Perplexity",

@@ -39,7 +39,7 @@ class PerplexityNode(BaseNode[PerplexityProperties]):
             name="Perplexity",
             category="ai",
             description="Search the web and get AI answers with live citations using Perplexity Sonar.",
-            icon="Globe",
+            icon="si:SiPerplexity",
             color="#20b2aa",
             properties=[
                 {

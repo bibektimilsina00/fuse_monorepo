@@ -7,6 +7,7 @@ import { useNodes } from '@/hooks/nodes/queries'
 import { CopilotTab } from './CopilotTab'
 import { ToolbarTab } from './ToolbarTab'
 import { EditorTab } from './EditorTab'
+import { TestTab } from './TestTab'
 import { ActionBar } from './components/action-bar/ActionBar'
 import { TabSelector } from './components/tab-selector/TabSelector'
 import { NodeHeader } from './components/node-header/NodeHeader'
@@ -68,6 +69,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({ style, classNa
         {activeTab === 'Copilot' && <CopilotTab />}
         {activeTab === 'Toolbar' && <ToolbarTab />}
         {activeTab === 'Editor' && <EditorTab />}
+        {activeTab === 'Test' && <TestTab />}
       </div>
     </aside>
   )

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Hand, ChevronDown, Undo2, Redo2, Maximize, MousePointer2, Check, Power } from 'lucide-react'
+import { Hand, ChevronDown, Maximize, MousePointer2, Check, Power } from 'lucide-react'
 import { useReactFlow } from 'reactflow'
 import { cn } from '@/lib/utils'
 import { IconButton, Tooltip } from '@/components/ui'
@@ -67,16 +67,10 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({ mode, onMode
 
       <div className="mx-1 h-[20px] w-[1px] bg-[var(--border-default)]" />
 
-      <IconButton icon={<Undo2 className="size-[16px]" strokeWidth={1.5} />} tooltip="Undo" size="sm" />
-      <IconButton icon={<Redo2 className="size-[16px]" strokeWidth={1.5} />} tooltip="Redo" size="sm" disabled />
-
-      <div className="mx-1 h-[20px] w-[1px] bg-[var(--border-default)]" />
-
       <IconButton icon={<Maximize className="size-[14px]" strokeWidth={2} />} tooltip="Fit view" size="sm" onClick={() => fitView()} />
 
       <div className="mx-1 h-[20px] w-[1px] bg-[var(--border-default)]" />
 
-      {/* Version history */}
       <VersionHistory />
 
       <div className="mx-1 h-[20px] w-[1px] bg-[var(--border-default)]" />

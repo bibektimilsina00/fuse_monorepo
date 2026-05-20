@@ -2,7 +2,7 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import { useUIStore, type InspectorTabType } from '@/stores/ui-store'
 
-const TABS: InspectorTabType[] = ['Copilot', 'Toolbar', 'Editor']
+const TABS: InspectorTabType[] = ['Copilot', 'Toolbar', 'Editor', 'Test']
 
 export const TabSelector: React.FC = () => {
   const { inspectorTab: activeTab, setInspectorTab: setActiveTab } = useUIStore()

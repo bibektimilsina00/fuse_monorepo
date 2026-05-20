@@ -76,8 +76,8 @@ export const WorkflowOptionsMenu: React.FC = () => {
   const { id: workflowId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { fitView } = useReactFlow()
-  const isActive = useWorkflowStore(s => s.isActive)
-  const setIsActive = useWorkflowStore(s => s.setIsActive)
+  const workflowLocked = useWorkflowStore(s => s.workflowLocked)
+  const setWorkflowLocked = useWorkflowStore(s => s.setWorkflowLocked)
 
   const updateWorkflow = useUpdateWorkflow()
   const duplicateWorkflow = useDuplicateWorkflow()
@@ -107,15 +107,9 @@ export const WorkflowOptionsMenu: React.FC = () => {
       onClick: () => fitView({ duration: 400, padding: 0.2 }),
     },
     {
-      label: isActive ? 'Lock workflow' : 'Unlock workflow',
-      icon: isActive ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />,
-      onClick: () => {
-        if (workflowId) {
-          const next = !isActive
-          setIsActive(next)
-          updateWorkflow.mutate({ id: workflowId, is_active: next, silent: true })
-        }
-      },
+      label: workflowLocked ? 'Unlock workflow' : 'Lock workflow',
+      icon: workflowLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />,
+      onClick: () => setWorkflowLocked(!workflowLocked),
       dividerBefore: true,
     },
     {

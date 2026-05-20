@@ -1,7 +1,8 @@
 import React from 'react'
-import { Ellipsis, MessageCircle, Send, Play } from 'lucide-react'
+import { MessageCircle, Send, Play } from 'lucide-react'
 import { Button, IconButton, Spinner } from '@/components/ui'
 import { useExecution } from '@/features/workflow-editor/hooks/use-execution'
+import { WorkflowOptionsMenu } from '../node-header/WorkflowOptionsMenu'
 
 export const ActionBar: React.FC = () => {
   const { run, isRunning } = useExecution()
@@ -9,7 +10,7 @@ export const ActionBar: React.FC = () => {
   return (
     <div className="flex items-center justify-between p-3 gap-2">
       <div className="flex items-center gap-1.5">
-        <IconButton icon={<Ellipsis />} tooltip="More options" size="sm" />
+        <WorkflowOptionsMenu />
         <IconButton icon={<MessageCircle />} tooltip="View chat" size="sm" />
       </div>
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type InspectorTabType = 'Copilot' | 'Toolbar' | 'Editor'
+export type InspectorTabType = 'Copilot' | 'Toolbar' | 'Editor' | 'Test'
 export type LogViewMode = 'structured' | 'raw'
 export type ThemeMode = 'dark' | 'light' | 'system'
 

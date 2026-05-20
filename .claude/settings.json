@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "if [[ \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == */.env* || \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == */.env ]]; then echo 'BLOCKED: .env files must not be edited by Claude — edit manually to avoid accidental credential exposure'; exit 2; fi"
+          },
+          {
+            "type": "command",
+            "command": "echo '⚠️  Fix-properly: State (1) root cause (2) lazy fix rejected (3) correct fix — before touching any file.'"
           }
         ]
       }

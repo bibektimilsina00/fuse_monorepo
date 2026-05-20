@@ -25,7 +25,7 @@ interface WorkflowState {
   onEdgesChange: OnEdgesChange
   onConnect: OnConnect
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void
-  setEdges: (edges: Edge[]) => void
+  setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void
   setNodeDefinitions: (definitions: NodeDefinition[]) => void
   addNode: (node: Node) => void
   updateNodeData: (id: string, data: any) => void
@@ -42,6 +42,17 @@ interface WorkflowState {
   workflowName: string | null
   isActive: boolean
   setIsActive: (active: boolean) => void
+  // Canvas lock — prevents editing (dragging, connecting, selecting)
+  workflowLocked: boolean
+  setWorkflowLocked: (locked: boolean) => void
+  // Undo / redo
+  undoStack: Array<{ nodes: Node[]; edges: Edge[] }>
+  redoStack: Array<{ nodes: Node[]; edges: Edge[] }>
+  snapshot: () => void
+  undo: () => void
+  redo: () => void
+  canUndo: () => boolean
+  canRedo: () => boolean
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -52,6 +63,42 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflowName: null,
   isActive: true,
   setIsActive: (active) => set({ isActive: active }),
+  workflowLocked: false,
+  setWorkflowLocked: (locked) => set({ workflowLocked: locked }),
+  undoStack: [],
+  redoStack: [],
+  snapshot: () => {
+    const { nodes, edges, undoStack } = get()
+    const MAX = 50
+    set({
+      undoStack: [...undoStack.slice(-MAX + 1), { nodes: [...nodes], edges: [...edges] }],
+      redoStack: [],  // snapshot clears redo
+    })
+  },
+  undo: () => {
+    const { nodes, edges, undoStack, redoStack } = get()
+    if (undoStack.length === 0) return
+    const prev = undoStack[undoStack.length - 1]
+    set({
+      nodes: prev.nodes,
+      edges: prev.edges,
+      undoStack: undoStack.slice(0, -1),
+      redoStack: [...redoStack, { nodes: [...nodes], edges: [...edges] }],
+    })
+  },
+  redo: () => {
+    const { nodes, edges, undoStack, redoStack } = get()
+    if (redoStack.length === 0) return
+    const next = redoStack[redoStack.length - 1]
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      undoStack: [...undoStack, { nodes: [...nodes], edges: [...edges] }],
+      redoStack: redoStack.slice(0, -1),
+    })
+  },
+  canUndo: () => get().undoStack.length > 0,
+  canRedo: () => get().redoStack.length > 0,
   onNodesChange: (changes: NodeChange[]) => {
     set({ nodes: applyNodeChanges(changes, get().nodes) })
   },
@@ -62,7 +109,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({ edges: addEdge(connection, get().edges) })
   },
   setNodes: (nodes) => set(state => ({ nodes: typeof nodes === 'function' ? nodes(state.nodes) : nodes })),
-  setEdges: (edges: Edge[]) => set({ edges }),
+  setEdges: (edges) => set(state => ({ edges: typeof edges === 'function' ? edges(state.edges) : edges })),
   setNodeDefinitions: (nodeDefinitions: NodeDefinition[]) => set({ nodeDefinitions }),
   addNode: (node: Node) => set({ nodes: [...get().nodes, node] }),
   updateNodeData: (id: string, data: any) => {
@@ -76,8 +123,22 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     });
   },
   removeNode: (id: string) => {
+    get().snapshot()
+    const current = get().nodes
+    const removedNode = current.find(n => n.id === id)
+
+    // Convert children's relative positions to absolute before unparenting
+    const updatedNodes = current
+      .filter(n => n.id !== id)
+      .map(n => {
+        if (n.parentNode !== id) return n
+        const absX = (removedNode?.position.x ?? 0) + n.position.x
+        const absY = (removedNode?.position.y ?? 0) + n.position.y
+        return { ...n, parentNode: undefined, extent: undefined, position: { x: absX, y: absY }, data: { ...n.data, parentId: undefined } }
+      })
+
     set({
-      nodes: get().nodes.filter((node) => node.id !== id),
+      nodes: updatedNodes,
       edges: get().edges.filter((edge) => edge.source !== id && edge.target !== id),
       selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId
     })

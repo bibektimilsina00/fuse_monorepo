@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Play, Clock, Zap, Globe, MoreHorizontal, Pencil, Trash2, ToggleLeft, ToggleRight, Copy } from 'lucide-react'
+import { Plus, Search, Play, Clock, Zap, Globe, MoreHorizontal, Pencil, Trash2, ToggleLeft, ToggleRight, Copy, Upload } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { requestJson } from '@/lib/api/client'
@@ -124,6 +124,31 @@ export const WorkflowsPage: React.FC = () => {
   const duplicateWorkflow = useDuplicateWorkflow()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const importRef = useRef<HTMLInputElement>(null)
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string)
+        const graph = json.graph ?? { nodes: json.nodes ?? [], edges: json.edges ?? [] }
+        const name = json.name ?? file.name.replace(/\.json$/, '') ?? 'Imported Workflow'
+        createWorkflow.mutate(name, {
+          onSuccess: async (wf) => {
+            await requestJson(z.any(), { url: `/workflows/${wf.id}`, method: 'PUT', data: { graph } })
+            refetch()
+            navigate(`/workflows/${wf.id}`)
+          }
+        })
+      } catch {
+        alert('Invalid workflow JSON file.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
 
   const filtered = useMemo(() => {
     return workflows.filter(wf => {
@@ -154,12 +179,21 @@ export const WorkflowsPage: React.FC = () => {
             <h1 className="text-[20px] font-bold text-white">Workflows</h1>
             <p className="text-[13px] text-[var(--text-muted)] mt-0.5">{workflows.length} total</p>
           </div>
-          <button
-            onClick={() => createWorkflow.mutate()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" /> New Workflow
-          </button>
+          <div className="flex items-center gap-2">
+            <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <button
+              onClick={() => importRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-2 border border-[var(--border-default)] text-[var(--text-muted)] hover:text-white text-[13px] font-medium rounded-lg transition-colors hover:border-[var(--border-focus)]"
+            >
+              <Upload className="w-4 h-4" /> Import
+            </button>
+            <button
+              onClick={() => createWorkflow.mutate()}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Workflow
+            </button>
+          </div>
         </div>
 
         {/* Search + Filter */}

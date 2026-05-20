@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     NOTION_CLIENT_ID: str = ""
     NOTION_CLIENT_SECRET: str = ""
 
+    DISCORD_CLIENT_ID: str = ""
+    DISCORD_CLIENT_SECRET: str = ""
+    DISCORD_BOT_TOKEN: str = ""
+
+    LINEAR_CLIENT_ID: str = ""
+    LINEAR_CLIENT_SECRET: str = ""
+
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parents[4] / ".env"),
         case_sensitive=True,

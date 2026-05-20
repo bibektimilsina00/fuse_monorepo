@@ -112,13 +112,31 @@ export const DashboardPage: React.FC = () => {
 
         {/* Content Grid */}
         <div className="w-full max-w-[68rem] pb-24">
-          {isEmpty ? (
+          {/* "Generate with Copilot" banner — shown when user has typed something */}
+          {searchQuery.trim() && (
+            <div className="mb-6">
+              <button
+                onClick={() => handleTemplateClick({ title: searchQuery, icon: Zap, description: searchQuery, prompt: searchQuery })}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-[var(--border-default)] hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all text-left group"
+              >
+                <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-600/20 flex-shrink-0 group-hover:bg-indigo-600/30 transition-colors">
+                  <Zap className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-white">Generate: <span className="text-indigo-400">"{searchQuery}"</span></p>
+                  <p className="text-[11px] text-[var(--text-muted)]">Create a workflow with AI Copilot</p>
+                </div>
+                <span className="text-[11px] text-[var(--text-muted)] group-hover:text-white transition-colors flex-shrink-0">↵ Enter</span>
+              </button>
+            </div>
+          )}
+          {isEmpty && !searchQuery.trim() ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="mb-4 rounded-full bg-[var(--surface-4)] p-4">
                 <Search className="size-8 text-[var(--text-muted)]" />
               </div>
               <h3 className="text-lg font-medium text-[var(--text-primary)]">No results found</h3>
-              <p className="text-[var(--text-muted)]">Try adjusting your search for "{searchQuery}"</p>
+              <p className="text-[var(--text-muted)]">Try adjusting your search</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
