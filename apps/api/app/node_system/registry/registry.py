@@ -47,6 +47,7 @@ from apps.api.app.node_system.nodes.stripe.stripe_node import StripeNode
 from apps.api.app.node_system.nodes.telegram.telegram_node import TelegramNode
 from apps.api.app.node_system.nodes.jira.jira_node import JiraNode
 from apps.api.app.node_system.nodes.salesforce.salesforce_node import SalesforceNode
+from apps.api.app.node_system.nodes.logic.sub_workflow.sub_workflow_node import SubWorkflowNode
 
 
 class NodeRegistry:
@@ -115,6 +116,7 @@ node_registry.register(DynamoDBNode)
 node_registry.register(Neo4jNode)
 node_registry.register(JiraNode)
 node_registry.register(SalesforceNode)
+node_registry.register(SubWorkflowNode)
 
 # Load tool definitions (side-effect: registers all tools in tool_registry)
 import apps.api.app.node_system.tools.loader  # noqa: F401

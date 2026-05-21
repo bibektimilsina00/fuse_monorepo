@@ -126,6 +126,31 @@ async def get_execution(
     return execution
 
 
+@router.post("/{execution_id}/cancel")
+async def cancel_execution(
+    execution_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    repo = ExecutionRepository(db)
+    execution = await repo.get_by_id(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    if execution.status not in ("pending", "running"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel execution with status: {execution.status}",
+        )
+
+    from apps.api.app.core.redis import get_redis
+    redis = await get_redis()
+    await redis.set(f"execution:cancel:{execution_id}", "1", ex=300)
+
+    await repo.update_status(execution_id, "cancelling")
+    return {"status": "cancellation requested"}
+
+
 @router.post("/{execution_id}/resume", status_code=status.HTTP_202_ACCEPTED)
 async def resume_execution(
     execution_id: uuid.UUID,

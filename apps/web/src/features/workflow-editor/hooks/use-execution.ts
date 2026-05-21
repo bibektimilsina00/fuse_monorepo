@@ -51,6 +51,18 @@ export function useExecution() {
     },
   })
 
+  const cancelMutation = useMutation({
+    mutationFn: async (executionId: string) => {
+      return requestJson(z.object({ status: z.string() }), {
+        url: `/executions/${executionId}/cancel`,
+        method: 'POST',
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: executionKeys.all })
+    },
+  })
+
   const executionQuery = useQuery({
     queryKey: executionKeys.detail(currentExecutionId || ''),
     queryFn: async ({ signal }) => {
@@ -64,7 +76,7 @@ export function useExecution() {
     enabled: !!currentExecutionId,
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      if (status === 'completed' || status === 'failed') return false
+      if (status === 'completed' || status === 'failed' || status === 'cancelled') return false
       return 1000
     },
   })
@@ -80,12 +92,19 @@ export function useExecution() {
     runMutation.mutate()
   }, [runMutation])
 
+  const cancel = useCallback(() => {
+    if (currentExecutionId) cancelMutation.mutate(currentExecutionId)
+  }, [cancelMutation, currentExecutionId])
+
   const status = executionQuery.data?.status
-  const isRunning = runMutation.isPending || isStreaming || status === 'running' || status === 'pending'
+  const isRunning = runMutation.isPending || isStreaming || status === 'running' || status === 'pending' || status === 'cancelling'
+  const isCancelling = status === 'cancelling' || cancelMutation.isPending
 
   return {
     run,
+    cancel,
     isRunning,
+    isCancelling,
     execution: executionQuery.data as Execution | undefined,
     error: runMutation.error || executionQuery.error,
     currentExecutionId,

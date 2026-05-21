@@ -22,6 +22,11 @@ class PauseSignal(Exception):
         super().__init__(f"Execution paused at node {node_id}")
 
 
+class CancelledException(Exception):
+    """Raised when a cancellation signal is detected in Redis."""
+    pass
+
+
 class WorkflowRunner:
     def __init__(
         self,
@@ -73,6 +78,8 @@ class WorkflowRunner:
             )
         except PauseSignal:
             raise  # propagate to Celery task
+        except CancelledException:
+            raise  # propagate to Celery task
         except Exception as e:
             self._failed.set()
             self._error_message = str(e)
@@ -89,9 +96,22 @@ class WorkflowRunner:
     # Internal: run a single node then dispatch its successors
     # ------------------------------------------------------------------
 
+    async def _is_cancelled(self) -> bool:
+        try:
+            from apps.api.app.core.redis import get_redis
+            redis = await get_redis()
+            result = await redis.get(f"execution:cancel:{self.execution_id}")
+            return result is not None
+        except Exception:
+            return False
+
     async def _execute_node(self, node_id: str, input_data: dict[str, Any]) -> None:
         if self._failed.is_set():
             return
+
+        if await self._is_cancelled():
+            logger.info(f"Execution {self.execution_id} cancelled before node {node_id}")
+            raise CancelledException(f"Execution cancelled at node {node_id}")
 
         node_data = self.nodes.get(node_id)
 

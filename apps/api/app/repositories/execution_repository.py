@@ -50,8 +50,9 @@ class ExecutionRepository:
             execution.status = status
             if status == "running":
                 execution.started_at = datetime.now(UTC)
-            elif status in ("completed", "failed"):
-                execution.finished_at = datetime.now(UTC)
+            elif status in ("completed", "failed", "cancelled", "cancelling"):
+                if status in ("completed", "failed", "cancelled"):
+                    execution.finished_at = datetime.now(UTC)
             if output_data is not None:
                 execution.output_data = output_data
             await self.db.commit()

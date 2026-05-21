@@ -43,7 +43,7 @@ async def _run_workflow(
 ):
     from apps.api.app.core.database import AsyncSessionLocal
     from apps.api.app.execution_engine.engine.event_emitter import RedisEventEmitter
-    from apps.api.app.execution_engine.engine.workflow_runner import PauseSignal, WorkflowRunner
+    from apps.api.app.execution_engine.engine.workflow_runner import CancelledException, PauseSignal, WorkflowRunner
     from apps.api.app.repositories.execution_repository import ExecutionRepository
     from apps.api.app.repositories.workflow_repository import WorkflowRepository
     from apps.api.app.services.credential_service import CredentialService
@@ -120,6 +120,14 @@ async def _run_workflow(
             await repo.update_status(uuid.UUID(execution_id), "completed", output_data=output)
             await repo.add_log(uuid.UUID(execution_id), "Workflow execution completed", level="info")
             await emitter.emit("execution_completed", {"status": "completed", "output": output})
+
+    except CancelledException:
+        async with AsyncSessionLocal() as db:
+            repo = ExecutionRepository(db)
+            await repo.update_status(uuid.UUID(execution_id), "cancelled")
+            await repo.add_log(uuid.UUID(execution_id), "Execution cancelled by user", level="warn")
+            await emitter.emit("execution_cancelled", {"status": "cancelled"})
+        logger.info(f"Execution {execution_id} cancelled")
 
     except PauseSignal as pause:
         import secrets

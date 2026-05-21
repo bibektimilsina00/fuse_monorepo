@@ -13,6 +13,9 @@ const LAYOUT_PADDING = { x: 150, y: 150 }
 
 // ── Auto-connect ──────────────────────────────────────────────────────────────
 
+/** Maximum Euclidean distance (px) for auto-connect to fire. Beyond this, nodes are unrelated. */
+const AUTO_CONNECT_MAX_DIST = 250
+
 /** Right-edge center anchor — same as Sim's getNodeAnchorPosition */
 function getAnchor(node: any): { x: number; y: number } {
   const w = node.width ?? node.style?.width ?? node.data?.width ?? NODE_W
@@ -22,7 +25,8 @@ function getAnchor(node: any): { x: number; y: number } {
 
 /**
  * Find the closest connectable node to a drop position.
- * Returns null if no nodes exist or the closest is a trigger-type node.
+ * Returns null when no candidates exist, or when the closest node is farther
+ * than AUTO_CONNECT_MAX_DIST — meaning the new node is an intentional island.
  */
 export function findClosestSourceNode(
   dropPos: { x: number; y: number },
@@ -40,13 +44,15 @@ export function findClosestSourceNode(
 
   for (const node of candidates) {
     const anchor = getAnchor(node)
-    const dist = (anchor.x - dropPos.x) ** 2 + (anchor.y - dropPos.y) ** 2
+    const dist = Math.sqrt((anchor.x - dropPos.x) ** 2 + (anchor.y - dropPos.y) ** 2)
     if (dist < minDist) {
       minDist = dist
       closest = node
     }
   }
-  return closest
+
+  // Only auto-connect when the new node is dropped close to an existing one
+  return minDist <= AUTO_CONNECT_MAX_DIST ? closest : null
 }
 
 /**
