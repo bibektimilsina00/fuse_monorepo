@@ -54,13 +54,6 @@ export function Knowledge() {
         </button>
       </div>
 
-      <div className="flex items-start gap-3 px-4 py-3.5 bg-[var(--bg)] border border-[var(--border-faint)] rounded-[10px]">
-        <Icons.Spark style={{ width: 14, height: 14, color: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
-        <p className="text-[12.5px] text-[var(--text-faint)] m-0">
-          Knowledge bases store documents as vector embeddings. AI agent nodes in workflows can search them with natural language to retrieve relevant context before generating responses.
-        </p>
-      </div>
-
       <div className="filter-bar">
         <div className="filter-tabs">
           <button className="filter-tab active">
