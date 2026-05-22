@@ -8,12 +8,12 @@ from apps.api.app.core.database import get_db
 from apps.api.app.models.user import User
 from apps.api.app.schemas.workspace import (
     WorkspaceCreate,
-    WorkspaceUpdate,
     WorkspaceInviteCreate,
     WorkspaceInviteOut,
     WorkspaceInvitePreviewOut,
     WorkspaceMemberOut,
     WorkspaceMemberUpdate,
+    WorkspaceUpdate,
     WorkspaceWithRoleOut,
 )
 from apps.api.app.services.workspace_service import WorkspaceService

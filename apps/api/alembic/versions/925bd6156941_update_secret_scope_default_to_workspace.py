@@ -5,15 +5,12 @@ Revises: cb5ff257f21d
 Create Date: 2026-05-22 14:44:43.587729
 
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
-
+from collections.abc import Sequence
 
 revision: str = '925bd6156941'
-down_revision: Union[str, None] = 'cb5ff257f21d'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'cb5ff257f21d'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

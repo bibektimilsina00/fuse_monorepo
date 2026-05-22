@@ -5,15 +5,15 @@ Revises: 6dc72c936f60
 Create Date: 2026-05-22 15:21:32.441834
 
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'c1dc1e8272fa'
-down_revision: Union[str, None] = '6dc72c936f60'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '6dc72c936f60'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

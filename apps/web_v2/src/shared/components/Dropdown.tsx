@@ -1,11 +1,23 @@
-import { useState, useEffect, useRef, useId, type ReactNode, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, useId, useCallback, type ReactNode, createContext, useContext } from 'react'
 import { cn } from '@/lib/cn'
 
 interface DropdownContextValue { open: boolean; setOpen: (v: boolean) => void; triggerId: string; contentId: string }
 const DropdownContext = createContext<DropdownContextValue>({ open: false, setOpen: () => {}, triggerId: '', contentId: '' })
 
-export function Dropdown({ children, className }: { children: ReactNode; className?: string }) {
-  const [open, setOpen] = useState(false)
+interface DropdownProps {
+  children: ReactNode
+  className?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function Dropdown({ children, className, open: controlledOpen, onOpenChange }: DropdownProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen
+  const setOpen = useCallback((v: boolean) => {
+    onOpenChange?.(v)
+    setUncontrolledOpen(v)
+  }, [onOpenChange])
   const ref = useRef<HTMLDivElement>(null)
   const id = useId()
   const triggerId = `dd-trigger-${id}`
@@ -18,7 +30,7 @@ export function Dropdown({ children, className }: { children: ReactNode; classNa
     document.addEventListener('mousedown', handler)
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', onKey) }
-  }, [open])
+  }, [open, setOpen])
 
   return (
     <DropdownContext.Provider value={{ open, setOpen, triggerId, contentId }}>
@@ -29,7 +41,7 @@ export function Dropdown({ children, className }: { children: ReactNode; classNa
   )
 }
 
-export function DropdownTrigger({ children, className }: { children: ReactNode; className?: string }) {
+export function DropdownTrigger({ children, className, disabled }: { children: ReactNode; className?: string; disabled?: boolean }) {
   const { open, setOpen, triggerId, contentId } = useContext(DropdownContext)
   return (
     <div
@@ -37,8 +49,8 @@ export function DropdownTrigger({ children, className }: { children: ReactNode; 
       aria-haspopup="menu"
       aria-expanded={open}
       aria-controls={contentId}
-      className={cn('cursor-pointer', className)}
-      onClick={() => setOpen(!open)}
+      className={cn('cursor-pointer', className, disabled && 'pointer-events-none opacity-50')}
+      onClick={() => { if (!disabled) setOpen(!open) }}
     >
       {children}
     </div>

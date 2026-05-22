@@ -5,15 +5,15 @@ Revises: f7c87737cc4a
 Create Date: 2026-05-22 14:39:29.402586
 
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'cb5ff257f21d'
-down_revision: Union[str, None] = 'f7c87737cc4a'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'f7c87737cc4a'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

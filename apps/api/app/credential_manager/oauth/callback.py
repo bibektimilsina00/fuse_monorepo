@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.credential_manager.oauth.flow import get_oauth_provider
 from apps.api.app.models.user import User
 from apps.api.app.models.workspace import Workspace
-from apps.api.app.services.credential_service import CredentialService
 from apps.api.app.services.audit_service import AuditService
+from apps.api.app.services.credential_service import CredentialService
 
 
 async def handle_oauth_callback(

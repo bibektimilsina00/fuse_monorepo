@@ -10,6 +10,7 @@ from apps.api.app.api.v1.executions.router import router as executions_router
 from apps.api.app.api.v1.folders.router import router as folders_router
 from apps.api.app.api.v1.integrations.router import router as integrations_router
 from apps.api.app.api.v1.knowledge.router import router as knowledge_router
+from apps.api.app.api.v1.logs.router import router as logs_router
 from apps.api.app.api.v1.nodes.router import router as nodes_router
 from apps.api.app.api.v1.secrets.router import router as secrets_router
 from apps.api.app.api.v1.skills.router import router as skills_router
@@ -43,3 +44,4 @@ router.include_router(cron_router)
 router.include_router(knowledge_router, prefix="/kb", tags=["knowledge"])
 router.include_router(secrets_router, prefix="/secrets", tags=["secrets"])
 router.include_router(tables_router, prefix="/tables", tags=["tables"])
+router.include_router(logs_router, prefix="/logs", tags=["logs"])
