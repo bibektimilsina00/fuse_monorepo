@@ -8,7 +8,7 @@ from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field
 
-from apps.api.app.shared.sqlmodel import SQLModelBase, utc_now
+from apps.api.app.shared.sqlmodel import SQLModelBase, utc_now_naive
 
 
 class CopilotSession(SQLModelBase, table=True):
@@ -38,10 +38,10 @@ class CopilotSession(SQLModelBase, table=True):
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
     created_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(DateTime, default=utc_now),
+        default_factory=utc_now_naive,
+        sa_column=Column(DateTime, default=utc_now_naive),
     )
     updated_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(DateTime, default=utc_now, onupdate=utc_now),
+        default_factory=utc_now_naive,
+        sa_column=Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive),
     )

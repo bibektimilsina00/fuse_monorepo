@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship
 
-from apps.api.app.shared.sqlmodel import SQLModelBase, utc_now
+from apps.api.app.shared.sqlmodel import SQLModelBase, utc_now_naive
 
 if TYPE_CHECKING:
     from apps.api.app.features.users.models import User
@@ -17,8 +17,8 @@ class Folder(SQLModelBase, table=True):
     parent_id: uuid.UUID | None = Field(default=None, foreign_key="folder.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
     workspace_id: uuid.UUID = Field(foreign_key="workspace.id", ondelete="CASCADE", index=True)
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now, sa_column_kwargs={"onupdate": utc_now})
+    created_at: datetime = Field(default_factory=utc_now_naive)
+    updated_at: datetime = Field(default_factory=utc_now_naive, sa_column_kwargs={"onupdate": utc_now_naive})
 
     user: "User" = Relationship(back_populates="folders")
     parent: "Folder" = Relationship(
