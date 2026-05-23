@@ -12,4 +12,4 @@ class Base(DeclarativeBase, TablenameMixin):
     pass
 
 
-import apps.api.app.shared.model_registry  # noqa: E402,F401
+import apps.api.app.shared.model  # noqa: E402,F401
