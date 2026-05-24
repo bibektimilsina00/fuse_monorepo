@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { ReactFlowProvider } from 'reactflow'
 import { APP_ROUTES } from '@/shared/constants/routes'
 import { useWorkflowEditor } from '../hooks/useWorkflowEditor'
 import { EditorCanvas } from '../components/canvas/EditorCanvas'
@@ -28,6 +29,7 @@ export function WorkflowEditor() {
   if (error || !workflow) return <EditorError onBack={() => navigate(APP_ROUTES.AUTOMATIONS)} />
 
   return (
+    <ReactFlowProvider>
     <div className="flex h-full w-full overflow-hidden bg-[var(--bg)]">
       <EditorCanvas
         nodes={nodes}
@@ -43,5 +45,6 @@ export function WorkflowEditor() {
         isRunning={isRunning}
       />
     </div>
+    </ReactFlowProvider>
   )
 }

@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react'
 import ReactFlow, {
-  ReactFlowProvider,
   Background,
   BackgroundVariant,
   type Node,
@@ -104,17 +103,15 @@ export function EditorCanvas(props: Props) {
   const ready = useWorkflowEditorStore(s => s.nodeDefinitions.length > 0)
 
   return (
-    <ReactFlowProvider>
-      <div className="flex-1 min-h-0 min-w-0 relative">
-        {ready
-          ? <Flow {...props} />
-          : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-7 h-7 border-2 border-border border-t-text-mute rounded-full animate-spin" />
-            </div>
-          )
-        }
-      </div>
-    </ReactFlowProvider>
+    <div className="flex-1 min-h-0 min-w-0 relative">
+      {ready
+        ? <Flow {...props} />
+        : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-7 h-7 border-2 border-border border-t-text-mute rounded-full animate-spin" />
+          </div>
+        )
+      }
+    </div>
   )
 }
