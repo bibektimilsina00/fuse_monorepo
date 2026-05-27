@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from apps.api.app.features.users.models import User
 from apps.api.app.features.workspaces.models import Workspace, WorkspaceInvite, WorkspaceMember
+from apps.api.app.shared.sqlmodel import utc_now_naive
 
 
 class WorkspaceRepository:
@@ -119,7 +120,7 @@ class WorkspaceRepository:
                 invited_by=invite.invited_by,
             )
             self.db.add(member)
-        invite.accepted_at = datetime.now(UTC)
+        invite.accepted_at = utc_now_naive()
         await self.db.commit()
         result = await self.db.execute(
             select(WorkspaceMember)

@@ -1,7 +1,7 @@
 import re
 import secrets
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from apps.api.app.features.users.models import User
 from apps.api.app.features.workspaces.models import Workspace, WorkspaceInvite, WorkspaceMember
 from apps.api.app.features.workspaces.repository import WorkspaceRepository
 from apps.api.app.features.workspaces.schemas import WorkspaceCreate, WorkspaceInviteCreate
+from apps.api.app.shared.sqlmodel import utc_now_naive
 from apps.api.app.utils.email_service import EmailService, InviteEmail
 
 MANAGE_MEMBER_ROLES = {"owner", "admin"}
@@ -98,7 +99,7 @@ class WorkspaceService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
 
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.now(UTC) + timedelta(days=7)
+        expires_at = utc_now_naive() + timedelta(days=7)
         invite = await self.repo.create_invite(
             workspace_id=workspace_id,
             email=str(data.email),
@@ -128,15 +129,11 @@ class WorkspaceService:
 
     async def accept_invite(self, token: str, user: User) -> WorkspaceMember:
         invite = await self.preview_invite(token)
-        now = datetime.now(UTC)
-        expires_at = (
-            invite.expires_at if invite.expires_at.tzinfo else invite.expires_at.replace(tzinfo=UTC)
-        )
         if invite.accepted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Invite already accepted"
             )
-        if expires_at <= now:
+        if invite.expires_at <= utc_now_naive():
             raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invite expired")
         if invite.email.lower() != user.email.lower():
             raise HTTPException(

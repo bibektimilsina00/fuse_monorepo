@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -15,6 +15,7 @@ import { useShallow } from "zustand/react/shallow";
 import { buildNodeTypes } from "../../constants/nodeTypes";
 import { useWorkflowEditorStore } from "../../stores/workflowEditorStore";
 import { CustomEdge } from "../edges/CustomEdge";
+import { CollaborationOverlay } from "../overlays/CollaborationOverlay";
 
 interface Props {
   nodes: Node[];
@@ -23,7 +24,16 @@ interface Props {
   onEdgesChange: OnEdgesChange;
   onConnect?: OnConnect;
   onSelectNode?: (nodeId: string) => void;
+  sendCursor?: (cursor: {
+    x: number;
+    y: number;
+    viewport: { x: number; y: number; zoom: number };
+  }) => void;
+  sendNodePosition?: (node: Node) => void;
 }
+
+// Throttle cursor emits to ~30 fps to avoid flooding WS
+const CURSOR_THROTTLE_MS = 33;
 
 function Flow({
   nodes,
@@ -32,13 +42,16 @@ function Flow({
   onEdgesChange,
   onConnect,
   onSelectNode,
+  sendCursor,
+  sendNodePosition,
 }: Props) {
   const nodeDefinitions = useWorkflowEditorStore(
     useShallow((s) => s.nodeDefinitions),
   );
   const setInspectorTab = useWorkflowEditorStore((s) => s.setInspectorTab);
   const workflowLocked = useWorkflowEditorStore((s) => s.workflowLocked);
-  const { screenToFlowPosition, addNodes } = useReactFlow();
+  const { screenToFlowPosition, addNodes, getViewport } = useReactFlow();
+  const lastCursorEmit = useRef(0);
 
   const nodeTypes = useMemo(
     () => buildNodeTypes(nodeDefinitions),
@@ -76,75 +89,97 @@ function Flow({
     [nodeDefinitions, screenToFlowPosition, addNodes],
   );
 
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={workflowLocked ? undefined : handleConnect}
-      onDragOver={workflowLocked ? undefined : onDragOver}
-      onDrop={workflowLocked ? undefined : onDrop}
-      onNodeClick={(_, node) => onSelectNode?.(node.id)}
-      nodesDraggable={!workflowLocked}
-      nodesConnectable={!workflowLocked}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      minZoom={0.1}
-      maxZoom={2}
-      defaultEdgeOptions={{
-        type: "custom",
-        animated: false,
-        style: { stroke: "var(--border)", strokeWidth: 2 },
-      }}
-      connectionLineType={ConnectionLineType.SmoothStep}
-      connectionLineStyle={{ stroke: "var(--border)", strokeWidth: 2 }}
-      proOptions={{ hideAttribution: true }}
-      style={{ background: "var(--bg)" }}
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={24}
-        size={1}
-        color="oklch(0.32 0.004 250)"
-        style={{ background: "var(--bg)" }}
-      />
+  const handlePaneMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!sendCursor) return;
+      const now = performance.now();
+      if (now - lastCursorEmit.current < CURSOR_THROTTLE_MS) return;
+      lastCursorEmit.current = now;
+      const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      const vp = getViewport();
+      sendCursor({ x: flowPos.x, y: flowPos.y, viewport: vp });
+    },
+    [sendCursor, screenToFlowPosition, getViewport],
+  );
 
-      {nodes.length === 0 && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-3"
-          style={{ zIndex: 4 }}
-        >
-          <button
-            onClick={() => setInspectorTab("library")}
-            className="flex w-[48px] h-[48px] rounded-[12px] bg-[var(--surface)] border border-[var(--border-faint)] items-center justify-center transition-colors hover:bg-[var(--surface-2)] hover:border-[var(--border-soft)]"
+  return (
+    <div
+      className="absolute inset-0"
+      onMouseMove={sendCursor ? handlePaneMouseMove : undefined}
+    >
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={workflowLocked ? undefined : handleConnect}
+        onDragOver={workflowLocked ? undefined : onDragOver}
+        onDrop={workflowLocked ? undefined : onDrop}
+        onNodeClick={(_, node) => onSelectNode?.(node.id)}
+        onNodeDragStop={(_, node) => sendNodePosition?.(node)}
+        nodesDraggable={!workflowLocked}
+        nodesConnectable={!workflowLocked}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.1}
+        maxZoom={2}
+        defaultEdgeOptions={{
+          type: "custom",
+          animated: false,
+          style: { stroke: "var(--border)", strokeWidth: 2 },
+        }}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineStyle={{ stroke: "var(--border)", strokeWidth: 2 }}
+        proOptions={{ hideAttribution: true }}
+        style={{ background: "var(--bg)" }}
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="oklch(0.32 0.004 250)"
+          style={{ background: "var(--bg)" }}
+        />
+
+        {nodes.length === 0 && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+            style={{ zIndex: 4 }}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--text-mute)"
-              strokeWidth="1.5"
+            <button
+              onClick={() => setInspectorTab("library")}
+              className="flex w-[48px] h-[48px] rounded-[12px] bg-[var(--surface)] border border-[var(--border-faint)] items-center justify-center transition-colors hover:bg-[var(--surface-2)] hover:border-[var(--border-soft)]"
             >
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-            </svg>
-          </button>
-          <div className="text-center pointer-events-none">
-            <p className="text-[13.5px] font-medium text-[var(--text-mute)]">
-              Empty canvas
-            </p>
-            <p className="text-[12px] text-[var(--text-faint)] mt-0.5">
-              Click{" "}
-              <strong className="text-[var(--text-mute)] font-medium">+</strong>{" "}
-              to browse nodes, or drag from the Library
-            </p>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--text-mute)"
+                strokeWidth="1.5"
+              >
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
+            </button>
+            <div className="text-center pointer-events-none">
+              <p className="text-[13.5px] font-medium text-[var(--text-mute)]">
+                Empty canvas
+              </p>
+              <p className="text-[12px] text-[var(--text-faint)] mt-0.5">
+                Click{" "}
+                <strong className="text-[var(--text-mute)] font-medium">
+                  +
+                </strong>{" "}
+                to browse nodes, or drag from the Library
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-    </ReactFlow>
+        )}
+      </ReactFlow>
+      <CollaborationOverlay />
+    </div>
   );
 }
 

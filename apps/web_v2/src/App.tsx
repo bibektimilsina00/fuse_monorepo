@@ -83,7 +83,7 @@ export default function App() {
           </Route>
 
           {/* Public invite accept — needs auth check inside the page */}
-          <Route path="/invite/:token" element={<InviteAccept />} />
+          <Route path={APP_ROUTES.INVITE_ACCEPT} element={<InviteAccept />} />
 
           {/* Showcase page - public but using AppLayout */}
           <Route element={<AppLayout />}>

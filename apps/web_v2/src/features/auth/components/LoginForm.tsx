@@ -1,50 +1,71 @@
-import { useState, type FormEvent } from 'react'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input, Checkbox, FormField, Card, useToast } from '@/shared/components'
-import { APP_ROUTES } from '@/shared/constants/routes'
-import { useAuth } from '../hooks/useAuth'
+import { useState, type FormEvent } from "react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Button,
+  Input,
+  Checkbox,
+  FormField,
+  Card,
+  useToast,
+} from "@/shared/components";
+import { APP_ROUTES } from "@/shared/constants/routes";
+import { useAuth } from "../hooks/useAuth";
 
 /**
  * LoginForm provides a premium login user interface matching the V2 specifications.
  */
 export function LoginForm() {
-  const { login, isLoading } = useAuth()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+
+  // Only honor same-origin relative paths — blocks open-redirect attacks
+  const rawRedirect = searchParams.get("redirect");
+  const redirectTo =
+    rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
+      ? rawRedirect
+      : APP_ROUTES.DASHBOARD;
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setLocalError(null)
+    e.preventDefault();
+    setLocalError(null);
 
     if (!email || !password) {
-      setLocalError('Please fill in all fields')
-      return
+      setLocalError("Please fill in all fields");
+      return;
     }
 
     try {
-      await login({ email, password })
-      toast('Logged in successfully', {
-        variant: 'ok',
-        description: 'Welcome back to your workspace.',
-      })
-      navigate(APP_ROUTES.DASHBOARD)
+      await login({ email, password });
+      toast("Logged in successfully", {
+        variant: "ok",
+        description: "Welcome back to your workspace.",
+      });
+      navigate(redirectTo);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Incorrect email or password'
-      setLocalError(message)
+      const message =
+        err instanceof Error ? err.message : "Incorrect email or password";
+      setLocalError(message);
     }
-  }
+  };
 
   return (
-    <Card className="w-full max-w-[400px] bg-bg2/80 backdrop-blur-md border border-border-faint shadow-panel" padding="lg">
+    <Card
+      className="w-full max-w-[400px] bg-bg2/80 backdrop-blur-md border border-border-faint shadow-panel"
+      padding="lg"
+    >
       <div className="flex flex-col gap-2 mb-6">
-        <h2 className="text-xl font-semibold text-text tracking-tight">Welcome back</h2>
+        <h2 className="text-xl font-semibold text-text tracking-tight">
+          Welcome back
+        </h2>
         <p className="text-xs text-text-mute">
           Enter your credentials to access your workspace.
         </p>
@@ -72,7 +93,7 @@ export function LoginForm() {
 
         <FormField label="Password" required>
           <Input
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
@@ -84,7 +105,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="hover:text-text focus:outline-none transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -117,17 +138,18 @@ export function LoginForm() {
       </form>
 
       <div className="mt-6 pt-4 border-t border-border-faint text-center text-[12px] text-text-mute">
-        Don't have an account?{' '}
+        Don't have an account?{" "}
         <Link
-          to={APP_ROUTES.REGISTER}
+          to={
+            rawRedirect
+              ? `${APP_ROUTES.REGISTER}?redirect=${encodeURIComponent(rawRedirect)}`
+              : APP_ROUTES.REGISTER
+          }
           className="font-medium text-text hover:underline cursor-pointer"
         >
           Create account
         </Link>
       </div>
     </Card>
-  )
+  );
 }
-
-
-

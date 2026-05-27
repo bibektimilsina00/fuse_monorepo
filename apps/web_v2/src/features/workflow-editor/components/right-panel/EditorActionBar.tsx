@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/cn";
 import { Button } from "@/shared/components";
 import { useEditorActionBar } from "../../hooks/useEditorActionBar";
+import { PresenceAvatars } from "./PresenceAvatars";
 
 interface EditorActionBarProps {
   onRun: () => void;
@@ -144,6 +145,7 @@ export function EditorActionBar({ onRun, isRunning }: EditorActionBarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <PresenceAvatars />
         <Button
           variant="secondary"
           size="sm"

@@ -1,7 +1,32 @@
 import { create } from "zustand";
-import type { Node, Edge } from "reactflow";
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Connection,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+  type OnConnect,
+  type OnEdgesChange,
+  type OnNodesChange,
+} from "reactflow";
 import type { NodeDefinition } from "../types/editorTypes";
 import type { SaveState, WorkflowDetail } from "../types/editorTypes";
+
+export type GraphPatch =
+  | {
+      operation: "node.position";
+      nodeId: string;
+      position: { x: number; y: number };
+    }
+  | {
+      operation: "graph.replace";
+      nodes: Node[];
+      edges: Edge[];
+      version?: number;
+    };
 
 interface WorkflowEditorState {
   // Loaded workflow meta
@@ -12,13 +37,15 @@ interface WorkflowEditorState {
   nodeDefinitions: NodeDefinition[];
   setNodeDefinitions: (defs: NodeDefinition[]) => void;
 
-  // ReactFlow graph state
+  // ReactFlow graph state — store is source of truth
   nodes: Node[];
   edges: Edge[];
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
-  onNodesChange: ((changes: unknown[]) => void) | null;
-  onEdgesChange: ((changes: unknown[]) => void) | null;
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+  applyRemoteGraphPatch: (patch: GraphPatch) => void;
 
   // Node mutations
   removeNode: (id: string) => void;
@@ -31,6 +58,7 @@ interface WorkflowEditorState {
   setSaveState: (s: SaveState) => void;
   versionVector: number;
   setVersionVector: (v: number) => void;
+  markSaved: (version: number) => void;
 
   // UI state
   selectedNodeId: string | null;
@@ -58,8 +86,59 @@ export const useWorkflowEditorStore = create<WorkflowEditorState>(
     edges: [],
     setNodes: (nodes) => set({ nodes }),
     setEdges: (edges) => set({ edges }),
-    onNodesChange: null,
-    onEdgesChange: null,
+
+    onNodesChange: (changes: NodeChange[]) =>
+      set((s) => {
+        const nodes = applyNodeChanges(changes, s.nodes);
+        const isStructural = changes.some(
+          (c) =>
+            c.type === "add" ||
+            c.type === "remove" ||
+            c.type === "position" ||
+            c.type === "reset",
+        );
+        return isStructural ? { nodes, saveState: "unsaved" } : { nodes };
+      }),
+
+    onEdgesChange: (changes: EdgeChange[]) =>
+      set((s) => {
+        const edges = applyEdgeChanges(changes, s.edges);
+        const isStructural = changes.some(
+          (c) => c.type === "add" || c.type === "remove" || c.type === "reset",
+        );
+        return isStructural ? { edges, saveState: "unsaved" } : { edges };
+      }),
+
+    onConnect: (connection: Connection) =>
+      set((s) => ({
+        edges: addEdge(
+          {
+            ...connection,
+            type: "custom",
+            animated: false,
+            style: { stroke: "var(--border)", strokeWidth: 2 },
+          },
+          s.edges,
+        ),
+        saveState: "unsaved",
+      })),
+
+    applyRemoteGraphPatch: (patch) => {
+      if (patch.operation === "node.position") {
+        set((s) => ({
+          nodes: s.nodes.map((n) =>
+            n.id === patch.nodeId ? { ...n, position: patch.position } : n,
+          ),
+        }));
+        return;
+      }
+      set((s) => ({
+        nodes: patch.nodes,
+        edges: patch.edges,
+        versionVector: patch.version ?? s.versionVector,
+        saveState: "saved",
+      }));
+    },
 
     removeNode: (id) =>
       set((s) => ({
@@ -116,6 +195,7 @@ export const useWorkflowEditorStore = create<WorkflowEditorState>(
     setSaveState: (saveState) => set({ saveState }),
     versionVector: 0,
     setVersionVector: (versionVector) => set({ versionVector }),
+    markSaved: (versionVector) => set({ versionVector, saveState: "saved" }),
 
     selectedNodeId: null,
     setSelectedNodeId: (selectedNodeId) => set({ selectedNodeId }),
