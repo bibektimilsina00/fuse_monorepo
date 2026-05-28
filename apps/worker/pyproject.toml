@@ -5,7 +5,6 @@ description = "Fuse Platform Worker"
 dependencies = [
     "celery",
     "redis",
-    "playwright",
     "httpx",
     "beautifulsoup4",
     "python-json-logger",

@@ -105,7 +105,6 @@ make dev
 - **Database**: PostgreSQL with [SQLAlchemy](https://www.sqlalchemy.org/)
 - **Cache & Broker**: [Redis](https://redis.io/)
 - **Background Jobs**: [Celery](https://docs.celeryq.dev/)
-- **Browser Automation**: [Playwright](https://playwright.dev/)
 - **UI**: [Tailwind CSS](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com/)
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/), [TanStack Query](https://tanstack.com/query)
 - **Flow Editor**: [ReactFlow](https://reactflow.dev/)

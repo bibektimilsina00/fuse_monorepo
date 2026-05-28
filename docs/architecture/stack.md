@@ -11,7 +11,6 @@
 | Encryption | cryptography (Fernet) | AES-256 for credential vault |
 | Auth | python-jose + passlib | JWT tokens, bcrypt password hashing |
 | HTTP client | httpx | Async-first, same API as requests |
-| Browser automation | Playwright | Headless Chrome, stealth mode, session pooling |
 | Dependency management | uv | Fast, lock-file based, replaces pip/poetry |
 
 ## Frontend

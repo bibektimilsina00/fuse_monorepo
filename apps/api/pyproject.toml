@@ -23,6 +23,7 @@ dependencies = [
     "pgvector>=0.4.2",
     "pypdf>=6.11.0",
     "slowapi>=0.1.9",
+    "sqlmodel>=0.0.38",
 ]
 
 [tool.uv]

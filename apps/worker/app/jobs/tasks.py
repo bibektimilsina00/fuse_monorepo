@@ -22,12 +22,17 @@ def execute_workflow(
 ):
     """Main workflow execution task. Handles both fresh runs and resumes."""
     try:
-        asyncio.run(_run_workflow(
-            execution_id, workflow_id, graph, trigger_data,
-            resume_from=resume_from,
-            resume_input=resume_input,
-            snapshot=snapshot,
-        ))
+        asyncio.run(
+            _run_workflow(
+                execution_id,
+                workflow_id,
+                graph,
+                trigger_data,
+                resume_from=resume_from,
+                resume_input=resume_input,
+                snapshot=snapshot,
+            )
+        )
     except Exception as e:
         logger.error(f"execute_workflow task failed: {e}", exc_info=True)
 
@@ -71,9 +76,13 @@ async def _run_workflow(
 
                 from apps.api.app.credential_manager.encryption.aes import AESEncryptionService
                 from apps.api.app.models.secret import Secret
+
                 _enc = AESEncryptionService()
-                result = await db.execute(sa.select(Secret).where(Secret.user_id == workflow.user_id))
+                result = await db.execute(
+                    sa.select(Secret).where(Secret.user_id == workflow.user_id)
+                )
                 from contextlib import suppress
+
                 for s in result.scalars().all():
                     with suppress(Exception):
                         secrets_dict[s.name] = _enc.decrypt(s.encrypted_value)
@@ -88,25 +97,29 @@ async def _run_workflow(
         message: str, level: str = "info", node_id: str | None = None, payload: Any = None
     ) -> None:
         from datetime import UTC, datetime
+
         async with AsyncSessionLocal() as db:
             repo = ExecutionRepository(db)
             await repo.add_log(
                 uuid.UUID(execution_id), message, level=level, node_id=node_id, payload=payload
             )
-        await emitter.emit("log_synced", {
-            "type": "log_synced",
-            "node_id": node_id,
-            "lvl": "err" if level == "error" else ("warn" if level == "warn" else "info"),
-            "src": workflow_name,
-            "msg": message,
-            "payload": payload,
-            "t": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
-        })
+        await emitter.emit(
+            "log_synced",
+            {
+                "type": "log_synced",
+                "node_id": node_id,
+                "lvl": "err" if level == "error" else ("warn" if level == "warn" else "info"),
+                "src": workflow_name,
+                "msg": message,
+                "payload": payload,
+                "t": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            },
+        )
 
     async with AsyncSessionLocal() as db:
         exec_repo = ExecutionRepository(db)
         await exec_repo.update_status(uuid.UUID(execution_id), "running")
-    
+
     await log_and_emit("Workflow execution started", level="info")
     await emitter.emit("execution_started", {})
 
@@ -138,7 +151,7 @@ async def _run_workflow(
         async with AsyncSessionLocal() as db:
             repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "completed", output_data=output)
-        
+
         await log_and_emit("Workflow execution completed", level="info")
         await emitter.emit("execution_completed", {"status": "completed", "output": output})
 
@@ -146,13 +159,14 @@ async def _run_workflow(
         async with AsyncSessionLocal() as db:
             repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "cancelled")
-        
+
         await log_and_emit("Execution cancelled by user", level="warn")
         await emitter.emit("execution_cancelled", {"status": "cancelled"})
         logger.info(f"Execution {execution_id} cancelled")
 
     except PauseSignal as pause:
         import secrets
+
         token = secrets.token_urlsafe(32)
         snap = {
             "executed_nodes": list(runner._executed.keys()),
@@ -169,11 +183,14 @@ async def _run_workflow(
                 resume_schema=pause.resume_schema,
                 snapshot=snap,
             )
-        await emitter.emit("execution_paused", {
-            "node_id": pause.node_id,
-            "resume_token": token,
-            "resume_schema": pause.resume_schema,
-        })
+        await emitter.emit(
+            "execution_paused",
+            {
+                "node_id": pause.node_id,
+                "resume_token": token,
+                "resume_schema": pause.resume_schema,
+            },
+        )
         logger.info(f"Execution {execution_id} paused at node {pause.node_id}")
 
     except Exception as e:
@@ -182,7 +199,7 @@ async def _run_workflow(
         async with AsyncSessionLocal() as db:
             repo = ExecutionRepository(db)
             await repo.update_status(uuid.UUID(execution_id), "failed")
-        
+
         await log_and_emit(error_msg, level="error")
         await emitter.emit("execution_failed", {"status": "failed", "error": error_msg})
         raise

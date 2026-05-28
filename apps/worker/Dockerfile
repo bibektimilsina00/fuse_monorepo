@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -10,9 +10,6 @@ COPY apps/worker/pyproject.toml ./apps/worker/
 
 # Install dependencies
 RUN cd apps/worker && uv sync --frozen
-
-# Install playwright browsers
-RUN cd apps/worker && uv run playwright install chromium
 
 # Copy the rest of the application
 COPY apps/worker ./apps/worker

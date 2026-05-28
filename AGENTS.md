@@ -43,7 +43,6 @@ apps/
 │   │   └── services/       # Business logic layer
 ├── worker/                 # Celery Worker
 │   ├── app/
-│   │   ├── browser/        # Playwright automation
 │   │   ├── execution/      # Isolated execution runtime
 │   │   └── jobs/           # Task consumers
 └── web/                    # Vite + React Frontend
