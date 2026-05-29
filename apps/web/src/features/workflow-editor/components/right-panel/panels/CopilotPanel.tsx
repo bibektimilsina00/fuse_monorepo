@@ -1,5 +1,6 @@
-import { Send, Sparkles, Zap, Check, X } from 'lucide-react'
+import { Send, Sparkles, Zap, Check, X, Plus, History, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { Dropdown, DropdownTrigger, DropdownContent } from '@/shared/components'
 import { useCopilotChat } from '../../../hooks/useCopilotChat'
 import { useCopilotDiffStore } from '../../../stores/copilotDiffStore'
 
@@ -52,6 +53,8 @@ export function CopilotPanel() {
     slashOpen, slashIdx, setSlashIdx, slashFilter,
     streamRef, inputRef,
     quickActions, send, onKeyDown, selectSlashCommand,
+    providers, provider, chooseProvider,
+    sessions, sessionId, newChat, loadSession, deleteSession,
   } = useCopilotChat()
 
   return (
@@ -64,6 +67,73 @@ export function CopilotPanel() {
       `}</style>
 
       <div className="flex h-full flex-col overflow-hidden">
+        {/* Header — new chat, history, provider */}
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-[var(--border-faint)] px-3 py-2">
+          <button
+            onClick={newChat}
+            title="New chat"
+            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11.5px] text-[var(--text-mute)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          >
+            <Plus className="h-3 w-3" /> New
+          </button>
+
+          <Dropdown>
+            <DropdownTrigger>
+              <button
+                title="Chat history"
+                className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11.5px] text-[var(--text-mute)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+              >
+                <History className="h-3 w-3" /> History
+              </button>
+            </DropdownTrigger>
+            <DropdownContent className="max-h-64 w-60 overflow-auto">
+              {sessions.length === 0 ? (
+                <div className="px-2.5 py-2 text-[12px] text-[var(--text-faint)]">No saved chats</div>
+              ) : (
+                sessions.map(s => (
+                  <div
+                    key={s.id}
+                    className="group flex items-center gap-1 rounded-[6px] px-2 py-1.5 hover:bg-[var(--surface-2)]"
+                  >
+                    <button
+                      onClick={() => void loadSession(s.id)}
+                      className={cn(
+                        'flex-1 truncate text-left text-[12px]',
+                        s.id === sessionId ? 'text-[var(--text)]' : 'text-[var(--text-mute)]',
+                      )}
+                    >
+                      {s.title}
+                    </button>
+                    <button
+                      onClick={() => void deleteSession(s.id)}
+                      className="shrink-0 text-[var(--text-faint)] opacity-0 transition-opacity hover:text-[var(--err)] group-hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </DropdownContent>
+          </Dropdown>
+
+          <div className="relative ml-auto">
+            <select
+              value={provider}
+              onChange={e => chooseProvider(e.target.value)}
+              className="appearance-none rounded-[6px] border border-[var(--border-faint)] bg-[var(--surface)] py-1 pl-2 pr-6 text-[11.5px] text-[var(--text)] outline-none transition-colors hover:border-[var(--border-soft)]"
+            >
+              {providers.length === 0 && <option value={provider}>{provider}</option>}
+              {providers.map(p => (
+                <option key={p.id} value={p.id} disabled={!p.hasCredential}>
+                  {p.name}
+                  {p.hasCredential ? '' : ' (no key)'}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--text-faint)]" />
+          </div>
+        </div>
+
         {/* Message stream */}
         <div
           ref={streamRef}
