@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD: str = "10/minute"
     RATE_LIMIT_DEFAULT: str = "100/minute"
 
+    # Code-node sandbox: "auto" (container when Docker is reachable, else
+    # in-process hardening), "container" (require the container boundary), or
+    # "process" (in-process hardening only).
+    CODE_SANDBOX: str = "auto"
+    CODE_SANDBOX_PYTHON_IMAGE: str = "python:3.13-slim"
+    CODE_SANDBOX_NODE_IMAGE: str = "node:22-alpine"
+    CODE_SANDBOX_MEMORY_MB: int = 512
+
     # Email (SMTP) — works with Gmail, SendGrid, Mailgun, SES, etc.
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
