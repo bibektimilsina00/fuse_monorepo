@@ -76,9 +76,9 @@ export function AppSidebar({ controller }: AppSidebarProps) {
               >
                 <item.icon />
                 <span className="flex-1 group-data-[collapsed=true]/shell:hidden">{item.label}</span>
-                {(navItemCounts[item.id] ?? item.count) && (
+                {navItemCounts[item.id] && (
                   <span className="ml-auto font-mono text-[10.5px] text-[var(--text-faint)] font-medium group-data-[collapsed=true]/shell:hidden">
-                    {navItemCounts[item.id] ?? item.count}
+                    {navItemCounts[item.id]}
                   </span>
                 )}
               </NavLink>

@@ -20,6 +20,9 @@ import {
 } from '@/features/workflows'
 import { useFileStats } from '@/features/files/hooks/useFiles'
 import { useKBList } from '@/features/knowledge/hooks/useKnowledge'
+import { useRunsCount } from '@/features/runs/hooks/useRunsCount'
+import { useSchedules } from '@/features/schedules/hooks/useSchedules'
+import { useCredentials } from '@/features/connections/hooks/useConnections'
 import { useTables } from '@/features/tables/hooks/useTables'
 import { useTablesStore } from '@/features/tables'
 import { useWorkspaces, useWorkspaceStore } from '@/features/workspaces'
@@ -42,6 +45,9 @@ export function useAppLayoutController() {
   const { data: knowledgeBases = [] } = useKBList()
   const { data: fileStats } = useFileStats()
   const { data: tables = [] } = useTables()
+  const { data: schedules = [] } = useSchedules()
+  const { data: credentials = [] } = useCredentials()
+  const { data: runsCount } = useRunsCount()
   const createFolder = useCreateFolder()
   const updateFolder = useUpdateFolder()
   const deleteFolder = useDeleteFolder()
@@ -297,6 +303,10 @@ export function useAppLayoutController() {
   const selectedTable = pageName === 'tables' ? tables.find(t => t.id === selectedTableId) : null
 
   const navItemCounts: Record<string, string> = {
+    automations: String(workflows.length),
+    runs: String(runsCount ?? 0),
+    schedules: String(schedules.length),
+    connections: String(credentials.length),
     tables: String(tables.length),
     files: String(fileStats?.count ?? 0),
     knowledge: String(knowledgeBases.length),

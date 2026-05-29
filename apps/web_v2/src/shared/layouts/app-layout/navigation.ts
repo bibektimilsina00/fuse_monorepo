@@ -6,7 +6,6 @@ export type NavItem = {
   id: string
   label: string
   icon: React.FC<SVGProps<SVGSVGElement>>
-  count?: string
   to: string
 }
 
@@ -21,15 +20,15 @@ export const NAV_GROUPS: NavGroup[] = [
     group: 'Workspace',
     items: [
       { id: 'home', label: 'Home', icon: Icons.Home, to: APP_ROUTES.DASHBOARD },
-      { id: 'automations', label: 'Automations', icon: Icons.Flow, count: '47', to: APP_ROUTES.AUTOMATIONS },
+      { id: 'automations', label: 'Automations', icon: Icons.Flow, to: APP_ROUTES.AUTOMATIONS },
       { id: 'templates', label: 'Templates', icon: Icons.Layers, to: APP_ROUTES.TEMPLATES },
     ],
   },
   {
     group: 'Operate',
     items: [
-      { id: 'runs', label: 'Runs', icon: Icons.Activity, count: '1.2k', to: APP_ROUTES.RUNS },
-      { id: 'schedules', label: 'Schedules', icon: Icons.Clock, count: '6', to: APP_ROUTES.SCHEDULES },
+      { id: 'runs', label: 'Runs', icon: Icons.Activity, to: APP_ROUTES.RUNS },
+      { id: 'schedules', label: 'Schedules', icon: Icons.Clock, to: APP_ROUTES.SCHEDULES },
       { id: 'logs', label: 'Logs', icon: Icons.Terminal, to: APP_ROUTES.LOGS },
     ],
   },
@@ -45,7 +44,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Integrations',
     items: [
-      { id: 'connections', label: 'Connections', icon: Icons.Plug, count: '18', to: APP_ROUTES.CONNECTIONS },
+      { id: 'connections', label: 'Connections', icon: Icons.Plug, to: APP_ROUTES.CONNECTIONS },
     ],
   },
   { group: 'Workflows', isWorkflows: true },
