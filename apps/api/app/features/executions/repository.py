@@ -95,6 +95,14 @@ class ExecutionRepository:
         )
         return list(result.scalars().all())
 
+    async def error_logs(self, execution_id: uuid.UUID) -> list[ExecutionLog]:
+        result = await self.db.execute(
+            select(ExecutionLog)
+            .where(ExecutionLog.execution_id == execution_id, ExecutionLog.level == "error")
+            .order_by(ExecutionLog.timestamp)
+        )
+        return list(result.scalars().all())
+
     async def update_status(
         self,
         execution_id: uuid.UUID,

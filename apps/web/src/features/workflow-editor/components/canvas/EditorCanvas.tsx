@@ -89,11 +89,28 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onSelectN
     const s = useWorkflowEditorStore.getState()
     if (menu?.type === 'node' && menu.nodeId) {
       const id = menu.nodeId
-      const locked = (nodes.find(n => n.id === id)?.data?.locked as boolean | undefined) ?? false
+      const node = nodes.find(n => n.id === id)
+      const locked = (node?.data?.locked as boolean | undefined) ?? false
+      const label = (node?.data?.label as string) || node?.type || 'this node'
+      const fixWithCopilot = () => {
+        s.setSelectedNodeId(id)
+        s.setInspectorTab('copilot')
+        // Defer so the Copilot panel mounts + registers its listener first.
+        setTimeout(
+          () =>
+            window.dispatchEvent(
+              new CustomEvent('copilot-send-message', {
+                detail: { message: `Fix the "${label}" node.` },
+              }),
+            ),
+          80,
+        )
+      }
       return [
         { label: 'Copy', shortcut: '⌘C', onClick: () => { s.setNodes(ns => ns.map(n => ({ ...n, selected: n.id === id }))); s.copySelection() } },
         { label: 'Duplicate', shortcut: '⌘D', onClick: () => s.duplicateNode(id) },
         { label: locked ? 'Unlock' : 'Lock', onClick: () => s.toggleNodeLock(id) },
+        { label: 'Fix with Copilot', dividerBefore: true, onClick: fixWithCopilot },
         { label: 'Delete', shortcut: '⌫', variant: 'danger', dividerBefore: true, onClick: () => s.removeNode(id) },
       ]
     }

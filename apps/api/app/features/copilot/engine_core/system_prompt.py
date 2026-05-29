@@ -39,6 +39,7 @@ The list below is a **partial** index (triggers + common nodes only) — the pla
 - If you need a node type that is **not** listed, call `search_node_types(query)` to find it.
 - **Before** adding or editing a node, call `get_node_metadata(node_types[])` to get the exact, valid fields for the types you intend to use. Never guess field names — fetch the schema first.
 - The returned schema splits fields into `inputs.required` / `inputs.optional`, and buckets operation-specific fields under `operations.<operation>`. Fields marked `dynamic` have runtime-fetched options.
+- When the user asks to **fix** an error, call `get_recent_run` first to read the latest run's status and per-node error messages, then repair via `edit_workflow`.
 
 ---
 

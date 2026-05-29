@@ -136,6 +136,18 @@ _GET_TRIGGER_NODES_TOOL: dict[str, Any] = {
     },
 }
 
+_GET_RECENT_RUN_TOOL: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "get_recent_run",
+        "description": (
+            "Get the most recent execution of this workflow: status and per-node error "
+            "messages. Use this to diagnose failures before fixing the workflow."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+}
+
 
 # ── SSE helper ────────────────────────────────────────────────────────────────
 
@@ -184,6 +196,7 @@ async def run_copilot(
         _GET_NODE_METADATA_TOOL,
         _SEARCH_NODE_TYPES_TOOL,
         _GET_TRIGGER_NODES_TOOL,
+        _GET_RECENT_RUN_TOOL,
     ]
     all_tool_calls: list[dict[str, Any]] = []
 
@@ -323,6 +336,37 @@ async def run_copilot(
                 # ── get_trigger_nodes ──────────────────────────────────────
                 elif tool_name == "get_trigger_nodes":
                     result = {"triggers": list_trigger_node_types(node_metadata)}
+                    all_tool_calls.append({"name": tool_name, "success": True, "result": result})
+                    yield _sse("tool_result", {"tool": tool_name, "success": True})
+
+                # ── get_recent_run (diagnostics for the fix flow) ──────────
+                elif tool_name == "get_recent_run":
+                    from apps.api.app.features.executions.repository import ExecutionRepository
+
+                    try:
+                        exec_repo = ExecutionRepository(db)
+                        runs = await exec_repo.list_by_workflow(_uuid.UUID(workflow_id))
+                        if not runs:
+                            result = {
+                                "status": "no_runs",
+                                "message": "This workflow has no runs yet.",
+                            }
+                        else:
+                            latest = runs[0]
+                            error_logs = await exec_repo.error_logs(latest.id)
+                            result = {
+                                "status": latest.status,
+                                "finished_at": latest.finished_at.isoformat()
+                                if latest.finished_at
+                                else None,
+                                "errors": [
+                                    {"node_id": log.node_id, "message": log.message}
+                                    for log in error_logs
+                                ],
+                            }
+                    except Exception as e:
+                        logger.error(f"get_recent_run failed: {e}", exc_info=True)
+                        result = {"error": "Could not load run history."}
                     all_tool_calls.append({"name": tool_name, "success": True, "result": result})
                     yield _sse("tool_result", {"tool": tool_name, "success": True})
 

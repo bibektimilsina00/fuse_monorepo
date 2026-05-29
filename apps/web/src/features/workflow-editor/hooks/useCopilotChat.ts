@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Node, Edge } from 'reactflow'
 import { HelpCircle, Code2, Search, Wrench, Sparkles } from 'lucide-react'
 import { streamCopilotChat } from '../services/copilotAPI'
@@ -148,6 +148,20 @@ export function useCopilotChat() {
     abortRef.current?.abort()
     setBusy(false)
   }
+
+  // "Fix with Copilot" and other surfaces dispatch a prefilled message.
+  const sendRef = useRef(send)
+  useEffect(() => {
+    sendRef.current = send
+  })
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const message = (e as CustomEvent<{ message?: string }>).detail?.message
+      if (message) void sendRef.current(message)
+    }
+    window.addEventListener('copilot-send-message', handler)
+    return () => window.removeEventListener('copilot-send-message', handler)
+  }, [])
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
