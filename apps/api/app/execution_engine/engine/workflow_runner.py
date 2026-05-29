@@ -11,6 +11,11 @@ from apps.api.app.node_system.base.node_context import NodeContext
 
 logger = get_logger(__name__)
 
+# Bound total work so a cyclic graph or runaway loop fails fast instead of
+# hanging the worker (guards against accidental or malicious infinite loops).
+_MAX_NODE_EXECUTIONS = 10_000
+_MAX_SUBGRAPH_DEPTH = 50
+
 
 class PauseSignal(Exception):
     """Raised by a node to pause execution at this point."""
@@ -37,6 +42,8 @@ class WorkflowRunner:
         on_log: Any = None,
         credentials: list[dict[str, Any]] | None = None,
         emitter: Any = None,
+        _depth: int = 0,
+        _budget: dict[str, int] | None = None,
     ):
         self.workflow_id = workflow_id
         self.execution_id = execution_id
@@ -58,6 +65,9 @@ class WorkflowRunner:
         self._outputs: dict[str, dict[str, Any]] = {}  # node_id → output_data
         self._failed = asyncio.Event()
         self._error_message: str | None = None
+        self._depth = _depth
+        # Shared across sub-runners so the whole run draws from one budget.
+        self._budget = _budget if _budget is not None else {"remaining": _MAX_NODE_EXECUTIONS}
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -124,6 +134,13 @@ class WorkflowRunner:
             logger.warning(f"Node {node_id} not found in graph, skipping")
             return
 
+        self._budget["remaining"] -= 1
+        if self._budget["remaining"] < 0:
+            raise RuntimeError(
+                f"Execution exceeded the maximum of {_MAX_NODE_EXECUTIONS} node runs "
+                "(possible infinite loop)"
+            )
+
         label = node_data.get("data", {}).get("label") or node_data["type"]
         await self._log(label, node_id=node_id)
 
@@ -157,6 +174,10 @@ class WorkflowRunner:
             item_input: dict[str, Any],
             loop_data: dict[str, Any] | None = None,
         ) -> list[dict[str, Any]]:
+            if self._depth + 1 > _MAX_SUBGRAPH_DEPTH:
+                raise RuntimeError(
+                    f"Execution exceeded the maximum sub-workflow depth ({_MAX_SUBGRAPH_DEPTH})"
+                )
             results: list[dict[str, Any]] = []
             for start_id in _successor_ids:
                 sub_runner = WorkflowRunner(
@@ -167,6 +188,8 @@ class WorkflowRunner:
                     on_log=self.on_log,
                     credentials=self.credentials,
                     emitter=self.emitter,
+                    _depth=self._depth + 1,
+                    _budget=self._budget,
                 )
                 sub_runner.variables = self.variables
                 sub_runner.env = self.env

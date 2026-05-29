@@ -58,6 +58,29 @@ async def test_workflow_runner_raises_when_a_node_fails():
         await runner.run(trigger_data={})
 
 
+@pytest.mark.anyio
+async def test_execution_budget_bounds_runaway_graphs():
+    """A shared node-execution budget makes runaway/cyclic graphs fail fast
+    instead of hanging the worker."""
+
+    def _set_var(node_id: str) -> dict:
+        return {
+            "id": node_id,
+            "type": "logic.set_variable",
+            "data": {"properties": {"key": node_id, "value": 1}},
+        }
+
+    graph = {
+        "nodes": [_set_var("a"), _set_var("b"), _set_var("c")],
+        "edges": [{"source": "a", "target": "b"}, {"source": "b", "target": "c"}],
+    }
+    runner = WorkflowRunner(
+        workflow_id="wf", execution_id="exec", graph=graph, _budget={"remaining": 1}
+    )
+    with pytest.raises(Exception, match="maximum of"):
+        await runner.run(trigger_data={})
+
+
 def test_worker_runtime_imports_resolve():
     """The worker imports these lazily inside _run_workflow, so a stale path only
     surfaces at execution time. Importing them here fails fast in CI instead."""
