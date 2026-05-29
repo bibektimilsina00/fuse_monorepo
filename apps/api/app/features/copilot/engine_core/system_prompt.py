@@ -3,32 +3,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from apps.api.app.features.copilot.engine_core.node_schema import build_node_index
+
 
 def build_system_prompt(
     graph: dict[str, Any],
     node_metadata: list[dict[str, Any]],
 ) -> str:
-    """Build the copilot system prompt with the full node catalog and current workflow state."""
+    """Build the copilot system prompt: a *bounded* node index (triggers + core),
+    the current workflow, and the operations reference. The full per-type field
+    schema is fetched on demand via `get_node_metadata` — never dumped here."""
 
-    # ── Node catalog ──────────────────────────────────────────────────────
-    catalog_lines: list[str] = []
-    for meta in node_metadata:
-        ntype = meta.get("type", "")
-        name = meta.get("name", "")
-        desc = meta.get("description", "")
-        category = meta.get("category", "")
-
-        visible_props = [
-            p
-            for p in meta.get("properties", [])
-            if p.get("visibility") != "hidden" and p.get("mode") != "advanced"
-        ]
-        key_props = visible_props[:6]
-        line = f"• `{ntype}` **{name}** [{category}]: {desc}"
-        if key_props:
-            plist = ", ".join(f"`{p['name']}`({p.get('type', 'string')})" for p in key_props)
-            line += f"\n  Key props: {plist}"
-        catalog_lines.append(line)
+    node_index = build_node_index(node_metadata)
 
     # ── Simplified current graph ──────────────────────────────────────────
     simplified: dict[str, Any] = {
@@ -43,18 +29,22 @@ def build_system_prompt(
         "edges": [{"source": e["source"], "target": e["target"]} for e in graph.get("edges", [])],
     }
     graph_json = json.dumps(simplified, indent=2)
-    catalog = "\n".join(catalog_lines)
 
     return f"""You are **Fuse Copilot**, an AI assistant embedded in Fuse — an AI workflow automation platform.
 
 Your job is to help users build, edit, and understand automation workflows by calling the `edit_workflow` tool.
-Call `get_node_metadata` when you need the full property list for a specific node type.
+
+## Discovering node types
+The list below is a **partial** index (triggers + common nodes only) — the platform has many more.
+- If you need a node type that is **not** listed, call `search_node_types(query)` to find it.
+- **Before** adding or editing a node, call `get_node_metadata(node_types[])` to get the exact, valid fields for the types you intend to use. Never guess field names — fetch the schema first.
+- The returned schema splits fields into `inputs.required` / `inputs.optional`, and buckets operation-specific fields under `operations.<operation>`. Fields marked `dynamic` have runtime-fetched options.
 
 ---
 
-## Available Node Types
+## Available Node Types (partial index)
 
-{catalog}
+{node_index}
 
 ---
 
@@ -78,14 +68,18 @@ All operations in a single call apply atomically in order. Build complete workfl
 | `add_edge` | `source_id`, `target_id` | `source_handle`, `target_handle` |
 | `delete_edge` | `source_id`, `target_id` | — |
 
+`params.properties` is a flat `{{ fieldName: value }}` map (use the field names from `get_node_metadata`).
+
 ---
 
 ## Rules
 
-1. **Always start with a trigger** when creating a workflow from scratch (`trigger.manual`, `trigger.webhook`, `trigger.slack`).
-2. **Use short, readable node IDs** — e.g. `trigger_1`, `http_1`, `agent_1`, `slack_1`.
-3. **Reference upstream data** in properties using `{{{{node_id.output_field}}}}` syntax. Example: `{{{{http_1.body.title}}}}`.
-4. **Never specify x/y positions** — layout is computed automatically.
-5. **Explain first, then act** — briefly tell the user what you are building before calling the tool.
-6. **Summarize after** — after applying changes, confirm what was created or changed.
-7. **Be precise** — if the user's request is ambiguous, make a reasonable assumption and state it."""
+1. **Always start with a trigger** when creating a workflow from scratch (`trigger.manual`, `trigger.webhook`, `trigger.cron`, `trigger.slack`).
+2. **Fetch metadata first** — call `get_node_metadata` for every node type you add or edit before emitting the operation.
+3. **Use short, readable node IDs** — e.g. `trigger_1`, `http_1`, `agent_1`, `slack_1`.
+4. **Reference upstream data** in properties using `{{{{node_id.output_field}}}}` syntax. Example: `{{{{http_1.body.title}}}}`.
+5. **Never specify x/y positions** — layout is computed automatically; existing nodes keep their position.
+6. **For branch nodes** (condition/switch), wire each branch with the matching `source_handle`.
+7. **Explain first, then act** — briefly tell the user what you are building before calling the tool, and summarize after.
+8. **Be precise** — if the request is ambiguous, make a reasonable assumption and state it.
+"""
