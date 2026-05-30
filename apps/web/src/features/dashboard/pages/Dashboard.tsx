@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import { GreetingRow }      from '../components/GreetingRow'
 import { StatsGrid }        from '../components/StatsGrid'
 import { PromptCard }       from '../components/PromptCard'
-import { GeneratingCard }   from '../components/GeneratingCard'
 import { RecentRuns }       from '../components/RecentRuns'
 import { SchedulePanel }    from '../components/SchedulePanel'
 import { ConnectionsPanel } from '../components/ConnectionsPanel'
@@ -34,9 +33,12 @@ export function Dashboard() {
       <GreetingRow />
       <StatsGrid items={stats} />
 
-      {ai.creating
-        ? <GeneratingCard message={ai.message} onCancel={ai.cancel} />
-        : <PromptCard onSubmit={ai.generate} />}
+      <PromptCard
+        onSubmit={ai.generate}
+        busy={ai.creating}
+        statusMessage={ai.message}
+        onCancel={ai.cancel}
+      />
 
       <div className="grid grid-cols-[minmax(0,1fr)_320px] gap-[24px]">
         <RecentRuns

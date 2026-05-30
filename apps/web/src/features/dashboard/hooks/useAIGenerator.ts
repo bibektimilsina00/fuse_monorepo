@@ -45,11 +45,9 @@ export function useAIGenerator() {
   const generate = async (prompt: string) => {
     setMsgIdx(0)
     setCreating(true)
-    let createdId: string | null = null
     try {
       const name = prompt.slice(0, 60).trim() || 'New AI workflow'
       const wf = await workflowAPI.create({ name })
-      createdId = wf.id
 
       const controller = new AbortController()
       abortRef.current = controller
@@ -76,11 +74,12 @@ export function useAIGenerator() {
       navigate(`/workflows/${wf.id}`)
     } catch (e) {
       const err = e as Error
-      if (err.name === 'AbortError') {
-        if (createdId) navigate(`/workflows/${createdId}`)
-      } else {
+      if (err.name !== 'AbortError') {
         toast(`Copilot failed: ${err.message || 'error'}`, { variant: 'err' })
       }
+      // On cancel we stay on the dashboard — the empty workflow appears in the
+      // sidebar so the user can keep it or delete it.
+      qc.invalidateQueries({ queryKey: workflowKeys.lists(workspaceId) })
     } finally {
       abortRef.current = null
       setCreating(false)
