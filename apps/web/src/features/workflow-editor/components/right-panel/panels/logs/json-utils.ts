@@ -66,7 +66,7 @@ export function tokenizeJson(source: string): JsonToken[] {
 
     if (ch === '-' || isDigit(ch)) {
       let j = i + 1
-      while (j < source.length && /[0-9.eE+\-]/.test(source[j])) j++
+      while (j < source.length && /[0-9.eE+-]/.test(source[j])) j++
       tokens.push({ type: 'number', value: source.slice(i, j) })
       i = j
       continue

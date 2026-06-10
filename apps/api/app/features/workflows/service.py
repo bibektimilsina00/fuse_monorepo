@@ -121,7 +121,17 @@ class WorkflowService:
     def _initial_graph(self, graph: dict | None) -> dict:
         if graph and graph.get("nodes"):
             return graph
-        return {"nodes": [], "edges": []}
+        return {
+            "nodes": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "trigger.manual",
+                    "data": {"name": "Start", "properties": {"startWorkflow": "manual"}},
+                    "position": {"x": 100, "y": 100},
+                }
+            ],
+            "edges": [],
+        }
 
     async def trigger_workflows(
         self,
