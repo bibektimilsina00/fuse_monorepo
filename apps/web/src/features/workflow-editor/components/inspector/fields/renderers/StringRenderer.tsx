@@ -113,11 +113,14 @@ function FxBadge({ onClick, disabled }: FxBadgeProps) {
       onClick={onClick}
       disabled={disabled}
       title="Switch to expression (JSONata)"
+      // Sits above the field, aligned to the label row on the right.
+      // FieldWrapper draws the label with `gap-1.5` (6px) below; the input
+      // top is at y=0 in this `relative` wrapper, so -22px lands the badge
+      // roughly on the label's baseline.
       className={cn(
-        'absolute -top-2 right-2 flex h-[16px] items-center rounded-[3px] px-1.5',
-        'font-mono text-[9.5px] font-semibold uppercase tracking-wide',
-        'bg-surface-2 text-text-faint',
-        'transition-colors hover:bg-accent/15 hover:text-accent',
+        'absolute -top-[22px] right-0 flex h-[16px] items-center rounded-[3px] px-1.5',
+        'font-mono text-[10px] font-semibold uppercase tracking-wide leading-none',
+        'text-text-faint transition-colors hover:bg-accent/15 hover:text-accent',
         disabled && 'pointer-events-none opacity-50',
       )}
     >
