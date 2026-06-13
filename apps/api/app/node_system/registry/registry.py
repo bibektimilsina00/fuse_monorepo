@@ -46,6 +46,8 @@ from apps.api.app.node_system.nodes.logic.human_input.human_input import HumanIn
 from apps.api.app.node_system.nodes.logic.loop.loop_node import LoopNode
 from apps.api.app.node_system.nodes.logic.sub_workflow.sub_workflow_node import SubWorkflowNode
 from apps.api.app.node_system.nodes.logic.while_loop.while_loop import WhileLoopNode
+from apps.api.app.node_system.nodes.meta.fb_message_trigger import FBMessageTriggerNode
+from apps.api.app.node_system.nodes.meta.fb_send_message import FBSendMessageNode
 from apps.api.app.node_system.nodes.meta.ig_comment_trigger import IGCommentTriggerNode
 from apps.api.app.node_system.nodes.meta.ig_send_dm import IGSendDMNode
 from apps.api.app.node_system.nodes.notion.notion_node import NotionNode
@@ -106,6 +108,8 @@ node_registry.register(GmailNode)
 node_registry.register(LinearNode)
 node_registry.register(IGCommentTriggerNode)
 node_registry.register(IGSendDMNode)
+node_registry.register(FBMessageTriggerNode)
+node_registry.register(FBSendMessageNode)
 node_registry.register(SetVariableNode)
 node_registry.register(JsonTransformNode)
 node_registry.register(MergeNode)

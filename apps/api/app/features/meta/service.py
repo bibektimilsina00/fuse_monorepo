@@ -151,6 +151,61 @@ class MetaService:
         return body
 
     # ------------------------------------------------------------------
+    # Messenger send-message — used by action.meta.fb_send_message.
+    # ------------------------------------------------------------------
+
+    async def fb_send_message(
+        self,
+        page_access_token: str,
+        page_id: str,
+        recipient_id: str,
+        text: str,
+        messaging_type: str = "RESPONSE",
+        message_tag: str | None = None,
+    ) -> dict[str, Any]:
+        """Send a Messenger DM via the Send API.
+
+        Args:
+          page_access_token: page-level token from the credential's `pages` array.
+          page_id:           FB Page id (NOT the recipient's PSID).
+          recipient_id:      Page-Scoped User ID (PSID) — from the upstream
+                             webhook's `sender.id`.
+          text:              message body.
+          messaging_type:    'RESPONSE' (within 24h), 'UPDATE' (transactional),
+                             or 'MESSAGE_TAG' (when paired with `message_tag`).
+          message_tag:       one of HUMAN_AGENT, CONFIRMED_EVENT_UPDATE,
+                             POST_PURCHASE_UPDATE, ACCOUNT_UPDATE — only honored
+                             when messaging_type == 'MESSAGE_TAG'.
+
+        Meta enforces the 24h window server-side. Calls outside the window
+        without an appropriate `message_tag` come back as error 10/2018278;
+        we surface those verbatim so the workflow log shows Meta's exact
+        rejection reason.
+        """
+        payload: dict[str, Any] = {
+            "recipient": {"id": recipient_id},
+            "message": {"text": text},
+            "messaging_type": messaging_type,
+        }
+        if messaging_type == "MESSAGE_TAG" and message_tag:
+            payload["tag"] = message_tag
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                _graph_url(f"/{page_id}/messages"),
+                params={"access_token": page_access_token},
+                json=payload,
+            )
+        body = resp.json()
+        if resp.status_code >= 400:
+            err = body.get("error", {})
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Messenger send failed: {err.get('message') or body}",
+            )
+        return body
+
+    # ------------------------------------------------------------------
     # Webhook receive — verifies signature, parses Meta's envelope, and
     # dispatches matching trigger nodes onto the execution engine.
     # ------------------------------------------------------------------
@@ -232,42 +287,107 @@ class MetaService:
 
 
 def _flatten_entry(object_type: str | None, entry: dict[str, Any]) -> list[dict[str, Any]]:
-    """Normalize Meta's two envelope shapes into a uniform list of events.
+    """Normalize Meta's two envelope shapes into a uniform list of synthesized
+    `{field, value}` rows.
 
-    Returns a list of `{field, value}` rows. For `changes` (FB feed, IG
-    comments, lead_gen) the field is the change-field. For `messaging`
-    (Messenger / IG DM / WA inbox) the field is synthesized from the
-    object type.
+    Meta delivers events under two top-level keys:
+      - `entry.changes[]` — content events (FB feed posts, IG comments,
+        mentions, reactions, lead_gen). Each row carries a `field` we can
+        often use verbatim, though FB `feed` is overloaded and we sub-
+        classify based on the row's `item` so a comment doesn't masquerade
+        as a status update.
+      - `entry.messaging[]` — conversational events (Messenger DMs, IG
+        DMs, story replies, story @mentions, postbacks, reactions). The
+        outer `field` doesn't exist on these — we synthesize one from the
+        message's shape so the routing table can stay flat.
+
+    The synthesized field is stable across rebuilds — never inline the
+    raw Meta keys in `_TRIGGER_MAP`; always go through this normalizer.
     """
     out: list[dict[str, Any]] = []
 
     for change in entry.get("changes") or []:
-        field = change.get("field")
-        if not field:
+        raw_field = change.get("field")
+        if not raw_field:
             continue
-        out.append({"field": str(field), "value": change.get("value") or {}})
+        value = change.get("value") or {}
+        field = str(raw_field)
+
+        # FB Page `feed` is overloaded — split by the row's `item`. A
+        # `feed/comment` event has a different downstream shape than a
+        # `feed/post`, and routing them through one trigger type would
+        # force every consumer to redo the disambiguation.
+        if field == "feed":
+            item = str(value.get("item") or "").lower()
+            if item == "comment":
+                field = "feed.comment"
+            elif item == "post":
+                field = "feed.post"
+            elif item == "reaction":
+                field = "feed.reaction"
+            else:
+                field = "feed.other"
+
+        out.append({"field": field, "value": value})
 
     for msg in entry.get("messaging") or []:
-        # Sub-classify so trigger.meta.ig_message vs ig_story_reply etc.
-        # can be dispatched without re-parsing later.
-        if "message" in msg:
-            field = "messages"
-        elif "postback" in msg:
-            field = "messaging_postbacks"
-        elif "reaction" in msg:
-            field = "message_reactions"
-        else:
-            field = "messages"
-        out.append({"field": field, "value": msg})
+        out.append({"field": _classify_messaging(object_type, msg), "value": msg})
 
     return out
 
 
-# Mapping from (object, field) → Fuse trigger node type. Only Phase 1
-# entries are populated — Phase 2+ adds Messenger, WhatsApp, Lead Ads,
-# story replies, etc.
+def _classify_messaging(object_type: str | None, msg: dict[str, Any]) -> str:
+    """Synthesize a stable field tag for `messaging[]` rows so the routing
+    table can fan out by intent (DM vs story reply vs story mention vs
+    postback) without every consumer re-parsing Meta's payload.
+    """
+    if "postback" in msg:
+        return "messaging.postback"
+    if "reaction" in msg:
+        return "messaging.reaction"
+
+    message = msg.get("message")
+    if not isinstance(message, dict):
+        return "messaging.unknown"
+
+    # IG story sub-types live inside the `message` body. They only appear
+    # on `object: instagram` — Messenger never sends them. We still gate
+    # on object_type so a misrouted payload can't accidentally fire an
+    # IG story-reply workflow on a Messenger DM.
+    if object_type == "instagram":
+        attachments = message.get("attachments") or []
+        if isinstance(attachments, list):
+            for att in attachments:
+                if isinstance(att, dict) and str(att.get("type") or "") == "story_mention":
+                    return "messaging.ig_story_mention"
+        reply_to = message.get("reply_to") or {}
+        if isinstance(reply_to, dict) and reply_to.get("story"):
+            return "messaging.ig_story_reply"
+
+    return "messaging.text"
+
+
+# (object, synthesized_field) → Fuse trigger node type. The fields here
+# are the ones `_flatten_entry` emits, NOT Meta's raw envelope fields.
+# Phase 2 routes every Messenger / IG inbox / Page feed / Lead Ads event
+# through this map; Phase 2b will add the `whatsapp_business_account`
+# entries. PR B in Phase 2 only adds node modules — the routing is
+# already in place here.
 _TRIGGER_MAP: dict[tuple[str, str], str] = {
+    # Instagram
     ("instagram", "comments"): "trigger.meta.ig_comment",
+    ("instagram", "mentions"): "trigger.meta.ig_mention",
+    ("instagram", "messaging.text"): "trigger.meta.ig_message",
+    ("instagram", "messaging.ig_story_reply"): "trigger.meta.ig_story_reply",
+    ("instagram", "messaging.ig_story_mention"): "trigger.meta.ig_story_mention",
+    # Facebook Page / Messenger
+    ("page", "messaging.text"): "trigger.meta.fb_message",
+    ("page", "messaging.postback"): "trigger.meta.fb_postback",
+    ("page", "feed.comment"): "trigger.meta.fb_comment",
+    ("page", "feed.reaction"): "trigger.meta.fb_reaction",
+    ("page", "mention"): "trigger.meta.fb_mention",
+    # Lead Ads (delivered under the `page` object)
+    ("page", "leadgen"): "trigger.meta.lead_submission",
 }
 
 
@@ -277,12 +397,35 @@ def _trigger_type_for(object_type: str | None, field: str) -> str | None:
     return _TRIGGER_MAP.get((object_type, field))
 
 
+# Per-trigger property filter so webhook routing only fires the workflow
+# whose trigger node points at the *same* target id Meta delivered the
+# event for. Keep these aligned with the trigger node's saved properties
+# (the property names below must match the node's Pydantic model fields).
+_TARGET_FILTER_BY_TRIGGER: dict[str, str] = {
+    # Instagram triggers — target_id is the IG business account id.
+    "trigger.meta.ig_comment": "ig_account_id",
+    "trigger.meta.ig_mention": "ig_account_id",
+    "trigger.meta.ig_message": "ig_account_id",
+    "trigger.meta.ig_story_reply": "ig_account_id",
+    "trigger.meta.ig_story_mention": "ig_account_id",
+    # Page triggers — target_id is the FB Page id.
+    "trigger.meta.fb_message": "page_id",
+    "trigger.meta.fb_postback": "page_id",
+    "trigger.meta.fb_comment": "page_id",
+    "trigger.meta.fb_reaction": "page_id",
+    "trigger.meta.fb_mention": "page_id",
+    # Lead Ads — target_id is the FB Page id; lead-form filtering happens
+    # inside the trigger node since Meta only sends `form_id` in the
+    # value, not as a separate routing key.
+    "trigger.meta.lead_submission": "page_id",
+}
+
+
 def _target_filters(trigger_type: str, target_id: str) -> dict[str, str]:
-    """Per-trigger property filter to constrain webhook routing to the
-    workflow whose trigger node references this specific target."""
-    if trigger_type == "trigger.meta.ig_comment":
-        return {"ig_account_id": target_id}
-    return {}
+    field = _TARGET_FILTER_BY_TRIGGER.get(trigger_type)
+    if not field:
+        return {}
+    return {field: target_id}
 
 
 def get_meta_service(db: AsyncSession) -> MetaService:
