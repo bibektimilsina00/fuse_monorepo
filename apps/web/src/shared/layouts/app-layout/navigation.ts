@@ -24,6 +24,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'templates', label: 'Templates', icon: Icons.Layers, to: APP_ROUTES.TEMPLATES },
     ],
   },
+  { group: 'Workflows', isWorkflows: true },
   {
     group: 'Operate',
     items: [
@@ -47,7 +48,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'connections', label: 'Connections', icon: Icons.Plug, to: APP_ROUTES.CONNECTIONS },
     ],
   },
-  { group: 'Workflows', isWorkflows: true },
 ]
 
 export const MENU_ITEM_CLASS =
@@ -58,3 +58,5 @@ export const NAV_LINK_CLASS =
 
 export const ACTIVE_NAV_LINK_CLASS =
   "bg-[var(--surface)] text-[var(--text)] group-data-[collapsed=true]/shell:shadow-[inset_0_0_0_1px_var(--border-soft)] before:content-[''] before:w-[3px] before:h-[14px] before:bg-[var(--text)] before:rounded-[0_2px_2px_0] before:absolute before:left-0 group-data-[collapsed=true]/shell:before:hidden"
+
+

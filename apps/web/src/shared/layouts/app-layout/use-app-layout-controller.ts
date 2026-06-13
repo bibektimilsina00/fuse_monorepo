@@ -65,8 +65,8 @@ export function useAppLayoutController() {
   const [feedbackSent, setFeedbackSent] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Workspace: true,
-    Operate: true,
     Workflows: true,
+    Operate: false,
     Data: false,
     Integrations: false,
   })
