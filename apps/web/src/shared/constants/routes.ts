@@ -56,6 +56,7 @@ export const API_ROUTES = {
 
   // Meta — resource discovery (Pages, IG accounts, WABA, Lead forms)
   META_RESOURCES: '/meta/resources',
+  META_WA_TEMPLATES: '/meta/wa/templates',
 
   // Workflows / Automations
   WORKFLOWS_WITH_STATS: '/workflows/with-stats',

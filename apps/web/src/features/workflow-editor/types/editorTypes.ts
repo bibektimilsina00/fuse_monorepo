@@ -32,7 +32,7 @@ export type SaveState = 'saved' | 'saving' | 'unsaved' | 'error'
 export type KnownNodePropertyType =
   | 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multi-options'
   | 'credential' | 'key-value' | 'list' | 'messages' | 'schema' | 'file-list'
-  | 'tool-selector' | 'skill-selector' | 'meta-resource'
+  | 'tool-selector' | 'skill-selector' | 'meta-resource' | 'wa-template'
   | 'code' | 'collection' | 'fixed-collection'
 
 export type NodePropertyType = KnownNodePropertyType | (string & {})

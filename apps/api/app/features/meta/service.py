@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.core.config import settings
 from apps.api.app.core.logger import get_logger
 from apps.api.app.features.credentials.service import CredentialService
-from apps.api.app.features.meta.schemas import MetaResource
+from apps.api.app.features.meta.schemas import MetaResource, WATemplate
 
 logger = get_logger(__name__)
 
@@ -493,6 +493,118 @@ class MetaService:
                 detail=f"WhatsApp send failed: {err.get('message') or body}",
             )
         return body
+
+    async def wa_send_template(
+        self,
+        access_token: str,
+        phone_number_id: str,
+        to: str,
+        template_name: str,
+        language_code: str,
+        body_variables: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Send a pre-approved WhatsApp template message.
+
+        Templates are the only way to reach a user OUTSIDE the 24-hour
+        customer-service window. Each template lives in the WABA's
+        message_templates list and must be APPROVED by Meta before it
+        can be sent — submitted templates are reviewed in ~24-48 hours.
+
+        Args:
+          template_name:  exact template name as registered in the WABA.
+          language_code:  e.g. "en_US", "es", "pt_BR".
+          body_variables: positional values substituted into the template's
+                          `{{1}}`, `{{2}}`, ... body placeholders. Header and
+                          button parameters are not exposed by this helper —
+                          they need their own component entries, which we'll
+                          add once the simpler body-only path is proven.
+        """
+        components: list[dict[str, Any]] = []
+        if body_variables:
+            components.append(
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": str(v)} for v in body_variables],
+                }
+            )
+
+        payload: dict[str, Any] = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language_code},
+                "components": components,
+            },
+        }
+        return await self._wa_send(access_token, phone_number_id, payload)
+
+    # ------------------------------------------------------------------
+    # Template list — powers the `wa-template` field type in the editor.
+    # The Graph API returns a richer payload; this projection extracts
+    # just the (id, name, language, status, body) the picker needs.
+    # ------------------------------------------------------------------
+
+    async def wa_list_templates(
+        self,
+        access_token: str,
+        waba_id: str,
+        limit: int = 100,
+    ) -> list[WATemplate]:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                _graph_url(f"/{waba_id}/message_templates"),
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"limit": limit},
+            )
+        body = resp.json()
+        if resp.status_code >= 400:
+            err = body.get("error", {})
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"WhatsApp template list failed: {err.get('message') or body}. "
+                    "Confirm the credential has whatsapp_business_management scope "
+                    "and the WABA is reachable through this account."
+                ),
+            )
+
+        templates: list[WATemplate] = []
+        for tpl in body.get("data") or []:
+            if not isinstance(tpl, dict):
+                continue
+            body_preview = ""
+            var_count = 0
+            for comp in tpl.get("components") or []:
+                if not isinstance(comp, dict):
+                    continue
+                if str(comp.get("type") or "").upper() != "BODY":
+                    continue
+                text = str(comp.get("text") or "")
+                body_preview = text
+                # Count `{{N}}` placeholders — Meta numbers them positionally
+                # starting at 1 and surfaces a `body_text_named_params` array
+                # only on newer named-parameter templates. The positional
+                # count is the source of truth for the legacy components API
+                # we use in wa_send_template.
+                import re
+
+                var_count = len(set(re.findall(r"\{\{(\d+)\}\}", text)))
+                break
+            templates.append(
+                WATemplate(
+                    id=str(tpl.get("id") or tpl.get("name") or ""),
+                    name=str(tpl.get("name") or ""),
+                    language=str(tpl.get("language") or ""),
+                    status=str(tpl.get("status") or "UNKNOWN"),
+                    category=tpl.get("category"),
+                    body_variable_count=var_count,
+                    body_preview=body_preview,
+                    raw=tpl,
+                )
+            )
+        return templates
 
     # ------------------------------------------------------------------
     # Lead Ads — fetch the lead details by leadgen_id. The webhook only

@@ -74,6 +74,8 @@ from apps.api.app.node_system.nodes.meta.lead_submission_trigger import (
 from apps.api.app.node_system.nodes.meta.wa_mark_read import WAMarkReadNode
 from apps.api.app.node_system.nodes.meta.wa_message_trigger import WAMessageTriggerNode
 from apps.api.app.node_system.nodes.meta.wa_send_message import WASendMessageNode
+from apps.api.app.node_system.nodes.meta.wa_send_template import WASendTemplateNode
+from apps.api.app.node_system.nodes.meta.wa_status_trigger import WAStatusTriggerNode
 from apps.api.app.node_system.nodes.notion.notion_node import NotionNode
 from apps.api.app.node_system.nodes.salesforce.salesforce_node import SalesforceNode
 from apps.api.app.node_system.nodes.slack.slack_node import SlackNode
@@ -157,6 +159,8 @@ node_registry.register(LeadFetchNode)
 node_registry.register(WAMessageTriggerNode)
 node_registry.register(WASendMessageNode)
 node_registry.register(WAMarkReadNode)
+node_registry.register(WASendTemplateNode)
+node_registry.register(WAStatusTriggerNode)
 node_registry.register(SetVariableNode)
 node_registry.register(JsonTransformNode)
 node_registry.register(MergeNode)
