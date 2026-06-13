@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.core.config import settings
 from apps.api.app.core.database import get_db
+from apps.api.app.features.credentials.service import CredentialService
 from apps.api.app.features.meta.schemas import (
     MetaResourcesResponse,
     MetaWebhookReceiveResponse,
+    WATemplatesResponse,
 )
 from apps.api.app.features.meta.service import MetaService
 from apps.api.app.features.users.models import User
@@ -22,7 +24,7 @@ router = APIRouter()
 @router.get("/meta/resources", tags=["meta"], response_model=MetaResourcesResponse)
 async def list_meta_resources(
     credential_id: _uuid.UUID = Query(...),
-    kind: str = Query(..., description="page | ig_account | waba_phone | lead_form"),
+    kind: str = Query(..., description="page | ig_account | waba | waba_phone | lead_form"),
     current_user: User = Depends(get_current_user),
     workspace: Workspace = Depends(get_current_workspace),
     db: AsyncSession = Depends(get_db),
@@ -33,6 +35,36 @@ async def list_meta_resources(
         credential_id=str(credential_id),
         kind=kind,
         resources=resources,
+    )
+
+
+@router.get("/meta/wa/templates", tags=["meta"], response_model=WATemplatesResponse)
+async def list_wa_templates(
+    credential_id: _uuid.UUID = Query(...),
+    waba_id: str = Query(..., description="WABA id from /meta/resources?kind=waba"),
+    current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the message templates registered under `waba_id`.
+
+    Used by the inspector's `wa-template` field type to populate the
+    template-picker dropdown. The credential must carry the
+    `whatsapp_business_management` scope and the WABA must be reachable
+    through this account.
+    """
+    cred_service = CredentialService(db)
+    data = await cred_service.get_decrypted(credential_id, current_user, workspace)
+    access_token = str((data or {}).get("access_token") or "")
+    if not access_token:
+        raise HTTPException(status_code=400, detail="Meta credential is missing access_token.")
+
+    service = MetaService(db)
+    templates = await service.wa_list_templates(access_token, waba_id)
+    return WATemplatesResponse(
+        credential_id=str(credential_id),
+        waba_id=waba_id,
+        templates=templates,
     )
 
 

@@ -23,3 +23,28 @@ class MetaWebhookReceiveResponse(BaseModel):
     status: str
     triggered_count: int
     execution_ids: list[str] = []
+
+
+class WATemplate(BaseModel):
+    """Lightweight projection of a Meta WhatsApp message template.
+
+    The Graph API returns a richer payload — we surface only the fields
+    the inspector needs to render the template-picker dropdown and the
+    variable hint count. Full payload is still accessible via the
+    `raw` field for advanced UIs / debugging.
+    """
+
+    id: str
+    name: str
+    language: str
+    status: str  # APPROVED | PENDING | REJECTED | PAUSED | DISABLED
+    category: str | None = None
+    body_variable_count: int = 0
+    body_preview: str = ""
+    raw: dict | None = None
+
+
+class WATemplatesResponse(BaseModel):
+    credential_id: str
+    waba_id: str
+    templates: list[WATemplate]
