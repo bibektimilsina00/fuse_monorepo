@@ -363,57 +363,33 @@ class MetaOAuthProvider:
         "Retrieve Lead Ads form submissions",
     ]
 
-    # Union of every Graph API permission Phase 1–5 nodes touch. Requested
-    # upfront so the user authorizes once. Meta App Review is required for
-    # production access to most of these — see the integration plan.
-    _SCOPES = ",".join(
-        [
-            # Page + Messenger
-            "pages_show_list",
-            "pages_read_engagement",
-            "pages_manage_metadata",
-            "pages_messaging",
-            "pages_manage_posts",
-            "pages_manage_engagement",
-            # Instagram
-            "instagram_basic",
-            "instagram_manage_comments",
-            "instagram_manage_messages",
-            "instagram_manage_insights",
-            "instagram_content_publish",
-            # WhatsApp
-            "whatsapp_business_management",
-            "whatsapp_business_messaging",
-            # Lead Ads
-            "leads_retrieval",
-            # Required for any webhook subscription
-            "business_management",
-        ]
-    )
-
     def _graph_url(self, path: str) -> str:
         return f"https://graph.facebook.com/{settings.META_GRAPH_API_VERSION}{path}"
 
     def get_authorization_url(self, state, code_challenge=None):
         from urllib.parse import urlencode
 
+        if not settings.META_FB_LOGIN_CONFIG_ID:
+            raise ValueError(
+                "META_FB_LOGIN_CONFIG_ID is not set. Create a Configuration in "
+                "Meta App Dashboard → Facebook Login for Business → Configurations, "
+                "then paste the id into the env var."
+            )
+
+        # Facebook Login for Business drives the permission set and asset
+        # picker from the Configuration referenced by `config_id`. Meta's
+        # web dialog ignores any `scope` query param when `config_id` is
+        # present, so we never send one.
+        # Meta's OAuth dialog supports PKCE only on the mobile SDK — the
+        # web flow ignores `code_challenge`, so skip it here to keep parity
+        # with what their docs actually accept.
         params: dict[str, str] = {
             "client_id": settings.META_APP_ID,
             "redirect_uri": REDIRECT_URI.format(service="meta"),
             "state": state,
             "response_type": "code",
+            "config_id": settings.META_FB_LOGIN_CONFIG_ID,
         }
-        # Facebook Login for Business uses a Configuration ID to drive the
-        # permission set and asset picker — the legacy `scope` query param is
-        # ignored when `config_id` is present. We send config_id when one is
-        # set in settings, otherwise fall back to the classic scope list.
-        if settings.META_FB_LOGIN_CONFIG_ID:
-            params["config_id"] = settings.META_FB_LOGIN_CONFIG_ID
-        else:
-            params["scope"] = self._SCOPES
-        # Meta's OAuth dialog supports PKCE only on the mobile SDK — the
-        # web flow ignores `code_challenge`, so skip it here to keep parity
-        # with what their docs actually accept.
         return f"https://www.facebook.com/{settings.META_GRAPH_API_VERSION}/dialog/oauth?{urlencode(params)}"
 
     async def exchange_code(self, code, code_verifier=None):

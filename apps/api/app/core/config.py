@@ -52,9 +52,10 @@ class Settings(BaseSettings):
     META_APP_SECRET: str = ""
     META_WEBHOOK_VERIFY_TOKEN: str = ""
     META_GRAPH_API_VERSION: str = "v20.0"
-    # Facebook Login for Business — Configuration ID. When set, the OAuth
-    # dialog uses this config (its preset permissions + assets) instead of
-    # the legacy `scope` list. Leave empty to use classic Facebook Login.
+    # Facebook Login for Business Configuration ID. Defines the permission
+    # set and asset picker shown during OAuth. Create one in Meta App
+    # Dashboard → Facebook Login for Business → Configurations, then paste
+    # the numeric id here. Required for the Meta OAuth flow to work.
     META_FB_LOGIN_CONFIG_ID: str = ""
 
     # Environment & CORS
