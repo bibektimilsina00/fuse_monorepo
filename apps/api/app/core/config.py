@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     LINEAR_CLIENT_ID: str = ""
     LINEAR_CLIENT_SECRET: str = ""
 
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # Meta (Facebook + Instagram + WhatsApp + Messenger). One developer app
     # backs every Meta product. The verify token is the shared secret used
     # for the webhook subscription handshake (Meta calls our endpoint with
