@@ -31,21 +31,48 @@ from apps.api.app.core.logger import get_logger
 logger = get_logger(__name__)
 
 
-# Each entry: provider_tag → async callable that takes the current
-# cursor dict + the resolved access token + the trigger node's
-# properties dict and returns `(matched_messages, new_cursor)`.
+# Each registered poller binds three things:
+#   - the node `type` string (e.g. `trigger.gmail`) the workflow graph
+#     emits — so the workflow service can decide which nodes need a
+#     cursor row on save.
+#   - the `provider` tag persisted on `integration_trigger_state.provider`
+#     so we can route a stored row back to a poller after a worker
+#     restart.
+#   - the async poller callable.
 PollerCallable = Callable[
     [str, dict[str, Any] | None, dict[str, Any]],
     Awaitable[tuple[list[dict[str, Any]], dict[str, Any]]],
 ]
-_POLLERS: dict[str, PollerCallable] = {}
 
 
-def register_poller(provider: str, poller: PollerCallable) -> None:
+class PollerEntry:
+    __slots__ = ("node_type", "provider", "poller")
+
+    def __init__(self, node_type: str, provider: str, poller: PollerCallable) -> None:
+        self.node_type = node_type
+        self.provider = provider
+        self.poller = poller
+
+
+_BY_NODE_TYPE: dict[str, PollerEntry] = {}
+_BY_PROVIDER: dict[str, PollerEntry] = {}
+
+
+def register_poller(*, node_type: str, provider: str, poller: PollerCallable) -> None:
     """Provider modules call this at import time to wire themselves into
-    the scheduler. Re-registering the same provider replaces — useful
+    the scheduler. Re-registering the same `node_type` replaces — useful
     for hot-reload in dev."""
-    _POLLERS[provider] = poller
+    entry = PollerEntry(node_type=node_type, provider=provider, poller=poller)
+    _BY_NODE_TYPE[node_type] = entry
+    _BY_PROVIDER[provider] = entry
+
+
+def get_entry_for_node_type(node_type: str) -> PollerEntry | None:
+    return _BY_NODE_TYPE.get(node_type)
+
+
+def get_entry_for_provider(provider: str) -> PollerEntry | None:
+    return _BY_PROVIDER.get(provider)
 
 
 @celery_app.task(name="poll_integration_triggers")
@@ -68,7 +95,7 @@ async def _poll_due_rows() -> None:
     # call is idempotent so reloading the worker doesn't double-fire.
     from apps.api.app.node_system.nodes.gmail import gmail_trigger as _gmail_trigger  # noqa: F401
 
-    if not _POLLERS:
+    if not _BY_PROVIDER:
         return
 
     async with AsyncSessionLocal() as db:
@@ -84,8 +111,8 @@ async def _poll_due_rows() -> None:
 
         for state in due_rows:
             provider = state.provider
-            poller = _POLLERS.get(provider)
-            if poller is None:
+            entry = _BY_PROVIDER.get(provider)
+            if entry is None:
                 # Unknown provider — likely a row left over from an
                 # uninstalled integration. Push its schedule out so it
                 # doesn't keep showing up every tick, but don't delete
@@ -107,6 +134,12 @@ async def _poll_due_rows() -> None:
                 continue
             if workflow is None:
                 # Workflow deleted — clean up the orphaned state row.
+                await state_repo.delete(state.workflow_id, state.node_id)
+                await db.commit()
+                continue
+            if not workflow.is_active:
+                # User paused the workflow between save and beat tick.
+                # Drop the row; re-activation will re-seed a snapshot.
                 await state_repo.delete(state.workflow_id, state.node_id)
                 await db.commit()
                 continue
@@ -142,7 +175,7 @@ async def _poll_due_rows() -> None:
                 continue
 
             try:
-                matches, new_cursor = await poller(token, state.cursor, props)
+                matches, new_cursor = await entry.poller(token, state.cursor, props)
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "Integration polling: %s poller raised for %s/%s: %s",

@@ -531,7 +531,11 @@ def _register() -> None:
         )
     except Exception:  # noqa: BLE001
         return
-    register_poller(PROVIDER, _poll_for_scheduler)
+    register_poller(
+        node_type="trigger.gmail",
+        provider=PROVIDER,
+        poller=_poll_for_scheduler,
+    )
 
 
 _register()

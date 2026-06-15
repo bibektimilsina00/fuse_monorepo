@@ -153,3 +153,27 @@ class IntegrationTriggerStateRepository:
             return
         await self.db.delete(row)
         await self.db.flush()
+
+    async def list_by_workflow(self, workflow_id: uuid.UUID) -> list[IntegrationTriggerState]:
+        stmt = select(IntegrationTriggerState).where(
+            IntegrationTriggerState.workflow_id == workflow_id,
+        )
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def delete_by_workflow_and_nodes(
+        self,
+        workflow_id: uuid.UUID,
+        node_ids_to_keep: set[str],
+    ) -> int:
+        """Drop every cursor row for `workflow_id` whose `node_id` is not
+        in `node_ids_to_keep`. Returns the number deleted. Used to
+        reconcile after a graph edit removes / renames a trigger node."""
+        existing = await self.list_by_workflow(workflow_id)
+        deleted = 0
+        for row in existing:
+            if row.node_id not in node_ids_to_keep:
+                await self.db.delete(row)
+                deleted += 1
+        if deleted:
+            await self.db.flush()
+        return deleted
