@@ -33,6 +33,10 @@ from apps.api.app.node_system.nodes.db.postgres.postgres import PostgresNode
 from apps.api.app.node_system.nodes.discord.discord_node import DiscordNode
 from apps.api.app.node_system.nodes.github.github_node import GitHubNode
 from apps.api.app.node_system.nodes.gmail.gmail_node import GmailNode
+from apps.api.app.node_system.nodes.google_sheets.google_sheets import GoogleSheetsNode
+from apps.api.app.node_system.nodes.google_sheets.google_sheets_trigger import (
+    GoogleSheetsTriggerNode,
+)
 from apps.api.app.node_system.nodes.http.request.request import HttpRequestNode
 from apps.api.app.node_system.nodes.http.webhook.webhook import WebhookTriggerNode
 from apps.api.app.node_system.nodes.hubspot.hubspot_node import HubSpotNode
@@ -109,6 +113,8 @@ node_registry.register(StripeNode)
 node_registry.register(HubSpotNode)
 node_registry.register(TelegramNode)
 node_registry.register(GmailNode)
+node_registry.register(GoogleSheetsNode)
+node_registry.register(GoogleSheetsTriggerNode)
 node_registry.register(LinearNode)
 # Meta surfaces — one consolidated trigger + action per surface
 # (Instagram, Facebook/Messenger, WhatsApp, Lead Ads) carrying

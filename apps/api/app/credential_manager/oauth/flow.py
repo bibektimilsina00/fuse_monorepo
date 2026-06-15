@@ -260,7 +260,7 @@ class GoogleOAuthProvider:
     type = "oauth"
     description = "Connect Google account for Gmail, Drive, and other Google services"
     icon_url = "https://cdn.brandfetch.io/google.com/icon"
-    scopes = ["Read and send Gmail", "Access Google profile"]
+    scopes = ["Read and send Gmail", "Access Google profile", "Read and write Google Sheets"]
 
     def get_authorization_url(self, state, code_challenge=None):
         from urllib.parse import urlencode
@@ -269,7 +269,12 @@ class GoogleOAuthProvider:
             "client_id": settings.GOOGLE_CLIENT_ID if hasattr(settings, "GOOGLE_CLIENT_ID") else "",
             "redirect_uri": REDIRECT_URI.format(service="google"),
             "response_type": "code",
-            "scope": "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly openid email profile",
+            "scope": (
+                "https://www.googleapis.com/auth/gmail.send "
+                "https://www.googleapis.com/auth/gmail.readonly "
+                "https://www.googleapis.com/auth/spreadsheets "
+                "openid email profile"
+            ),
             "access_type": "offline",
             "state": state,
             "prompt": "consent",
