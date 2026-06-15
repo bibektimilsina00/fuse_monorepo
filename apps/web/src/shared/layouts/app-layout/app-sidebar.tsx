@@ -13,6 +13,7 @@ import { DropdownMenu } from './dropdown-menu'
 
 interface AppSidebarProps {
   controller: AppLayoutController
+  variant?: 'floating' | 'flat'
 }
 
 /** Base class for all nav items — used by NavLink, workflow and folder rows */
@@ -31,7 +32,7 @@ const ACTION_BTN =
 const MENU_ITEM =
   'flex items-center gap-[9px] py-[8px] px-[10px] rounded-[7px] text-[13px] text-[var(--text-mute)] w-full text-left transition-colors duration-80 font-medium hover:bg-[var(--surface)] hover:text-[var(--text)] [&_svg]:w-[14px] [&_svg]:h-[14px] [&_svg]:shrink-0'
 
-export function AppSidebar({ controller }: AppSidebarProps) {
+export function AppSidebar({ controller, variant = 'floating' }: AppSidebarProps) {
   const {
     collapsed,
     setCollapsed,
@@ -59,8 +60,17 @@ export function AppSidebar({ controller }: AppSidebarProps) {
     showPendingFeature,
   } = controller
 
+  const isFlat = variant === 'flat'
+
   return (
-    <aside className="relative h-[calc(100vh-28px)] my-[14px] ml-[14px] bg-[var(--bg-2)] border border-[var(--border-faint)] rounded-[16px] flex flex-col overflow-hidden shadow-[inset_0_1px_0_oklch(0.30_0.004_250/0.4),0_24px_48px_-28px_oklch(0_0_0/0.6)] z-20">
+    <aside
+      className={cn(
+        'relative flex flex-col overflow-hidden transition-all duration-150 z-20',
+        isFlat
+          ? 'h-screen bg-[var(--bg-2)] border-r border-[var(--border-faint)]'
+          : 'h-[calc(100vh-28px)] my-[14px] ml-[14px] bg-[var(--bg-2)] border border-[var(--border-faint)] rounded-[16px] shadow-[inset_0_1px_0_oklch(0.30_0.004_250/0.4),0_24px_48px_-28px_oklch(0_0_0/0.6)]'
+      )}
+    >
       <SidebarHeader collapsed={collapsed} onToggleCollapsed={() => setCollapsed(value => !value)} />
 
       {/* ── Nav scroll area ─────────────────────────────────── */}

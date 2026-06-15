@@ -16,9 +16,7 @@ export function EditorLayout() {
       )}
       data-collapsed={controller.collapsed}
     >
-      <div className="dot-grid" />
-
-      <AppSidebar controller={controller} />
+      <AppSidebar controller={controller} variant="flat" />
 
       <div className="relative flex h-screen min-h-0 flex-col overflow-hidden">
         <Outlet context={controller} />
