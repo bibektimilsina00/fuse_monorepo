@@ -217,6 +217,10 @@ class GCalTriggerNode(BaseNode[GCalTriggerProperties]):
                             "cursor_initialised": True,
                             "sync_token": sync_token,
                         },
+                        # Cursor initialised, nothing to emit yet — halt the
+                        # downstream chain so action nodes don't fire with
+                        # null fields. Real events arrive via the scheduler.
+                        handled_successors=True,
                     )
                 events, new_sync_token = await self._poll_sync(client, headers, state)
         except httpx.HTTPStatusError as exc:
@@ -247,6 +251,9 @@ class GCalTriggerNode(BaseNode[GCalTriggerProperties]):
                     "events": [],
                     "sync_token": new_sync_token,
                 },
+                # Nothing matched this poll — halt downstream so the
+                # action chain only fires when there is real event data.
+                handled_successors=True,
             )
         return NodeResult(success=True, output_data=events[0])
 
@@ -378,7 +385,11 @@ class GCalTriggerNode(BaseNode[GCalTriggerProperties]):
                 resp.raise_for_status()
                 items = resp.json().get("items") or []
                 if not items:
-                    return NodeResult(success=True, output_data={"matched": 0, "events": []})
+                    return NodeResult(
+                        success=True,
+                        output_data={"matched": 0, "events": []},
+                        handled_successors=True,
+                    )
                 return NodeResult(
                     success=True,
                     output_data=_normalize(items[0], _classify_change(items[0])),
