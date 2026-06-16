@@ -250,7 +250,7 @@ class GmailNode(BaseNode[GmailProperties]):
                     "type": "gmail-query",
                     "placeholder": "Search words…",
                     "description": (
-                        "Build the search visually or toggle Raw Query for " "full Gmail syntax."
+                        "Build the search visually or toggle Raw Query for full Gmail syntax."
                     ),
                     "condition": _cond("search"),
                 },

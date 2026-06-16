@@ -68,9 +68,7 @@ _ORDER_BY_OPTIONS: list[dict[str, str]] = [
 # File-resource fields we always pull back. Slim list so the action
 # response stays template-friendly without hauling the full Drive
 # metadata bag through downstream JSONata.
-_FILE_FIELDS = (
-    "id,name,mimeType,trashed,createdTime,modifiedTime," "webViewLink,iconLink,parents,size"
-)
+_FILE_FIELDS = "id,name,mimeType,trashed,createdTime,modifiedTime,webViewLink,iconLink,parents,size"
 
 
 class GDriveProperties(BaseModel):
@@ -188,7 +186,7 @@ class GDriveNode(BaseNode[GDriveProperties]):
                     "multiline": True,
                     "required": True,
                     "placeholder": (
-                        "https://example.com/file.pdf  /  raw text  /  " "base64-encoded bytes"
+                        "https://example.com/file.pdf  /  raw text  /  base64-encoded bytes"
                     ),
                     "condition": _cond("upload_file"),
                 },
@@ -215,7 +213,7 @@ class GDriveNode(BaseNode[GDriveProperties]):
                     "default": "",
                     "options": _CONVERSION_OPTIONS,
                     "description": (
-                        "Optional — converts the upload to a Google-native " "format on the way in."
+                        "Optional — converts the upload to a Google-native format on the way in."
                     ),
                     "condition": _cond("upload_file"),
                     "mode": "advanced",
