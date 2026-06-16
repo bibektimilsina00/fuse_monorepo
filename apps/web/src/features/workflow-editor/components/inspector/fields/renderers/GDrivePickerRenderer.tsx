@@ -122,7 +122,7 @@ function parseValue(v: unknown): PickerValue | null {
   return null
 }
 
-export function GDrivePickerRenderer({ prop, value, onChange, disabled, properties }: RendererProps) {
+export function GDrivePickerRenderer({ value, onChange, disabled, properties }: RendererProps) {
   const selected = parseValue(value)
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -223,9 +223,6 @@ export function GDrivePickerRenderer({ prop, value, onChange, disabled, properti
       </div>
       {error && (
         <p className="text-[11px] text-[var(--danger,#dc2626)]">{error}</p>
-      )}
-      {prop.description && !error && (
-        <p className="text-[11px] text-text-muted">{prop.description}</p>
       )}
     </div>
   )
