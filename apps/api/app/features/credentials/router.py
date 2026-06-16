@@ -195,8 +195,11 @@ async def get_picker_token(
     """
     from apps.api.app.core.config import settings
 
+    # Workspace-scoped: any member can drive the picker against any cred
+    # in the workspace. `get_by_id_and_workspace` already enforces the
+    # boundary — no per-user gate.
     cred = await service.repo.get_by_id_and_workspace(credential_id, workspace.id)
-    if cred is None or cred.user_id != current_user.id:
+    if cred is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found")
     # `get_decrypted_credential` runs the same refresh-if-near-expiry
     # path the runtime hits, so the token we hand to Picker is the same
