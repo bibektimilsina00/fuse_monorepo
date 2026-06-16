@@ -142,8 +142,13 @@ function FolderBrowser({
 
   useEffect(() => {
     let alive = true
+    // Resetting state on parent navigation is the whole point of the
+    // effect — eslint's set-state-in-effect rule doesn't fit here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFolders(null)
     apiClient
       .get<FolderListResponse>(
