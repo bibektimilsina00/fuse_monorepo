@@ -84,7 +84,7 @@ def format_gcs_error(status_code: int, body: str) -> str:
         return make_structured_error(
             "Cloud Storage resource not found",
             summary=(
-                "The bucket or object name doesn't exist, or the " "connected account can't see it."
+                "The bucket or object name doesn't exist, or the connected account can't see it."
             ),
             actions=[
                 "Re-open the bucket picker and re-select.",
@@ -128,7 +128,7 @@ def format_gcs_error(status_code: int, body: str) -> str:
         return make_structured_error(
             "Cloud Storage quota / rate limit hit",
             summary=(
-                "The project hit a Cloud Storage rate limit. Most " "limits refill within a second."
+                "The project hit a Cloud Storage rate limit. Most limits refill within a second."
             ),
             actions=[
                 "Retry with backoff.",
