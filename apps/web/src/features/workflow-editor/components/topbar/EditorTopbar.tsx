@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronDown, Pencil, Activity, Check, MoreHorizontal, MessageCircle, Loader2, Send, Play,
+  ChevronDown, Pencil, Activity, Check, MoreHorizontal, Bot, Loader2, Send, Play,
   LayoutDashboard, Lock, Download, Copy, Trash2, PanelRightClose
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -192,7 +192,7 @@ export function EditorTopbar({
               className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--text-mute)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
               title="Open Copilot"
             >
-              <MessageCircle className="h-4 w-4" />
+              <Bot className="h-4 w-4" />
             </button>
           </div>
 
