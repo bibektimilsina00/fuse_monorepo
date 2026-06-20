@@ -2,6 +2,7 @@
  * Pricing source of truth. Used by both the tier cards and the
  * comparison matrix below them. Update one place; both update.
  */
+import { EXTERNAL_LINKS } from '@/shared/constants/routes'
 
 export type Tier = {
   slug: 'free' | 'pro' | 'enterprise'
@@ -23,7 +24,7 @@ export const TIERS: Tier[] = [
     cadence: '/ month',
     tagline: 'For solo builders trying Fuse on side projects.',
     ctaLabel: 'Start for free',
-    ctaHref: 'https://app.fuse.bibektimilsina.tech/register',
+    ctaHref: EXTERNAL_LINKS.REGISTER,
     features: [
       '1 workspace · 1 user',
       '500 workflow runs / month',
@@ -39,7 +40,7 @@ export const TIERS: Tier[] = [
     cadence: '/ user / month',
     tagline: 'For teams shipping workflows that customers depend on.',
     ctaLabel: 'Start free trial',
-    ctaHref: 'https://app.fuse.bibektimilsina.tech/register',
+    ctaHref: EXTERNAL_LINKS.REGISTER,
     highlight: true,
     features: [
       'Unlimited workspaces',

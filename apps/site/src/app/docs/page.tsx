@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { MarketingNav } from '@/features/marketing'
 import { DocsLayout, DocsToc, type TocEntry } from '@/features/docs'
+import { EXTERNAL_LINKS } from '@/shared/constants/routes'
 
 const TOC: TocEntry[] = [
   { id: 'overview',  label: 'Overview' },
@@ -45,7 +46,7 @@ export default function DocsHome() {
         <p>Self-host with Docker:</p>
         <pre><code>{`docker compose -f deploy/docker-compose.production.yml up -d`}</code></pre>
         <p>
-          Or sign up at <a href="https://app.fuse.bibektimilsina.tech">app.fuse.bibektimilsina.tech</a>{' '}
+          Or sign up at <a href={EXTERNAL_LINKS.PRODUCT}>{EXTERNAL_LINKS.PRODUCT.replace(/^https?:\/\//, '')}</a>{' '}
           and skip the infra.
         </p>
 

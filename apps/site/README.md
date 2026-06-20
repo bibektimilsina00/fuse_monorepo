@@ -1,6 +1,6 @@
 # fuse-site
 
-Marketing site for [Fuse](https://fuse.bibektimilsina.tech). Next.js 16 (App Router) + Tailwind v4 + shadcn/ui.
+Marketing site for [Fuse](https://runmycrew.com). Next.js 16 (App Router) + Tailwind v4 + shadcn/ui.
 
 ## Run
 

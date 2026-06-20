@@ -36,7 +36,7 @@ const COPY = {
 /**
  * Shared auth card — drives both Login and Register from one component.
  * Tokens, weights, and radii mirror the marketing site so the handoff
- * from `fuse.bibektimilsina.tech` → `app.*` feels continuous.
+ * from `runmycrew.com` → `app.*` feels continuous.
  */
 export function AuthForm({ mode }: AuthFormProps) {
   const copy = COPY[mode]

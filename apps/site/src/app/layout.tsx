@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Analytics } from '@vercel/analytics/next'
+import { MARKETING_URL } from '@/shared/constants/routes'
 import './globals.css'
 
 const sans = Inter({
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   },
   description:
     'Fuse is the automation platform that turns natural-language prompts into production workflows. Connect any app, ship in minutes, audit every run.',
-  metadataBase: new URL('https://fuse.bibektimilsina.tech'),
+  metadataBase: new URL(MARKETING_URL),
   openGraph: {
     type: 'website',
     siteName: 'Fuse',

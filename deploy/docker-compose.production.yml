@@ -30,8 +30,8 @@ services:
   # "pull web image, restart container".
   #
   # Caddy fronts BOTH hostnames from this one container:
-  #   - fuse.bibektimilsina.tech       → marketing site (`site:3100`)
-  #   - app.fuse.bibektimilsina.tech   → React product (static + api)
+  #   - runmycrew.com       → marketing site (`site:3100`)
+  #   - app.runmycrew.com   → React product (static + api)
   web:
     image: ghcr.io/${GITHUB_OWNER}/fuse-web:${FUSE_IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -86,8 +86,8 @@ services:
       POSTGRES_SERVER: db
       REDIS_HOST: redis
       ENVIRONMENT: production
-      BASE_URL: ${BASE_URL:-https://app.fuse.bibektimilsina.tech}
-      FRONTEND_URL: ${FRONTEND_URL:-https://app.fuse.bibektimilsina.tech}
+      BASE_URL: ${BASE_URL:-https://app.runmycrew.com}
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.runmycrew.com}
       TZ: UTC
     depends_on:
       db:
