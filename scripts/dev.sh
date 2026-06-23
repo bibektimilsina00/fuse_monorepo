@@ -29,9 +29,13 @@ command -v docker  >/dev/null || fail "docker not installed"
 command -v uv      >/dev/null || fail "uv not installed (see https://docs.astral.sh/uv)"
 command -v pnpm    >/dev/null || fail "pnpm not installed"
 
-# .env must exist for native (non-docker) api/worker — they read POSTGRES_SERVER etc.
+# .env is optional — every setting in app/core/config.py has a default that
+# matches the docker-compose db + redis services. The OAuth / LLM secrets
+# stay empty until the user adds them, which just disables the matching
+# feature; the app still boots. Warn so people notice, don't block.
 if [[ ! -f apps/api/.env ]]; then
-  fail "apps/api/.env missing — copy apps/api/.env.example and fill in secrets first"
+  log "no apps/api/.env — using built-in defaults (LLM + OAuth integrations disabled)"
+  log "copy apps/api/.env.example to apps/api/.env when you need real secrets"
 fi
 
 # ── Infrastructure ──────────────────────────────────────────────────
