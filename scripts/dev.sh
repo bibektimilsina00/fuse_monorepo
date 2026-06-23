@@ -94,9 +94,10 @@ launch worker "$C_WORKER" bash -c "cd apps/worker && PYTHONPATH=../.. uv run cel
 # Beat: Celery beat publishing cron-trigger ticks. Required for agent loops.
 launch beat   "$C_BEAT"   bash -c "cd apps/api    && PYTHONPATH=../.. uv run celery -A apps.api.app.core.celery beat --loglevel=info"
 
-# Frontends: filter through pnpm so turbo doesn't try to start them too.
-launch web    "$C_WEB"    pnpm --filter web  dev
-launch site   "$C_SITE"   pnpm --filter site dev
+# Frontends — workspace package names are `runmycrew-web` / `runmycrew-site`
+# (see each app's package.json). Filter by name so pnpm scopes the run.
+launch web    "$C_WEB"    pnpm --filter runmycrew-web  dev
+launch site   "$C_SITE"   pnpm --filter runmycrew-site dev
 
 log "all services launched. URLs:"
 log "  api    → http://localhost:8000  (docs: /docs, health: /health)"
