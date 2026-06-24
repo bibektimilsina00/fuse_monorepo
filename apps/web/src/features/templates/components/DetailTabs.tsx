@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { editorAPI } from '@/features/workflow-editor/services/editorAPI'
 import { getIcon } from '@/features/workflow-editor/utils/icon-map'
 import type { NodeDefinition } from '@/features/workflow-editor/types/editorTypes'
+import { useCredentials } from '@/features/connections/hooks/useConnections'
 import type { TemplateDetail } from '../types/templatesTypes'
-import { MissingCredentialsAlert } from './MissingCredentialsAlert'
+import { IntegrationRow } from './IntegrationRow'
+import { ToolRow } from './ToolRow'
 import { WorkflowMiniPreview } from './WorkflowMiniPreview'
 
 /**
@@ -23,7 +25,10 @@ interface DetailTabsProps {
   missingCredentials: string[]
 }
 
-export function DetailTabs({ template, missingCredentials }: DetailTabsProps) {
+export function DetailTabs({ template }: DetailTabsProps) {
+  // Per-row connection status replaces the old "missing-creds" banner —
+  // each integration shows Connected ✓ or a Connect button. Banner gone.
+  const { data: credentials = [] } = useCredentials()
   return (
     <div className="flex flex-col gap-[40px]">
       <section className="flex flex-col gap-4">
@@ -58,33 +63,33 @@ export function DetailTabs({ template, missingCredentials }: DetailTabsProps) {
 
       <Divider />
 
-      <section className="flex flex-col gap-5">
+      <section className="flex flex-col gap-4">
         <SectionHeading>Integrations required</SectionHeading>
         {template.credentials_required.length === 0 ? (
           <span className="text-[13.5px] italic text-[var(--text-faint)]">
             No integrations required.
           </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2.5">
             {template.credentials_required.map((c) => (
-              <Chip key={c}>{c}</Chip>
+              <IntegrationRow key={c} required={c} connected={credentials} />
             ))}
           </div>
         )}
+      </section>
 
-        {missingCredentials.length > 0 && (
-          <MissingCredentialsAlert missing={missingCredentials} />
-        )}
+      <Divider />
 
-        <SectionHeading className="mt-4">Tools used</SectionHeading>
+      <section className="flex flex-col gap-4">
+        <SectionHeading>Tools used</SectionHeading>
         {template.tools_required.length === 0 ? (
           <span className="text-[13.5px] italic text-[var(--text-faint)]">
             No tools used.
           </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2.5">
             {template.tools_required.map((t) => (
-              <Chip key={t}>{t}</Chip>
+              <ToolRow key={t} toolId={t} />
             ))}
           </div>
         )}
