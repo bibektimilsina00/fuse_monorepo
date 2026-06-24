@@ -1,12 +1,13 @@
-import { Sparkles } from 'lucide-react'
+import { Crown } from 'lucide-react'
 
 /**
- * Small badge that overlays the top-right of the `inspo-art` panel when
- * a template is paid. Pure absolute-positioned overlay — does not touch
- * the existing card layout / inspo-mock / label.
+ * Premium badge — gold-tinted overlay sized so it reads as a
+ * "paid product" marker, not a generic accent chip. Used on:
+ *   - card variant: top-right of `inspo-art`, absolute overlay
+ *   - detail variant: inline pill in the detail hero / sidebar
  *
- * Price is rendered as USD; cents-precision tail (`.99`) only when
- * non-zero so $5 reads "$5" not "$5.00".
+ * Gold tone via raw oklch (not a token) — only used by this badge so
+ * it stays distinct from the product's accent everywhere else.
  */
 
 interface PremiumBadgeProps {
@@ -14,21 +15,34 @@ interface PremiumBadgeProps {
   variant?: 'card' | 'detail'
 }
 
+const GOLD = 'oklch(0.82 0.16 85)'
+const GOLD_DEEP = 'oklch(0.68 0.18 75)'
+
 export function PremiumBadge({ priceCents, variant = 'card' }: PremiumBadgeProps) {
   const formatted = formatPrice(priceCents)
 
   if (variant === 'detail') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-[7px] border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[12px] font-semibold text-[var(--accent)]">
-        <Sparkles className="h-3.5 w-3.5" />
+      <span
+        className="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-1 text-[12px] font-semibold text-[oklch(0.18_0.03_85)]"
+        style={{
+          background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DEEP})`,
+        }}
+      >
+        <Crown className="h-3.5 w-3.5" />
         Premium · {formatted}
       </span>
     )
   }
 
   return (
-    <span className="pointer-events-none absolute right-[10px] top-[10px] z-10 inline-flex items-center gap-1 rounded-[6px] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white shadow-[0_4px_12px_-4px_oklch(0_0_0/0.6)]">
-      <Sparkles className="h-2.5 w-2.5" />
+    <span
+      className="pointer-events-none absolute right-[10px] top-[10px] z-10 inline-flex items-center gap-1.5 rounded-[7px] px-2 py-[3px] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[oklch(0.18_0.03_85)]"
+      style={{
+        background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DEEP})`,
+      }}
+    >
+      <Crown className="h-3 w-3" />
       {formatted}
     </span>
   )

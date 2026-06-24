@@ -4,11 +4,8 @@ import { Loader2, Search, Users } from 'lucide-react'
 import { APP_ROUTES } from '@/shared/constants/routes'
 import { useTemplates, useTemplateCategories } from '../hooks/useTemplates'
 import { TemplateCard } from '../components/TemplateCard'
-import type {
-  Template,
-  TemplateListItem,
-  TemplateSort,
-} from '../types/templatesTypes'
+import { toCardShape } from '../utils/toCardShape'
+import type { TemplateSort } from '../types/templatesTypes'
 
 /**
  * Marketplace listing page.
@@ -161,22 +158,4 @@ export function Templates() {
       </div>
     </div>
   )
-}
-
-function toCardShape(item: TemplateListItem, idx: number): Template {
-  return {
-    idx: String(idx + 1).padStart(2, '0'),
-    label: humanCategory(item.category),
-    title: item.title,
-    kind: item.kind,
-    steps: item.steps,
-    bg: item.bg_variant,
-  }
-}
-
-function humanCategory(cat: string): string {
-  return cat
-    .split('-')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ')
 }

@@ -7,7 +7,7 @@ import { useCredentials } from '@/features/connections/hooks/useConnections'
 import type { TemplateDetail } from '../types/templatesTypes'
 import { IntegrationRow } from './IntegrationRow'
 import { ToolRow } from './ToolRow'
-import { WorkflowMiniPreview } from './WorkflowMiniPreview'
+import { TemplateGraphPreview } from './TemplateGraphPreview'
 
 /**
  * Stacked content sections for the main column.
@@ -47,11 +47,9 @@ export function DetailTabs({ template }: DetailTabsProps) {
 
       <section className="flex flex-col gap-4">
         <SectionHeading>Workflow graph</SectionHeading>
-        <div
-          className={`relative aspect-[2/1] w-full overflow-hidden rounded-[10px] border border-[var(--border-faint)] ${template.bg_variant}`}
-        >
+        <div className="relative aspect-[2/1] w-full overflow-hidden rounded-[10px] border border-[var(--border-faint)] bg-[var(--bg)]">
           {template.graph?.nodes?.length ? (
-            <WorkflowMiniPreview graph={template.graph} density="comfortable" />
+            <TemplateGraphPreview graph={template.graph} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-[12px] text-[var(--text-faint)]">
               No graph data

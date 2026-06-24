@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { APP_ROUTES } from '@/shared/constants/routes'
 import { useTemplates } from '../hooks/useTemplates'
 import { TemplateCard } from './TemplateCard'
-import type { Template, TemplateListItem } from '../types/templatesTypes'
+import { toCardShape } from '../utils/toCardShape'
 
 /**
  * Bottom strip of 3 same-category templates on the detail page.
@@ -46,22 +46,4 @@ export function RelatedTemplates({ category, excludeId }: RelatedTemplatesProps)
       </div>
     </section>
   )
-}
-
-function toCardShape(item: TemplateListItem, idx: number): Template {
-  return {
-    idx: String(idx + 1).padStart(2, '0'),
-    label: humanCategory(item.category),
-    title: item.title,
-    kind: item.kind,
-    steps: item.steps,
-    bg: item.bg_variant,
-  }
-}
-
-function humanCategory(cat: string): string {
-  return cat
-    .split('-')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ')
 }

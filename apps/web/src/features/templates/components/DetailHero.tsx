@@ -1,5 +1,5 @@
 import type { TemplateDetail } from '../types/templatesTypes'
-import { WorkflowMiniPreview } from './WorkflowMiniPreview'
+import { TemplateGraphPreview } from './TemplateGraphPreview'
 
 /**
  * Big preview block at the top of the detail page — Vercel-style hero
@@ -50,14 +50,12 @@ export function DetailHero({ template }: DetailHeroProps) {
         )}
       </div>
 
-      {/* 16:9 preview tile */}
-      <div
-        className={`relative aspect-[16/9] w-full overflow-hidden rounded-[12px] border border-[var(--border-faint)] ${template.bg_variant}`}
-      >
+      {/* 16:9 preview tile — real editor widgets, read-only */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[12px] border border-[var(--border-faint)] bg-[var(--bg)]">
         {template.graph?.nodes?.length ? (
-          <WorkflowMiniPreview graph={template.graph} density="comfortable" />
+          <TemplateGraphPreview graph={template.graph} />
         ) : null}
-        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-[oklch(0_0_0/0.55)] to-transparent p-4 text-[11px] font-mono uppercase tracking-[0.08em] text-white/85">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-[oklch(0_0_0/0.55)] to-transparent p-4 text-[11px] font-mono uppercase tracking-[0.08em] text-white/85">
           <span>{(template.graph?.nodes?.length ?? template.steps) || 0} nodes</span>
           <span className="opacity-50">·</span>
           <span>{template.graph?.edges?.length ?? 0} connections</span>

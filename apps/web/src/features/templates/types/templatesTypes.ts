@@ -88,6 +88,11 @@ export interface Template {
   kind: string
   steps: number
   bg: string
+  graph?: TemplateGraph
+  creator?: TemplateCreator | null
+  is_official?: boolean
+  is_premium?: boolean
+  price_cents?: number
 }
 
 export interface PublishTemplateInput {

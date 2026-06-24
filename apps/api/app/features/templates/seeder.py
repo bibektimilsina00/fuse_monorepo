@@ -38,8 +38,17 @@ async def seed_official_templates(db: AsyncSession) -> int:
 
     for idx, raw in enumerate(registry.all()):
         slug = _slug_for(raw)
-        existing = await db.execute(select(Template).where(Template.slug == slug))
-        if existing.scalar_one_or_none() is not None:
+        result = await db.execute(select(Template).where(Template.slug == slug))
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            # Keep pricing/featured flags in sync with the seed JSON so
+            # marking a template premium in source takes effect on next
+            # boot without manual DB edits. Other fields stay untouched
+            # so user-driven changes (rare) survive.
+            if existing.is_official:
+                existing.is_premium = bool(raw.get("is_premium", False))
+                existing.price_cents = int(raw.get("price_cents", 0) or 0)
+                existing.featured = bool(raw.get("featured", False))
             continue
 
         graph = _extract_graph(raw)
@@ -62,15 +71,15 @@ async def seed_official_templates(db: AsyncSession) -> int:
                 bg_variant=_BG_VARIANTS[idx % len(_BG_VARIANTS)],
                 is_published=True,
                 is_official=True,
-                is_premium=False,
-                price_cents=0,
-                featured=False,
+                is_premium=bool(raw.get("is_premium", False)),
+                price_cents=int(raw.get("price_cents", 0) or 0),
+                featured=bool(raw.get("featured", False)),
             )
         )
         inserted += 1
 
+    await db.commit()
     if inserted:
-        await db.commit()
         logger.info("template seeder: imported %d official template(s)", inserted)
     return inserted
 

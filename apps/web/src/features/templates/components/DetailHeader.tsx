@@ -1,4 +1,4 @@
-import { ArrowLeft, Link2, MoreHorizontal, Download, FileDown, Sparkles } from 'lucide-react'
+import { ArrowLeft, Link2, MoreHorizontal, Download, FileDown, Crown } from 'lucide-react'
 import { Button, useToast } from '@/shared/components'
 import {
   DropdownMenuRoot,
@@ -67,13 +67,6 @@ export function DetailHeader({
           <ArrowLeft className="h-4 w-4" />
         </button>
 
-        <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-white text-[13px] font-bold ${template.bg_variant}`}
-          aria-hidden
-        >
-          {template.title.charAt(0).toUpperCase()}
-        </div>
-
         <span className="truncate text-[15px] font-semibold tracking-[-0.011em] text-[var(--text)]">
           {template.title}
         </span>
@@ -86,9 +79,18 @@ export function DetailHeader({
             disabled={primaryDisabled}
             loading={primaryLoading}
             leftIcon={
-              isPremium ? <Sparkles className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />
+              isPremium ? <Crown className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />
             }
             className="font-semibold"
+            style={
+              isPremium
+                ? {
+                    background: 'linear-gradient(135deg, oklch(0.82 0.16 85), oklch(0.68 0.18 75))',
+                    color: 'oklch(0.18 0.03 85)',
+                    border: 'none',
+                  }
+                : undefined
+            }
           >
             {primaryLoading ? '…' : primaryLabel}
           </Button>

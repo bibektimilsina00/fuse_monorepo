@@ -1,5 +1,6 @@
 import {
   Sparkles,
+  Crown,
   CheckCircle2,
   Download,
   Calendar,
@@ -32,10 +33,23 @@ export function DetailSidebar({ template, missingCredentials }: DetailSidebarPro
   return (
     <aside className="flex flex-col gap-[14px] lg:sticky lg:top-[80px]">
       <Block>
-        <BlockTitle icon={<Sparkles className="h-3.5 w-3.5" />}>Pricing</BlockTitle>
+        <BlockTitle
+          icon={
+            template.is_premium ? (
+              <Crown className="h-3.5 w-3.5" style={{ color: 'oklch(0.68 0.18 75)' }} />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )
+          }
+        >
+          Pricing
+        </BlockTitle>
         {template.is_premium ? (
           <div className="flex items-baseline gap-1">
-            <span className="font-mono text-[22px] font-semibold text-[var(--text)] tracking-[-0.02em]">
+            <span
+              className="font-mono text-[22px] font-semibold tracking-[-0.02em]"
+              style={{ color: 'oklch(0.68 0.18 75)' }}
+            >
               {formatPrice(template.price_cents)}
             </span>
             <span className="text-[11.5px] text-[var(--text-faint)] uppercase font-semibold tracking-[0.06em]">
