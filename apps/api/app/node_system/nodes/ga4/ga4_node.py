@@ -293,7 +293,7 @@ class GoogleAnalyticsNode(BaseNode[GoogleAnalyticsProperties]):
                 "streams / conversion events. Read-only against both "
                 "the Data API and the Admin API."
             ),
-            icon="si:SiGoogleanalytics",
+            icon="google-analytics",
             color="#f4b400",
             properties=[
                 {

@@ -86,7 +86,7 @@ class GoogleTasksTriggerNode(BaseNode[GoogleTasksTriggerProperties]):
                 "tasklist. First poll snapshots silently; later polls emit one "
                 "execution per matching task."
             ),
-            icon="si:SiGoogletasks",
+            icon="google-tasks",
             color="#1a73e8",
             properties=[
                 {

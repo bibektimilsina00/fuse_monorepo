@@ -76,7 +76,7 @@ class GooglePeopleTriggerNode(BaseNode[GooglePeopleTriggerProperties]):
                 "Contacts. First poll snapshots silently; later polls emit "
                 "one execution per matching contact."
             ),
-            icon="si:SiGooglecontacts",
+            icon="google",
             color="#1a73e8",
             properties=[
                 {

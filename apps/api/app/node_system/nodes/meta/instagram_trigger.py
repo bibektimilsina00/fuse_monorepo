@@ -58,7 +58,7 @@ class InstagramTriggerNode(BaseNode[InstagramTriggerProperties]):
                 "Fires on Instagram comments, DMs, mentions, story replies, "
                 "and story mentions. Pick the event type below."
             ),
-            icon="Instagram",
+            icon="instagram",
             color="#E1306C",
             properties=[
                 {

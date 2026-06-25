@@ -116,7 +116,7 @@ class GooglePeopleNode(BaseNode[GooglePeopleProperties]):
                 "tag with groups, and pull individual or batched contact "
                 "records."
             ),
-            icon="si:SiGooglecontacts",
+            icon="google",
             color="#1a73e8",
             properties=[
                 {

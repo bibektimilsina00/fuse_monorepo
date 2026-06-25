@@ -217,7 +217,7 @@ class GoogleYouTubeNode(BaseNode[GoogleYouTubeProperties]):
                 "Read, post, upload, and curate on YouTube — videos, comments, "
                 "playlists, subscriptions, ratings, and thumbnails."
             ),
-            icon="si:SiYoutube",
+            icon="youtube",
             color="#ff0000",
             properties=[
                 {

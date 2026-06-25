@@ -41,7 +41,7 @@ class StripeNode(BaseNode[StripeProperties]):
             name="Stripe",
             category="integration",
             description="Create payments, manage customers, and retrieve billing data from Stripe.",
-            icon="si:SiStripe",
+            icon="stripe",
             color="#635bff",
             properties=[
                 {

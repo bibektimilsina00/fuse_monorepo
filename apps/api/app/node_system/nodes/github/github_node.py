@@ -35,7 +35,7 @@ class GitHubNode(BaseNode[GitHubProperties]):
             name="GitHub",
             category="integration",
             description="GitHub integration: manage issues, comments, and repositories.",
-            icon="si:SiGithub",
+            icon="github",
             color="#24292e",
             properties=[
                 {

@@ -294,7 +294,7 @@ class GoogleChatNode(BaseNode[GoogleChatProperties]):
                 "read history, react to messages, and look up space "
                 "members — driven by the connected Google account."
             ),
-            icon="si:SiGooglechat",
+            icon="google-chat",
             color="#1a73e8",
             properties=[
                 {

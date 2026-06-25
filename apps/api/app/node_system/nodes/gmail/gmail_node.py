@@ -119,7 +119,7 @@ class GmailNode(BaseNode[GmailProperties]):
                 "Send, reply, search, label, and manage Gmail messages via OAuth. "
                 "Attachments accept URLs, uploaded files, or items from your Library."
             ),
-            icon="si:SiGmail",
+            icon="gmail",
             color="#ea4335",
             properties=[
                 {

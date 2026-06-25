@@ -88,7 +88,7 @@ class GoogleChatTriggerNode(BaseNode[GoogleChatTriggerProperties]):
                 "space or DM. First poll silently snapshots the cursor; "
                 "later polls emit one execution per new message."
             ),
-            icon="si:SiGooglechat",
+            icon="google-chat",
             color="#1a73e8",
             properties=[
                 {

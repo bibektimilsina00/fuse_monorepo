@@ -118,7 +118,7 @@ class GoogleYouTubeTriggerNode(BaseNode[GoogleYouTubeTriggerProperties]):
                 "Quota-aware — `new_video` for other channels uses YouTube's "
                 "RSS feed (zero quota)."
             ),
-            icon="si:SiYoutube",
+            icon="youtube",
             color="#ff0000",
             properties=[
                 {

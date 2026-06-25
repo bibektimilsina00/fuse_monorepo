@@ -248,7 +248,7 @@ class GoogleCloudStorageNode(BaseNode[GoogleCloudStorageProperties]):
                 "read, write, copy, delete. Object uploads can pull "
                 "from a URL, a RunMyCrew Library asset, or inline content."
             ),
-            icon="si:SiGooglecloudstorage",
+            icon="google-cloud-storage",
             color="#4285f4",
             properties=[
                 {

@@ -23,7 +23,7 @@ class SlackTriggerNode(BaseNode[SlackTriggerProperties]):
             name="Slack Trigger",
             category="trigger",
             description="Listen for any Slack event: messages, reactions, channel changes, app interactions, and more.",
-            icon="si:SiSlack",
+            icon="slack",
             color="#4a154b",
             properties=[
                 {

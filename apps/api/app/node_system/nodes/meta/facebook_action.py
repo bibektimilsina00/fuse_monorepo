@@ -70,7 +70,7 @@ class FacebookActionNode(BaseNode[FacebookActionProperties]):
             description=(
                 "Send Messenger DMs, reply to Page comments, or publish posts on a Facebook Page."
             ),
-            icon="Facebook",
+            icon="facebook",
             color="#1877F2",
             properties=[
                 {

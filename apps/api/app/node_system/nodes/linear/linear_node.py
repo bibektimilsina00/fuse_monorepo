@@ -41,7 +41,7 @@ class LinearNode(BaseNode[LinearProperties]):
             name="Linear",
             category="integration",
             description="Create and manage Linear issues, projects, and teams.",
-            icon="si:SiLinear",
+            icon="linear",
             color="#5e6ad2",
             properties=[
                 {

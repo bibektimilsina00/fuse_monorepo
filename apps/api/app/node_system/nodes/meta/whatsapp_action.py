@@ -56,7 +56,7 @@ class WhatsAppActionNode(BaseNode[WhatsAppActionProperties]):
                 "Send free-form text messages, pre-approved templates, or "
                 "mark inbound WhatsApp messages as read."
             ),
-            icon="si:SiWhatsapp",
+            icon="whatsapp",
             color="#25D366",
             properties=[
                 {

@@ -32,7 +32,7 @@ class Neo4jNode(BaseNode[Neo4jProperties]):
             name="Neo4j",
             category="integration",
             description="Run a Cypher query against a Neo4j graph database.",
-            icon="si:SiNeo4j",
+            icon="neo4j",
             color="#008cc1",
             properties=[
                 {

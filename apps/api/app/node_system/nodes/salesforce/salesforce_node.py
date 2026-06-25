@@ -38,7 +38,7 @@ class SalesforceNode(BaseNode[SalesforceProperties]):
             name="Salesforce",
             category="integration",
             description="Create and query Salesforce records (Contacts, Leads, Accounts, Opportunities).",
-            icon="si:SiSalesforce",
+            icon="salesforce",
             color="#00a1e0",
             properties=[
                 {

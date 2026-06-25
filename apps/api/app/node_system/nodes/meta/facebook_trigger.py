@@ -50,7 +50,7 @@ class FacebookTriggerNode(BaseNode[FacebookTriggerProperties]):
                 "Fires on Facebook Page comments, Messenger DMs, mentions, "
                 "Messenger button clicks, and Page reactions."
             ),
-            icon="Facebook",
+            icon="facebook",
             color="#1877F2",
             properties=[
                 {
